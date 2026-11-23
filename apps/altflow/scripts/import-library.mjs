@@ -1,13 +1,19 @@
 // Seeds the shared creator library (scope `library:creator`) from knowledge/library/*.md.
-// Idempotent: upsertPage reports created / updated / unchanged. Run: node --import tsx scripts/import-library.mjs
+// Idempotent: upsertPage reports created / updated / unchanged. Run: node --import tsx scripts/import-library.mjs (data root: ALTFLOW_RUNTIME_ROOT)
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Knowledge, knowledgeMemoryScopes } from '@mastra/core/knowledge';
 import { MastraCompositeStore } from '@mastra/core/storage';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { localEmbedder } from '../src/mastra/embedding.ts';
+import './environment.mjs';
 
-const root = process.env.MASTRA_PREVIEW_ROOT ?? process.cwd();
+// Same data-root rule as the server (src/mastra/index.ts) and its launchers, so this writes the
+// databases the running service reads. The page sources ship with the app, not with the data.
+const appRoot = fileURLToPath(new URL('..', import.meta.url));
+const root = resolve(process.env.ALTFLOW_RUNTIME_ROOT ?? process.env.MASTRA_PREVIEW_ROOT ?? appRoot);
+const sourceDir = resolve(appRoot, 'knowledge/library');
 const SCOPE = 'library:creator';
 const PAGES = [
   { file: 'genre-first-principles', path: 'research/genre-first-principles', name: '短剧类型第一性原理分析', description: '用一个词概括每种短剧类型的底层逻辑，用于类型判断、策划和互动设计。' },
@@ -49,7 +55,7 @@ const knowledge = new Knowledge({
 });
 
 for (const page of PAGES) {
-  const body = await readFile(resolve(root, 'knowledge/library', `${page.file}.md`), 'utf8');
+  const body = await readFile(resolve(sourceDir, `${page.file}.md`), 'utf8');
   const result = await knowledge.upsertPage({ scope: SCOPE, path: page.path, name: page.name, description: page.description, body, author: 'library-import' });
   console.log(result.status.padEnd(9), page.path);
 }
