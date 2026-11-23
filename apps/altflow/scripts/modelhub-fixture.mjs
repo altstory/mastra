@@ -79,19 +79,22 @@ export async function modelHubFixture() {
         );
         return;
       }
-      const plannedCall = state.toolCall ?? { name: 'countText', args: { text: state.toolCallText } };
-      const callTool =
-        !summarizing &&
-        (state.toolCall !== undefined || state.toolCallText !== undefined) &&
-        body.tools?.some(tool => tool.function?.name === plannedCall.name) &&
-        !body.messages.some(message => message.role === 'tool');
+      const firstCall = state.toolCall ?? { name: 'countText', args: { text: state.toolCallText } };
+      const plannedCall = summarizing
+        ? undefined
+        : (state.nextToolCall?.(body) ??
+          ((state.toolCall !== undefined || state.toolCallText !== undefined) &&
+          !body.messages.some(message => message.role === 'tool')
+            ? firstCall
+            : undefined));
+      const callTool = plannedCall && body.tools?.some(tool => tool.function?.name === plannedCall.name);
       const message = callTool
         ? {
             role: 'assistant',
             content: null,
             tool_calls: [
               {
-                id: 'count-test',
+                id: plannedCall.id ?? 'count-test',
                 type: 'function',
                 function: {
                   name: plannedCall.name,

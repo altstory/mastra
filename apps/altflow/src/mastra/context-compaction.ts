@@ -158,34 +158,49 @@ function pruneTools(prompt: Prompt): Prompt {
   });
 }
 
-/** Keep the recent tail and latest user request, moving the cut backward across open tool pairs. */
-function selectCut(messages: Prompt, retain: number, force: boolean, counter: TokenCounter): number {
+function selectCut(
+  messages: Prompt,
+  latestUser: Message | undefined,
+  syntheticCount: number,
+  retain: number,
+  force: boolean,
+  budget: number,
+  counter: TokenCounter,
+) {
+  const userIndex = latestUser ? messages.lastIndexOf(latestUser) : -1;
+  const costs = messages.map(message => price(message, counter));
   let cut = messages.length;
   let tokens = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
     cut = i;
-    tokens += price(messages[i], counter);
+    tokens += costs[i];
     if (tokens >= retain || force) break;
   }
-  let latestUser = -1;
-  for (let i = messages.length - 1; i >= 0; i--)
-    if (messages[i].role === 'user') {
-      latestUser = i;
-      break;
-    }
-  if (latestUser >= 0) cut = Math.min(cut, latestUser);
+
+  const normalCut = userIndex >= syntheticCount ? Math.min(cut, userIndex) : cut;
+  const checkpointReserve = Math.min(retain / 4, 4096);
   const open = new Set<string>();
-  let balanced = 0;
+  let tailCost = costs.reduce((total, cost) => total + cost, 0);
+  let beforeUser: number | undefined;
+  let relaxed: number | undefined;
   for (let i = 0; i < cut; i++) {
     const message = messages[i];
+    tailCost -= costs[i];
     if (typeof message.content !== 'string')
       for (const block of message.content) {
         if (block.type === 'tool-call') open.add(block.toolCallId);
         if (block.type === 'tool-result') open.delete(block.toolCallId);
       }
-    if (!open.size) balanced = i + 1;
+    const boundary = i + 1;
+    if (open.size || boundary <= syntheticCount || boundary === userIndex + 1) continue;
+    const carriedUserCost = userIndex >= 0 && userIndex < boundary ? costs[userIndex] : 0;
+    if (tailCost + carriedUserCost + checkpointReserve > budget) continue;
+    if (boundary <= normalCut) beforeUser = boundary;
+    // When a long tool loop uses the remaining budget on its own, compact
+    // complete exchanges from this turn and carry the user's request verbatim.
+    relaxed = boundary;
   }
-  return balanced;
+  return beforeUser ?? relaxed;
 }
 
 function providerPrompt(prompt: Prompt): ProviderPrompt {
@@ -304,24 +319,42 @@ export class ContextCompaction implements Processor {
       previous &&
       original.length >= previous.covered &&
       fingerprint(original.slice(0, previous.covered)) === previous.digest;
-    let messages = applied ? [checkpointMessage(previous.summary), ...original.slice(previous.covered)] : original;
+    let userIndex = original.length - 1;
+    while (userIndex >= 0 && original[userIndex].role !== 'user') userIndex--;
+    const latestUser = userIndex >= 0 ? original[userIndex] : undefined;
+    const synthetic: Prompt = applied
+      ? [checkpointMessage(previous.summary), ...(latestUser && userIndex < previous.covered ? [latestUser] : [])]
+      : [];
+    let messages = applied ? [...synthetic, ...original.slice(previous.covered)] : original;
     let prompt = [...system, ...messages];
     const counter = new TokenCounter({ model: { provider: args.apiProviderId, modelId: route.modelId } });
     const estimate = () => pricePrompt(prompt, counter) + overhead;
-    const pressure = () =>
-      saved.measurement?.route === routeKey && saved.measurement.epoch === (applied ? previous.version : 0)
-        ? Math.max(estimate(), saved.measurement.input + estimate() - saved.measurement.estimate)
-        : estimate();
+    const measurement = saved.measurement;
+    const correction =
+      measurement?.route === routeKey && measurement.epoch === (applied ? previous.version : 0)
+        ? Math.max(0, measurement.input - measurement.estimate)
+        : 0;
+    const pressure = () => estimate() + correction;
     const force = args.state.forceCompaction === true;
     args.state.forceCompaction = false;
     if (force || pressure() >= route.policy.threshold) {
       prompt = pruneTools(prompt);
       messages = prompt.filter(message => message.role !== 'system');
       if (force || pressure() >= route.policy.threshold) {
-        const cut = selectCut(messages, route.policy.retain, force, counter);
-        if (cut > 0 && !(applied && cut === 1)) {
-          const covered = (applied ? previous.covered - 1 : 0) + cut;
+        const budget = route.policy.threshold - pricePrompt(system, counter) - overhead;
+        // The previous measurement is useful when choosing how much to cut.
+        // A large overage may disappear with the history being replaced.
+        const cut =
+          selectCut(messages, latestUser, synthetic.length, route.policy.retain, force, budget - correction, counter) ??
+          selectCut(messages, latestUser, synthetic.length, route.policy.retain, force, budget, counter);
+        if (cut !== undefined) {
+          const covered = (applied ? previous.covered : 0) + cut - synthetic.length;
           const prefix = messages.slice(0, cut);
+          const tail = [...(latestUser && userIndex < covered ? [latestUser] : []), ...messages.slice(cut)];
+          const tailBudget = budget - pricePrompt(tail, counter);
+          const checkpointFrame = price(checkpointMessage(''), counter);
+          const removedCost =
+            pricePrompt(prefix, counter) - (latestUser && userIndex < covered ? price(latestUser, counter) : 0);
           const catalog = await this.#gateway.catalog();
           const lastRoute = saved.lastRoute;
           const lastProduct = catalog.free_chat_models.find(product => product.id === lastRoute?.modelId);
@@ -333,7 +366,14 @@ export class ContextCompaction implements Processor {
               ? lastRoute
               : route;
           const model = await this.#gateway.resolveSummaryModel(summaryRoute.modelId);
+          const summaryProduct = catalog.free_chat_models.find(product => product.id === summaryRoute.modelId);
+          const summaryTarget = summaryProduct?.thinking_options.find(
+            option => option.level === summaryRoute.level,
+          )?.target;
+          const summaryCapacity = summaryTarget ? (await this.#gateway.modelInfo())[summaryTarget] : undefined;
+          const summaryWindow = contextPolicy(summaryCapacity).window;
           let summary: string | undefined;
+          let summaryLimit = Math.max(1, Math.min(tailBudget - checkpointFrame - 1, Math.floor(removedCost / 2), 8192));
           for (let attempt = 0; attempt < 2; attempt++) {
             args.abortSignal?.throwIfAborted();
             const span = args.tracingContext?.currentSpan?.createChildSpan({
@@ -348,15 +388,14 @@ export class ContextCompaction implements Processor {
                 ...prefix,
                 {
                   role: 'user',
-                  content: [{ type: 'text', text: COMPACTION_INSTRUCTION }],
+                  content: [
+                    {
+                      type: 'text',
+                      text: `${COMPACTION_INSTRUCTION}\n- Limit the checkpoint to ${summaryLimit} tokens. Prioritize facts needed for the next step.`,
+                    },
+                  ],
                 },
               ];
-              const summaryProduct = catalog.free_chat_models.find(product => product.id === summaryRoute.modelId);
-              const summaryTarget = summaryProduct?.thinking_options.find(
-                option => option.level === summaryRoute.level,
-              )?.target;
-              const summaryCapacity = summaryTarget ? (await this.#gateway.modelInfo())[summaryTarget] : undefined;
-              const summaryWindow = contextPolicy(summaryCapacity).window;
               const summaryOutput = Math.min(65536, summaryWindow - pricePrompt(summaryPrompt, counter) - overhead);
               if (summaryOutput <= 0) throw new Error('Summary request exceeds its source model capacity');
               const result = await model.doGenerate({
@@ -394,14 +433,11 @@ export class ContextCompaction implements Processor {
                 .join('')
                 .trim();
               const replacement = checkpointMessage(text);
-              if (
-                result.finishReason.unified !== 'stop' ||
-                !text ||
-                price(replacement, counter) >= pricePrompt(prefix, counter)
-              )
+              if (result.finishReason.unified !== 'stop' || !text) continue;
+              if (price(replacement, counter) >= Math.min(removedCost, tailBudget)) {
+                summaryLimit = Math.max(1, Math.floor(summaryLimit / 2));
                 continue;
-              const candidate = [...system, replacement, ...messages.slice(cut)];
-              if (pricePrompt(candidate, counter) + overhead >= route.policy.threshold) continue;
+              }
               summary = text;
               break;
             } catch (error) {
@@ -433,7 +469,7 @@ export class ContextCompaction implements Processor {
                 };
               },
             });
-            prompt = [...system, checkpointMessage(summary), ...messages.slice(cut)];
+            prompt = [...system, checkpointMessage(summary), ...tail];
             await args.sendSignal?.({
               type: 'reactive',
               tagName: 'system-reminder',

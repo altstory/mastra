@@ -361,6 +361,63 @@ test('long tool output is pruned only on the model projection and retains its co
   assert.ok(JSON.stringify(saved.messages).includes(large), 'stored transcript retains the full tool output');
 });
 
+test('Qwen streams past the pressure threshold during a single turn with many document reads', async t => {
+  const { hub, agent, store, seed } = await setup(t);
+  await seed(4, 8000);
+  const slices = Array.from({ length: 64 }, (_, index) => `page-${index}: ${'abcd'.repeat(1950)}`);
+  const readPage = createTool({
+    id: 'readPage',
+    description: 'Read one page of the supplied manuscript.',
+    inputSchema: z.object({ index: z.number().int() }),
+    execute: async ({ index }) => slices[index],
+  });
+  let nextPage = 0;
+  hub.state.nextToolCall = () => {
+    if (nextPage >= slices.length) return;
+    const index = nextPage++;
+    return { id: `read-${index}`, name: 'readPage', args: { index } };
+  };
+  const request = 'Read all pages of the manuscript, then propose an adaptation.';
+  const result = await (
+    await agent({ readPage }, 'qwen3.8-max')
+  ).stream(request, {
+    ...options,
+    maxSteps: slices.length + 2,
+  });
+  await result.consumeStream();
+  assert.equal(await result.text, 'verified');
+  assert.equal(nextPage, slices.length);
+
+  const requests = hub.state.requests;
+  const summaryIndex = requests.findIndex(
+    entry => isSummary(entry) && JSON.stringify(entry.body.messages).includes('page-0:'),
+  );
+  assert.ok(summaryIndex > 0, 'at least one checkpoint summarizes early reads from the same turn');
+  for (const entry of requests.slice(summaryIndex + 1).filter(entry => !isSummary(entry))) {
+    const messages = entry.body.messages;
+    assert.ok(messages.some(message => message.role === 'user' && JSON.stringify(message.content).includes(request)));
+    assert.ok(messages.some(message => JSON.stringify(message.content).includes('<compacted-summary>')));
+    const toolCalls = new Set(messages.flatMap(message => (message.tool_calls ?? []).map(call => call.id)));
+    const toolResults = new Set(
+      messages.filter(message => message.role === 'tool').map(message => message.tool_call_id),
+    );
+    assert.deepEqual(toolResults, toolCalls);
+    assert.ok(!JSON.stringify(messages).includes('page-0:'));
+  }
+  const last = requests.at(-1).body.messages;
+  assert.ok(last.some(message => message.role === 'tool' && message.tool_call_id === `read-${slices.length - 1}`));
+  const { messages } = await store.listMessages({ threadId: 'thread', resourceId: 'owner', perPage: false });
+  assert.ok(JSON.stringify(messages).includes(slices[0]), 'the full document read is still in memory');
+
+  const followUp = 'Give me the first scene from your adaptation.';
+  const reopened = await (await agent({ readPage }, 'qwen3.8-max')).generate(followUp, options);
+  assert.equal(reopened.text, 'verified');
+  const resumed = JSON.stringify(requests.at(-1).body.messages);
+  assert.ok(resumed.includes(followUp));
+  assert.ok(resumed.includes('<compacted-summary>'));
+  assert.ok(!resumed.includes('page-0:'));
+});
+
 for (const failure of ['empty', 'truncated'])
   test(`${failure} summaries never overwrite history or land a checkpoint`, async t => {
     const { hub, store, agent, seed } = await setup(t);
