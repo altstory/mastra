@@ -18,6 +18,7 @@ export function MetricsPageLayout({ children, filterFields }: MetricsPageLayoutP
   useLocale();
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={metricsCrumbs} />}
       actionRow={
         <ActionRow>

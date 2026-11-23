@@ -33,7 +33,7 @@ function WorkflowSchedules() {
   }
 
   return (
-    <PageLayout>
+    <PageLayout variant="page">
       <h1 className="sr-only">{studioT('Schedules')}</h1>
       {content}
     </PageLayout>

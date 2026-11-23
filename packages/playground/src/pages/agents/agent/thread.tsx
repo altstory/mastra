@@ -1,15 +1,22 @@
 import { v4 as uuid } from '@lukeed/uuid';
 import { EmptyState } from '@mastra/playground-ui/components/EmptyState';
+import { ThreadsPanelProvider } from '@mastra/playground-ui/domains/agents/chat';
+import {
+  AgentChatLoadingSkeleton,
+  AgentLandingLoadingSkeleton,
+} from '@mastra/playground-ui/domains/agents/chat/agent-loading-skeletons';
+import type { ThreadDraftHandle } from '@mastra/playground-ui/domains/agents/chat/drafts/ThreadInputContext';
+import { ThreadInputProvider } from '@mastra/playground-ui/domains/agents/chat/drafts/ThreadInputContext';
 import { ActivatedSkillsProvider } from '@mastra/playground-ui/domains/agents/context/activated-skills-context';
 import { BrowserToolCallsProvider } from '@mastra/playground-ui/domains/agents/context/browser-tool-calls-context';
 import { PermissionDenied } from '@mastra/playground-ui/domains/auth/components/permission-denied';
 import { SessionExpired } from '@mastra/playground-ui/domains/auth/components/session-expired';
 import { cleanProviderId } from '@mastra/playground-ui/domains/llm';
+
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { useLocale, t as studioT } from '@mastra/playground-ui/lib/i18n';
 import { is401UnauthorizedError, is403ForbiddenError, is404NotFoundError } from '@mastra/playground-ui/utils/errors';
 import { useMastraClient } from '@mastra/react';
-
 import { useAgent } from '@mastra/react/hooks/agents';
 import { useAuthCapabilities, isAuthenticated } from '@mastra/react/hooks/auth';
 import { useMemory, useThreads } from '@mastra/react/hooks/memory';
@@ -19,21 +26,14 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import { useAccount } from '@/domains/account/account-context';
 import { AgentChat } from '@/domains/agents/components/agent-chat';
 import { AgentLayout } from '@/domains/agents/components/agent-layout';
-import {
-  AgentChatLoadingSkeleton,
-  AgentLandingLoadingSkeleton,
-} from '@/domains/agents/components/agent-loading-skeletons';
 import { AgentUnavailable } from '@/domains/agents/components/agent-unavailable';
 import { ObservationalMemoryProvider } from '@/domains/agents/context/agent-observational-memory-context';
 import { WorkingMemoryProvider } from '@/domains/agents/context/agent-working-memory-context';
 import { BrowserSessionProvider } from '@/domains/agents/context/browser-session-provider';
 import { MemoryTimelineProvider } from '@/domains/agents/context/memory-timeline-context';
 import { ThreadPreferencesProvider } from '@/domains/agents/context/thread-preferences-provider';
-import { ThreadsPanelProvider } from '@/domains/agents/context/threads-panel-context';
 import { buildAgentDefaultSettings } from '@/domains/agents/utils/agent-default-settings';
 import { getAgentSuggestedPrompts } from '@/domains/agents/utils/agent-suggested-prompts';
-import type { ThreadDraftHandle } from '@/domains/conversation/context/ThreadInputContext';
-import { ThreadInputProvider } from '@/domains/conversation/context/ThreadInputContext';
 import { useConversationProjects } from '@/domains/navigation/use-conversation-projects';
 import { useConversationScope } from '@/domains/navigation/use-conversation-scope';
 

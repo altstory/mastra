@@ -18,6 +18,8 @@ export interface ChatSendArgs {
   deliveryMode?: 'queue' | 'steer';
   /** Attachments already converted to core user messages (images / files). */
   attachments?: CoreUserMessage[];
+  /** Entries added to this turn's request context, on top of the agent's own, e.g. an interface's state. */
+  requestContext?: Record<string, unknown>;
 }
 
 export interface MessagesContextValue {

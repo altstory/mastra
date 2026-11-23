@@ -1,9 +1,9 @@
-import { t, useLocale } from '@mastra/playground-ui/lib/i18n';
+import { useThreadsPanel } from '@mastra/playground-ui/domains/agents/chat';
 import { AgentConversationLayout } from '@mastra/playground-ui/domains/agents/components/agent-conversation-layout';
+import { t, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { useEffect, useRef } from 'react';
 import type { PanelImperativeHandle } from 'react-resizable-panels';
 import { useMemoryTimeline } from '../context/memory-timeline-context';
-import { useThreadsPanel } from '../context/use-threads-panel';
 
 export interface AgentLayoutProps {
   agentId: string;

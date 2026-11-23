@@ -1,6 +1,8 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { Skeleton } from '@mastra/playground-ui/components/Skeleton';
 import { Txt } from '@mastra/playground-ui/components/Txt';
+import { useAgentThreadInput } from '@mastra/playground-ui/domains/agents/chat';
+import { getRecentMessagesSettings } from '@mastra/playground-ui/domains/agents/chat/memory-sidebar/recent-messages';
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { IconFork } from '@mastra/playground-ui/icons/central/IconFork';
 import { IconSquareArrowTopRight } from '@mastra/playground-ui/icons/central/IconSquareArrowTopRight';
@@ -21,8 +23,6 @@ import {
 import { useCallback } from 'react';
 import { AgentObservationalMemory } from './agent-observational-memory';
 import { AgentWorkingMemory } from './agent-working-memory';
-import { getRecentMessagesSettings } from './lib/recent-messages';
-import { useThreadInput } from '@/domains/conversation';
 import { MemorySearch } from '@/lib/ai-ui/memory-search';
 
 interface AgentMemoryProps {
@@ -33,9 +33,9 @@ interface AgentMemoryProps {
 }
 
 export function AgentMemory({ agentId, threadId, memoryType, hideRecentMessages = false }: AgentMemoryProps) {
-  const studioLocale = useLocale();
+  useLocale();
   const isGatewayMemory = memoryType === 'gateway';
-  const { threadInput: chatInputValue } = useThreadInput(threadId);
+  const { threadInput: chatInputValue } = useAgentThreadInput(threadId);
 
   const { paths, navigate } = useLinkComponent();
 
@@ -95,7 +95,7 @@ export function AgentMemory({ agentId, threadId, memoryType, hideRecentMessages 
     if (result?.thread?.id) {
       navigate(paths.agentThreadLink(agentId, result.thread.id));
     }
-  }, [threadId, agentId, cloneThread, navigate, paths, studioLocale]);
+  }, [threadId, agentId, cloneThread, navigate, paths]);
 
   // Handle clicking on a search result to scroll to the message
   const handleResultClick = useCallback(

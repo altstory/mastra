@@ -22,12 +22,6 @@
     "qwen3.8-max"
   ],
   "reasoning": {
-    "claude-sonnet-5-5": [
-      {
-        "type": "effort",
-        "values": ["low", "medium", "high", "xhigh", "max"]
-      }
-    ],
     "deepseek-v4-flash": [
       {
         "type": "toggle"
@@ -37,10 +31,10 @@
         "values": ["low", "high", "max"]
       }
     ],
-    "glm-5.3": [
+    "gpt-6.1-sol": [
       {
         "type": "effort",
-        "values": ["low", "high", "max"]
+        "values": ["low", "medium", "high", "xhigh", "max"]
       }
     ],
     "qwen3.8-max": [
@@ -55,6 +49,30 @@
         "type": "budget_tokens"
       }
     ],
+    "claude-sonnet-5-5": [
+      {
+        "type": "effort",
+        "values": ["low", "medium", "high", "xhigh", "max"]
+      }
+    ],
+    "claude-opus-5-5": [
+      {
+        "type": "effort",
+        "values": ["low", "medium", "high", "xhigh", "max"]
+      }
+    ],
+    "kimi-k3.1-pro": [
+      {
+        "type": "effort",
+        "values": ["low", "high", "max"]
+      }
+    ],
+    "gpt-6-astra": [
+      {
+        "type": "effort",
+        "values": ["low", "medium", "high", "xhigh", "max"]
+      }
+    ],
     "deepseek-flash-1017": [
       {
         "type": "toggle"
@@ -64,22 +82,10 @@
         "values": ["low", "high", "max"]
       }
     ],
-    "kimi-k3.1-pro": [
+    "glm-5.3": [
       {
         "type": "effort",
         "values": ["low", "high", "max"]
-      }
-    ],
-    "gpt-6.1-sol": [
-      {
-        "type": "effort",
-        "values": ["low", "medium", "high", "xhigh", "max"]
-      }
-    ],
-    "gpt-6-astra": [
-      {
-        "type": "effort",
-        "values": ["low", "medium", "high", "xhigh", "max"]
       }
     ],
     "deepseek-v4-pro": [
@@ -89,12 +95,6 @@
       {
         "type": "effort",
         "values": ["low", "high", "max"]
-      }
-    ],
-    "claude-opus-5-5": [
-      {
-        "type": "effort",
-        "values": ["low", "medium", "high", "xhigh", "max"]
       }
     ]
   }

@@ -1,4 +1,3 @@
-import { v4 as uuid } from '@lukeed/uuid';
 import type { RuleGroup, RuleGroupDepth1, RuleGroupDepth2 } from '@mastra/core/storage';
 
 import { t as studioT } from '@mastra/playground-ui/lib/i18n';
@@ -21,21 +20,12 @@ export type SkillFormValue = {
   files: InMemoryFileNode[];
 };
 
-export type InlineInstructionBlock = {
-  id: string;
-  type: 'prompt_block';
-  content: string;
-  rules?: RuleGroup;
-};
-
-export type RefInstructionBlock = {
-  id: string;
-  type: 'prompt_block_ref';
-  promptBlockId: string;
-  rules?: RuleGroup;
-};
-
-export type InstructionBlock = InlineInstructionBlock | RefInstructionBlock;
+export type {
+  InlineInstructionBlock,
+  RefInstructionBlock,
+  InstructionBlock,
+} from '@mastra/playground-ui/domains/instruction-blocks';
+export { createInstructionBlock, createRefInstructionBlock } from '@mastra/playground-ui/domains/instruction-blocks';
 
 const ruleSchema = z.object({
   field: z.string(),
@@ -86,20 +76,6 @@ const refInstructionBlockSchema = z.object({
 });
 
 const instructionBlockSchema = z.discriminatedUnion('type', [inlineInstructionBlockSchema, refInstructionBlockSchema]);
-
-export const createInstructionBlock = (content = '', rules?: RuleGroup): InlineInstructionBlock => ({
-  id: uuid(),
-  type: 'prompt_block',
-  content,
-  rules,
-});
-
-export const createRefInstructionBlock = (promptBlockId: string, rules?: RuleGroup): RefInstructionBlock => ({
-  id: uuid(),
-  type: 'prompt_block_ref',
-  promptBlockId,
-  rules,
-});
 
 const scoringSamplingConfigSchema = z.object({
   type: z.enum(['ratio']),

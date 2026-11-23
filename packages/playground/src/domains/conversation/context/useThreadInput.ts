@@ -1,8 +1,8 @@
+import type { DraftStatus } from '@mastra/playground-ui/domains/agents/chat/drafts/thread-draft-state';
+import type { ThreadDraft } from '@mastra/playground-ui/domains/agents/chat/drafts/thread-draft-storage';
+import { ThreadInputContext } from '@mastra/playground-ui/domains/agents/chat/drafts/thread-input-context';
 import { use, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { DraftStatus } from './thread-draft-state';
-import type { ThreadDraft } from './thread-draft-storage';
-import { ThreadInputContext } from './thread-input-context';
 
 type ThreadInputSetter = Dispatch<SetStateAction<string>>;
 

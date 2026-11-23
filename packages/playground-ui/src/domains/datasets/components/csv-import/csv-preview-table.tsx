@@ -1,0 +1,84 @@
+'use client';
+
+import { DataList } from '@/ds/components/DataList';
+import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
+
+export interface CSVPreviewTableProps {
+  headers: string[];
+  data: Record<string, unknown>[];
+  maxRows?: number;
+}
+
+// Truncate long values for display.
+function truncateValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  return str.length > 50 ? str.slice(0, 47) + '...' : str;
+}
+
+/**
+ * Preview table showing parsed CSV data.
+ * Displays first N rows with truncated cell values.
+ */
+export function CSVPreviewTable({ headers, data, maxRows = 5 }: CSVPreviewTableProps) {
+  useLocale();
+  const displayData = data.slice(0, maxRows);
+  const totalRows = data.length;
+  const columns = headers.map((_, index) => (index === 0 ? 'minmax(10rem, 14rem)' : 'minmax(8rem, 12rem)')).join(' ');
+
+  return (
+    <div className="flex flex-col gap-2">
+      {headers.length > 0 ? (
+        <DataList columns={columns} className="max-h-80" mask={{ left: false }}>
+          <DataList.Top>
+            {headers.map((header: string, index: number) => (
+              <DataList.TopCell key={`${index}-${header}`} sticky={index === 0 ? 'start' : undefined}>
+                {header}
+              </DataList.TopCell>
+            ))}
+          </DataList.Top>
+          {displayData.map((row: Record<string, unknown>, rowIndex: number) => {
+            return (
+              <DataList.RowStatic key={rowIndex}>
+                {headers.map((header: string, index: number) => {
+                  const value = truncateValue(row[header]);
+
+                  if (index === 0) {
+                    return (
+                      <DataList.RowHeaderCell
+                        key={`${index}-${header}`}
+
+                        className="max-w-[14rem] text-caption"
+                      >
+                        {value}
+                      </DataList.RowHeaderCell>
+                    );
+                  }
+
+                  return (
+                    <DataList.Cell key={`${index}-${header}`} className="max-w-[12rem] text-caption">
+                      <span className="block truncate">{value}</span>
+                    </DataList.Cell>
+                  );
+                })}
+              </DataList.RowStatic>
+            );
+          })}
+        </DataList>
+      ) : null}
+
+      {/* Row count indicator */}
+      <Txt as="p" variant="caption" tone="muted">
+        {displayData.length < totalRows
+          ? studioT('Showing {value0} of {value1} rows', { value0: displayData.length, value1: totalRows })
+          : studioT('{value0} row{value1}', {
+              value0: totalRows,
+              value1: totalRows !== 1 ? studioT('English plural suffix') : '',
+            })}
+      </Txt>
+    </div>
+  );
+}

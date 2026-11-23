@@ -25,7 +25,7 @@ export function Processors() {
 
   if (error && is401UnauthorizedError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Processors')}</h1>
         <SessionExpired variant="fill" />
       </PageLayout>
@@ -34,7 +34,7 @@ export function Processors() {
 
   if (error && is403ForbiddenError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Processors')}</h1>
         <PermissionDenied variant="fill" resource="processors" />
       </PageLayout>
@@ -43,7 +43,7 @@ export function Processors() {
 
   if (error) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Processors')}</h1>
         <EmptyState
           tone="error"
@@ -57,7 +57,7 @@ export function Processors() {
 
   if (Object.keys(processors).length === 0 && !isLoading) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Processors')}</h1>
         <NoProcessorsInfo />
       </PageLayout>
@@ -66,6 +66,7 @@ export function Processors() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
       actionRow={
         <ActionRow>

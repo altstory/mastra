@@ -1,4 +1,3 @@
-import { t as studioT } from '@/lib/i18n';
 import type { MastraDBMessage } from '@mastra/core/agent/message-list';
 import type { MessageFactoryPart } from '@mastra/react/ui';
 import type { ComponentProps } from 'react';
@@ -24,8 +23,8 @@ import {
   TranscriptAnnotations,
   useChatAnnotations,
 } from '@/ds/components/ai/annotations';
-
 import type { ChatAnnotation } from '@/ds/components/ai/annotations';
+
 import { ArrivalScope } from '@/ds/components/Arrival';
 import { Avatar } from '@/ds/components/Avatar';
 import { Button } from '@/ds/components/Button';
@@ -33,6 +32,7 @@ import { ChatShell } from '@/ds/components/ChatShell';
 import {
   Composer,
   ComposerActions,
+  ComposerActionsDetail,
   ComposerActionsEnd,
   ComposerActionsStart,
   ComposerBox,
@@ -46,6 +46,7 @@ import type { ThreadRailTurn } from '@/ds/components/ThreadRail';
 import { Txt } from '@/ds/components/Txt';
 import { IconArrowUp } from '@/ds/icons/central/IconArrowUp';
 import { quietTextHover } from '@/ds/primitives/typography';
+import { t as studioT } from '@/lib/i18n';
 
 const EMPTY_SUGGESTED_PROMPTS: string[] = [];
 
@@ -89,6 +90,7 @@ const ThreadRailLayer = ({ turns }: { turns: ThreadRailTurn[] }) => {
 export interface ThreadProps {
   mcpAppTools?: ComponentProps<typeof MessageRow>['mcpAppTools'];
   agentName?: string;
+  agentAvatarUrl?: string;
   agentId?: string;
   threadId?: string;
   suggestedPrompts?: string[];
@@ -112,6 +114,7 @@ export interface ThreadProps {
 
 const ThreadContent = ({
   agentName,
+  agentAvatarUrl,
   agentId,
   threadId,
   suggestedPrompts,
@@ -245,7 +248,7 @@ const ThreadContent = ({
                                 isSpeaking={readAloud?.isSpeaking ?? false}
                                 onReadAloud={readAloud?.readAloud}
                                 onStopSpeaking={readAloud?.stop}
-                                mcpAppTools={mcpAppTools}
+                                mcpAppTools={mcpAppTools ?? features.mcpAppTools}
                               />
                             </MessageScrollerItem>
                           ))}
@@ -262,13 +265,17 @@ const ThreadContent = ({
             </ChatShell.Content>
             <ChatShell.Dock
               data-testid={landingShown ? 'thread-landing' : undefined}
-              className={landingShown ? 'static flex flex-1 flex-col justify-center py-12 before:hidden' : undefined}
+              className={
+                landingShown
+                  ? 'static flex flex-1 flex-col justify-end pt-12 pb-[max(--spacing(12),30dvh)] before:hidden'
+                  : undefined
+              }
             >
-              {landingShown ? null : <ChatShell.ScrollButton />}
+              {landingShown ? null : <ChatShell.ScrollButton busy={isRunning} />}
               <ChatShell.Column className={landingShown ? 'gap-6 px-1 md:px-1' : 'gap-2 px-1 md:px-1'}>
                 {landingShown ? (
                   <>
-                    <ThreadWelcome agentName={agentName} />
+                    <ThreadWelcome agentName={agentName} avatarUrl={agentAvatarUrl} />
                     {agentId ? features.slots?.channelsCard?.(agentId) : null}
                   </>
                 ) : (
@@ -305,11 +312,11 @@ export const Thread = (props: ThreadProps) => (
   </ChatAnnotationsProvider>
 );
 
-const ThreadWelcome = ({ agentName }: { agentName?: string }) => {
+const ThreadWelcome = ({ agentName, avatarUrl }: { agentName?: string; avatarUrl?: string }) => {
   return (
     <div data-testid="thread-welcome" className="flex w-full flex-col items-center gap-4">
       <div className="starter-heading">
-        <Avatar name={agentName || 'Agent'} size="lg" />
+        <Avatar src={avatarUrl} name={agentName || 'Agent'} size="lg" />
       </div>
       <Txt
         as="h1"
@@ -532,17 +539,17 @@ const ComposerActionRow = ({
     <>
       <ComposerActionsStart>
         {canExecute && <AttachFileMenu />}
-        {runOptionsSlot}
+        <ComposerActionsDetail>{runOptionsSlot}</ComposerActionsDetail>
       </ComposerActionsStart>
       <ComposerActionsEnd>
         {showModelSwitcher && agentId && (
           <>
             {modelSwitcher}
-            {modelSettings?.(agentId)}
+            <ComposerActionsDetail>{modelSettings?.(agentId)}</ComposerActionsDetail>
           </>
         )}
         {canExecute && speechInput?.({ agentId, onTranscript: onSetText })}
-        {canExecute && agentId && voiceCallButton}
+        {canExecute && agentId && <ComposerActionsDetail>{voiceCallButton}</ComposerActionsDetail>}
         <ComposerSendButton
           canExecute={canExecute}
           isEmpty={isEmpty}

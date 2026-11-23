@@ -64,7 +64,7 @@ function CmsScorersEditForm({
   activeVersionId,
   onClearVersion,
 }: CmsScorersEditFormProps) {
-  const studioLocale = useLocale();
+  useLocale();
   const client = useMastraClient();
   const queryClient = useQueryClient();
   const { navigate, paths } = useLinkComponent();
@@ -129,7 +129,7 @@ function CmsScorersEditForm({
     } finally {
       setIsSavingDraft(false);
     }
-  }, [form, updateStoredScorer, studioLocale]);
+  }, [form, updateStoredScorer]);
 
   const handlePublish = useCallback(async () => {
     const isValid = await form.trigger();
@@ -165,7 +165,7 @@ function CmsScorersEditForm({
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, updateStoredScorer, client, scorerId, navigate, paths, queryClient, studioLocale]);
+  }, [form, updateStoredScorer, client, scorerId, navigate, paths, queryClient]);
 
   const handlePublishVersion = useCallback(async () => {
     if (isViewingPreviousVersion && selectedVersionId) {
@@ -189,17 +189,7 @@ function CmsScorersEditForm({
     } else {
       await handlePublish();
     }
-  }, [
-    handlePublish,
-    isViewingPreviousVersion,
-    selectedVersionId,
-    client,
-    scorerId,
-    queryClient,
-    navigate,
-    paths,
-    studioLocale,
-  ]);
+  }, [handlePublish, isViewingPreviousVersion, selectedVersionId, client, scorerId, queryClient, navigate, paths]);
 
   return (
     <AgentEditLayout
@@ -280,7 +270,7 @@ function CmsScorersEditPage() {
 
   if (isLoading) {
     return (
-      <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{scorerId}</h1>
         <AgentEditLayout leftSlot={<Spinner fill size="lg" />}>
           <Spinner fill size="lg" />
@@ -291,7 +281,7 @@ function CmsScorersEditPage() {
 
   if (!scorer || !scorerId) {
     return (
-      <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{scorerId}</h1>
         <AgentEditLayout leftSlot={<EmptyState variant="fill" titleSlot={studioT('Scorer not found')} />}>
           <EmptyState variant="fill" titleSlot={studioT('Scorer not found')} />
@@ -313,7 +303,7 @@ function CmsScorersEditPage() {
   );
 
   return (
-    <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />} headerActions={actions}>
+    <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />} headerActions={actions}>
       <h1 className="sr-only">{scorerId}</h1>
       <CmsScorersEditForm
         scorer={scorer}

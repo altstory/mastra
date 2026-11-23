@@ -13,7 +13,7 @@ const crumbs = [navCrumb('/intelligence')];
 export function SignalsOverviewPage() {
   useLocale();
   return (
-    <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+    <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
       <h1 className="sr-only">{studioT('Intelligence')}</h1>
       <TraceIntelligenceProvider cacheScope="oss-studio" LinkComponent={Link}>
         <SignalsOverviewContent />

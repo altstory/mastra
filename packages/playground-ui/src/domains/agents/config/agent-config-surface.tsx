@@ -1,11 +1,12 @@
-import { t as studioT } from '@/lib/i18n';
 import type { ReactNode } from 'react';
 import { ScrollArea, ScrollAreaViewport } from '../../../ds/components/ScrollArea';
 import { Txt } from '../../../ds/components/Txt';
 import { frameSurfaceStyle } from '../../../ds/primitives/raised-surface';
 import { cn } from '../../../utils/cn';
+import { t as studioT } from '@/lib/i18n';
 
-export function AgentConfigSurface({ children }: { children: ReactNode }) {
+/** The Config panel frame. The host owns close and collapse via `actions`. */
+export function AgentConfigSurface({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
   return (
     <div
       data-testid="agent-overview-panel"
@@ -15,6 +16,7 @@ export function AgentConfigSurface({ children }: { children: ReactNode }) {
         <Txt as="h2" variant="subheading" tone="ink">
           {studioT('Config')}
         </Txt>
+        {actions && <div className="ml-auto">{actions}</div>}
       </div>
       <ScrollArea className="min-h-0" mask={{ top: false }}>
         <ScrollAreaViewport className="h-full">{children}</ScrollAreaViewport>

@@ -1,10 +1,9 @@
 import { Metadata } from '@mastra/playground-ui/components/Metadata';
 import { Txt } from '@mastra/playground-ui/components/Txt';
-
+import { ExperimentStatusIcon } from '@mastra/playground-ui/domains/experiments/components/experiment-stats';
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { useDatasetExperiment, useExperiment } from '@mastra/react/hooks/datasets';
 import { useParams } from 'react-router';
-import { ExperimentStatusIcon } from '@/domains/experiments/components/experiment-stats';
 
 const useCurrentExperiment = () => {
   const { experimentId } = useParams<{ experimentId: string }>();

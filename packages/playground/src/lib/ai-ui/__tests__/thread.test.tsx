@@ -2,6 +2,7 @@ import { MastraClient } from '@mastra/client-js';
 import type { ListMemoryThreadMessagesResponse, StreamParams } from '@mastra/client-js';
 import type { MastraDBMessage } from '@mastra/core/agent/message-list';
 import type { TaskItem } from '@mastra/core/signals';
+import { ThreadInputProvider } from '@mastra/playground-ui/domains/agents/chat/drafts/ThreadInputContext';
 import { ChatMetricsProvider, ChatSessionStats, ChatPreferencesProvider } from '@mastra/playground-ui/domains/chat';
 import { createChatPreferencesStore } from '@mastra/playground-ui/domains/chat/preferences/chat-preferences';
 import { locale } from '@mastra/playground-ui/lib/i18n';
@@ -11,8 +12,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { http, HttpResponse } from 'msw';
 import type { ComponentProps, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ChatProvider } from '../chat/chat-provider';
 import { ConversationStats } from '../chat/conversation-stats';
 import { Thread } from '../thread';
@@ -42,7 +43,6 @@ import { WorkingMemoryProvider } from '@/domains/agents/context/agent-working-me
 import { BrowserSessionProvider } from '@/domains/agents/context/browser-session-provider';
 import { ThreadPreferencesProvider } from '@/domains/agents/context/thread-preferences-provider';
 import { StudioConfigContext } from '@/domains/configuration/context/studio-config-state';
-import { ThreadInputProvider } from '@/domains/conversation';
 import { server } from '@/test/msw-server';
 
 declare global {

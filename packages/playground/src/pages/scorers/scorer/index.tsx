@@ -35,6 +35,7 @@ const SCORES_SORT_KEYS: readonly ScoresSortKey[] = ['date', 'score'];
 
 export default function Scorer() {
   const studioLocale = useLocale();
+  const allEntitiesLabel = studioT('All Entities');
   const { scorerId } = useParams() as { scorerId: string };
   const [searchParams, setSearchParams] = useSearchParams();
   const scoreIdFromUrl = searchParams.get('scoreId') ?? undefined;
@@ -43,7 +44,7 @@ export default function Scorer() {
   const navigate = useNavigate();
   const [selectedEntityOption, setSelectedEntityOption] = useState<EntityOptions | undefined>({
     value: 'all',
-    label: studioT('All Entities'),
+    label: allEntitiesLabel,
     type: 'ALL' as const,
   });
 
@@ -94,8 +95,8 @@ export default function Scorer() {
   );
 
   const entityOptions: EntityOptions[] = useMemo(
-    () => [{ value: 'all', label: studioT('All Entities'), type: 'ALL' as const }, ...agentOptions, ...workflowOptions],
-    [agentOptions, workflowOptions, studioLocale],
+    () => [{ value: 'all', label: allEntitiesLabel, type: 'ALL' as const }, ...agentOptions, ...workflowOptions],
+    [agentOptions, workflowOptions, allEntitiesLabel],
   );
 
   // Sync URL entity to state (treat missing ?entity as 'all' so browser back/forward resets the filter)
@@ -224,6 +225,7 @@ export default function Scorer() {
 
     return (
       <PageLayout
+        variant="page"
         breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
         actionRow={
           !hasError && scorerActionsMenu ? (
@@ -252,6 +254,7 @@ export default function Scorer() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
       actionRow={
         <ActionRow>

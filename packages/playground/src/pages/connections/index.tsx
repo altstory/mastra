@@ -46,7 +46,7 @@ function docsLink(label: string) {
  * the resource key the studio session resolves to.
  */
 export default function ConnectionsPage() {
-  const studioLocale = useLocale();
+  useLocale();
   const surface = useConnectSurface();
   const connectionsQuery = useUserConnections({ enabled: surface.data?.status === 'ready' });
   const disconnect = useDisconnectUserConnection();
@@ -63,7 +63,7 @@ export default function ConnectionsPage() {
         },
       );
     },
-    [disconnectMutate, studioLocale],
+    [disconnectMutate],
   );
 
   const connections = useMemo(() => connectionsQuery.data ?? [], [connectionsQuery.data]);
@@ -135,8 +135,8 @@ export default function ConnectionsPage() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
-      variant="narrow"
       header={
         <PageHeader>
           <PageHeader.Title>{studioT('Connections')}</PageHeader.Title>

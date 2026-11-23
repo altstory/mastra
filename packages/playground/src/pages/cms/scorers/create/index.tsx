@@ -21,7 +21,7 @@ function CmsScorersCreatePage() {
   const { navigate, paths } = useLinkComponent();
 
   return (
-    <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+    <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
       <h1 className="sr-only">{studioT('Create scorer')}</h1>
       <ScorerCreateContent onSuccess={scorer => navigate(paths.scorerLink(scorer.id))} />
     </PageLayout>

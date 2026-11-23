@@ -2,11 +2,12 @@ import type { StorageThreadType } from '@mastra/core/memory';
 import { Button } from '@mastra/playground-ui/components/Button';
 import { EmptyState } from '@mastra/playground-ui/components/EmptyState';
 import { Skeleton } from '@mastra/playground-ui/components/Skeleton';
+import { SidebarPanel } from '@mastra/playground-ui/domains/agents/chat/sidebar-panel';
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { useMemory } from '@mastra/react/hooks/memory';
+import './memory-sidebar.css';
 import { ChatThreads } from '@/domains/agents/components/chat-threads';
-import { SidebarPanel } from '@/domains/agents/components/sidebar-panel';
 
 export interface MemorySidebarProps {
   agentId: string;

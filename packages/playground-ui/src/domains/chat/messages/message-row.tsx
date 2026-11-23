@@ -14,6 +14,8 @@ import { WorkDetailsBlock } from '../preferences/work-details-block';
 import { useWorkDetails } from '../preferences/work-details-state';
 import { AssistantMessageActions, DatasetSaveAction } from '@/domains/chat';
 import { ChatRunningContext, useChatRunning } from '@/domains/chat/context/chat-context';
+import { ChatInterface } from '@/domains/chat/messages/gen-ui/chat-interface';
+import { SPEC_PART_TYPE } from '@/domains/chat/messages/gen-ui/gen-ui-interface';
 import { AssistantTextPartRenderer } from '@/domains/chat/messages/renderers/assistant-text-part-renderer';
 import { DataPartRenderer } from '@/domains/chat/messages/renderers/data-part-renderer';
 import { messageTextKind } from '@/domains/chat/messages/renderers/message-text-kind';
@@ -246,11 +248,29 @@ export const MessageRow = memo(function MessageRow({
       Reasoning: part => (
         <ReasoningPartRenderer part={part} defaultOpen={reasoningDefaultOpen} showPreview={showReasoningPreview} />
       ),
-      Data: part => (
-        <Arriving>
-          <DataPartRenderer part={part} />
-        </Arriving>
-      ),
+      Data: part => {
+        if (part.type === SPEC_PART_TYPE) {
+          // An interface is built from all of the reply's spec parts, drawn where the first one sits.
+          const specParts = shownParts.filter(shown => shown.type === SPEC_PART_TYPE);
+          if (part !== specParts[0]) return null;
+          return (
+            <Arriving>
+              <ChatInterface
+                messageId={message.id}
+                parts={specParts}
+                chatRunning={running.isRunning}
+                revealing={revealing}
+                readOnly={readOnly}
+              />
+            </Arriving>
+          );
+        }
+        return (
+          <Arriving>
+            <DataPartRenderer part={part} />
+          </Arriving>
+        );
+      },
       ToolInvocation: renderTool,
       DynamicTool: renderTool,
       Error: (part: MastraErrorPart) => (
@@ -270,6 +290,10 @@ export const MessageRow = memo(function MessageRow({
     renderToolCard,
     incompleteLabel,
     errorLabel,
+    shownParts,
+    message.id,
+    running.isRunning,
+    revealing,
   ]);
 
   const userRenderers = useMemo<MessageRenderers>(

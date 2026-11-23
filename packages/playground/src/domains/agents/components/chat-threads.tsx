@@ -13,13 +13,16 @@ import {
 } from '@mastra/playground-ui/components/ThreadList';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@mastra/playground-ui/components/Tooltip';
 import { Txt } from '@mastra/playground-ui/components/Txt';
+import { useThreadsPanel } from '@mastra/playground-ui/domains/agents/chat';
+import { ThreadActionsMenu } from '@mastra/playground-ui/domains/agents/chat/thread-actions-menu';
+import { useCollapsedThreadSections } from '@mastra/playground-ui/domains/agents/chat/use-collapsed-thread-sections';
 import { useIsMobile } from '@mastra/playground-ui/hooks/use-is-mobile';
+
 import { IconPlusMedium } from '@mastra/playground-ui/icons/central/IconPlusMedium';
+
 import { Icon } from '@mastra/playground-ui/icons/Icon';
 import { useLinkComponent } from '@mastra/playground-ui/lib/framework';
-
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
-
 import { Trans } from '@mastra/playground-ui/lib/i18n/trans';
 import { PanelEdgeIcon } from '@mastra/playground-ui/resize/panel-edge-icon';
 import { panelIconButtonClass } from '@mastra/playground-ui/resize/panel-icon-button';
@@ -27,11 +30,8 @@ import { cn } from '@mastra/playground-ui/utils/cn';
 import { formatDate } from '@mastra/playground-ui/utils/date-format';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useThreadsPanel } from '../context/use-threads-panel';
-import { useCollapsedThreadSections } from '../hooks/use-collapsed-thread-sections';
 import { usePinnedThreads } from '../hooks/use-pinned-threads';
 import { RenameThreadDialog } from './rename-thread-dialog';
-import { ThreadActionsMenu } from './thread-actions-menu';
 import { usePermissions } from '@/domains/auth/hooks/use-permissions';
 
 export interface ChatThreadsProps {

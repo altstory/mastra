@@ -11,7 +11,7 @@ import { useDatasetExperimentsQueries } from '@mastra/react/hooks/datasets';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { ExperimentIdLink } from './experiment-id-link';
-import { ExperimentsComparison } from '@/domains/experiments/components/comparison/experiments-comparison';
+import { StudioExperimentsComparison } from '@/domains/experiments/components/comparison/studio-experiments-comparison';
 
 function ExperimentIdLinks({ experimentIds }: { experimentIds: string[] }) {
   useLocale();
@@ -121,7 +121,7 @@ export function CompareExperimentsContent({
         <Txt as="h1" variant="heading" className="sr-only">
           {studioT('Experiments comparison')}
         </Txt>
-        <ExperimentsComparison
+        <StudioExperimentsComparison
           datasetId={datasetId}
           baselineId={baselineId}
           contenderIds={contenderIds}

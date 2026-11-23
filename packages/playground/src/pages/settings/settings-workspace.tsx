@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { SettingsSidebar } from './settings-sidebar';
 import { SidebarShortcuts } from '@/domains/navigation/components/sidebar-shortcuts';
 
-export function SettingsWorkspace({ children }: { children: ReactNode }) {
+export function SettingsWorkspace({ children, title }: { children: ReactNode; title?: ReactNode }) {
   useLocale();
   const { Link } = useLinkComponent();
   return (
@@ -27,7 +27,9 @@ export function SettingsWorkspace({ children }: { children: ReactNode }) {
           </header>
         }
       >
-        <PageLayout>{children}</PageLayout>
+        <PageLayout variant="settings" title={title}>
+          {children}
+        </PageLayout>
       </AppShell>
     </Sidebar.Provider>
   );

@@ -36,7 +36,7 @@ export default function Tools() {
 
   if (error && is401UnauthorizedError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Tools')}</h1>
         <SessionExpired variant="fill" />
       </PageLayout>
@@ -45,7 +45,7 @@ export default function Tools() {
 
   if (error && is403ForbiddenError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Tools')}</h1>
         <PermissionDenied variant="fill" resource="tools" />
       </PageLayout>
@@ -54,7 +54,7 @@ export default function Tools() {
 
   if (error) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Tools')}</h1>
         <EmptyState
           tone="error"
@@ -68,7 +68,7 @@ export default function Tools() {
 
   if (Object.keys(tools).length === 0 && !catalog.data?.length && !isLoading) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Tools')}</h1>
         <NoToolsInfo />
       </PageLayout>
@@ -77,6 +77,7 @@ export default function Tools() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
       actionRow={
         <ActionRow>

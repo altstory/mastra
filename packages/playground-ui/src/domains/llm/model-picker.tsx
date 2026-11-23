@@ -87,7 +87,9 @@ export function ModelPicker({
   const triggerProps = {
     type: 'button' as const,
     disabled: busy,
-    'aria-label': ariaLabel,
+    'aria-label':
+      ariaLabel ??
+      (!children && value?.model ? studioT('Model: {value0}', { value0: formatModelName(value.model) }) : undefined),
     'aria-busy': busy,
   };
   const triggerClass = cn('max-w-full min-w-0 gap-1.5', triggerClassName);
@@ -97,12 +99,16 @@ export function ModelPicker({
         <>
           <span className="sr-only">{studioT('Model:') + ' '}</span>
           {value?.provider ? <span className="flex shrink-0">{renderProviderIcon(value.provider)}</span> : null}
-          <span className="truncate max-sm:max-w-28">
+          <span className="truncate max-sm:max-w-28" data-composer-line-hidden={value?.provider ? true : undefined}>
             {value?.model ? formatModelName(value.model) : studioT('Select model')}
           </span>
         </>
       )}
-      <IconChevronDownMedium aria-hidden className="size-icon-xs shrink-0" />
+      <IconChevronDownMedium
+        aria-hidden
+        className="size-icon-xs shrink-0"
+        data-composer-line-hidden={children || value?.provider ? true : undefined}
+      />
     </>
   );
 

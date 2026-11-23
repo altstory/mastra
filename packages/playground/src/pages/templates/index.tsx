@@ -10,7 +10,6 @@ import { Link } from 'react-router';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
 import { TemplatesList } from '@/domains/templates/templates-list';
 import { TemplatesTools } from '@/domains/templates/templates-tools';
-import { cn } from '@/lib/utils';
 
 const crumbs = [
   {
@@ -76,7 +75,7 @@ export default function Templates() {
   const isFiltered = searchTerm || selectedTag !== 'all' || selectedProvider !== 'all';
 
   return (
-    <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+    <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
       <h1 className="sr-only">{studioT('Templates')}</h1>
       <Header>
         <HeaderTitle>
@@ -86,28 +85,19 @@ export default function Templates() {
           {studioT('Templates')}
         </HeaderTitle>
       </Header>
-
-      <div className={cn('z-10 h-full w-full overflow-y-auto px-5 pb-12')}>
-        <TemplatesTools
-          selectedTag={selectedTag}
-          onTagChange={value => handleFilterChange(value, 'tag')}
-          tagOptions={tagOptions}
-          selectedProvider={selectedProvider}
-          onProviderChange={value => handleFilterChange(value, 'provider')}
-          providerOptions={providerOptions}
-          searchTerm={searchTerm}
-          onSearchChange={handleSearch}
-          onReset={isFiltered ? handleReset : undefined}
-          className="max-w-[80rem]"
-          isLoading={isLoading}
-        />
-        <TemplatesList
-          templates={filteredTemplates}
-          linkComponent={Link}
-          className="mx-auto max-w-[80rem]"
-          isLoading={isLoading}
-        />
-      </div>
+      <TemplatesTools
+        selectedTag={selectedTag}
+        onTagChange={value => handleFilterChange(value, 'tag')}
+        tagOptions={tagOptions}
+        selectedProvider={selectedProvider}
+        onProviderChange={value => handleFilterChange(value, 'provider')}
+        providerOptions={providerOptions}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearch}
+        onReset={isFiltered ? handleReset : undefined}
+        isLoading={isLoading}
+      />
+      <TemplatesList templates={filteredTemplates} linkComponent={Link} isLoading={isLoading} />
     </PageLayout>
   );
 }

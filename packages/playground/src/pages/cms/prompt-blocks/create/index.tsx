@@ -21,7 +21,7 @@ function CmsPromptBlocksCreatePage() {
   const { navigate, paths } = useLinkComponent();
 
   return (
-    <PageLayout variant="fit" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+    <PageLayout variant="page" body="fixed" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
       <h1 className="sr-only">{studioT('Create prompt block')}</h1>
       <PromptBlockCreateContent onSuccess={block => navigate(paths.cmsPromptBlockEditLink(block.id))} />
     </PageLayout>

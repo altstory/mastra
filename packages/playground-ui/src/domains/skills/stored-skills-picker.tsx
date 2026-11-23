@@ -1,8 +1,9 @@
-import { t as studioT } from '@/lib/i18n';
 import { Button } from '@/ds/components/Button';
 import { Checkbox } from '@/ds/components/Checkbox';
 import { Field, FieldLabel } from '@/ds/components/Field';
 import { Txt } from '@/ds/components/Txt';
+import { IconPencil } from '@/ds/icons/central/IconPencil';
+import { t as studioT } from '@/lib/i18n';
 
 export interface StoredSkillsPickerSkill {
   id: string;
@@ -18,6 +19,8 @@ export interface StoredSkillsPickerProps {
   onAttach: (skillId: string) => void;
   onRemove: (skillId: string) => void;
   onCreate?: () => void;
+  /** Offers an edit action on each skill. The host owns the editor. */
+  onEdit?: (skillId: string) => void;
 }
 
 export function StoredSkillsPicker({
@@ -28,6 +31,7 @@ export function StoredSkillsPicker({
   onAttach,
   onRemove,
   onCreate,
+  onEdit,
 }: StoredSkillsPickerProps) {
   const selected = new Set(selectedSkillIds);
 
@@ -53,9 +57,9 @@ export function StoredSkillsPicker({
       ) : (
         <ul className="flex flex-col">
           {availableSkills.map(skill => (
-            <li key={skill.id}>
-              <Field disabled={disabled}>
-                <FieldLabel className="flex shrink items-start gap-3 p-4 hover:bg-fill-subtle">
+            <li key={skill.id} className="flex items-start hover:bg-fill-subtle">
+              <Field disabled={disabled} className="min-w-0 flex-1">
+                <FieldLabel className="flex shrink items-start gap-3 p-4">
                   <span className="mt-0.5 flex">
                     <Checkbox
                       checked={selected.has(skill.id)}
@@ -74,6 +78,20 @@ export function StoredSkillsPicker({
                   </span>
                 </FieldLabel>
               </Field>
+              {onEdit && (
+                <span className="p-3">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    tooltip={studioT('Edit {value0}', { value0: skill.name })}
+                    aria-label={studioT('Edit {value0}', { value0: skill.name })}
+                    disabled={disabled}
+                    onClick={() => onEdit(skill.id)}
+                  >
+                    <IconPencil />
+                  </Button>
+                </span>
+              )}
             </li>
           ))}
         </ul>

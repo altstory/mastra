@@ -1,7 +1,7 @@
 import { Txt } from '@mastra/playground-ui/components/Txt';
-import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
+import { SidebarPanel } from '@mastra/playground-ui/domains/agents/chat/sidebar-panel';
 
-import { SidebarPanel } from '../sidebar-panel';
+import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { AgentPlaygroundConfig } from './agent-playground-config';
 import { AgentPlaygroundVersionBar } from './agent-playground-version-bar';
 

@@ -30,6 +30,7 @@ import {
 } from '@mastra/playground-ui/components/ThreadRail';
 import type { ThreadRailTurn } from '@mastra/playground-ui/components/ThreadRail';
 import { Txt } from '@mastra/playground-ui/components/Txt';
+import { ChatMessagesLoadingSkeleton } from '@mastra/playground-ui/domains/agents/chat/agent-loading-skeletons';
 import {
   ChatMetricsProvider,
   SaveFullConversationAction,
@@ -42,13 +43,13 @@ import { MessageRow } from '@mastra/playground-ui/domains/chat/messages/message-
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { IconArrowUp } from '@mastra/playground-ui/icons/central/IconArrowUp';
 import { IconMicrophone } from '@mastra/playground-ui/icons/central/IconMicrophone';
-import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 
+import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { quietTextHover } from '@mastra/playground-ui/primitives/typography';
 import { useSpeechRecognition } from '@mastra/react';
 import { useReadAloud } from '@mastra/react/hooks/voice';
-import type { MessageFactoryPart } from '@mastra/react/ui';
 
+import type { MessageFactoryPart } from '@mastra/react/ui';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -67,10 +68,9 @@ import { TaskPanel } from './task-panel';
 import type { StoredFileReference } from '@/domains/account/storage-api';
 import { BrowserThumbnail, useBrowserSession } from '@/domains/agents';
 import { AgentChannelsCard } from '@/domains/agents/components/agent-channels/agent-channels-card';
-import { ChatMessagesLoadingSkeleton } from '@/domains/agents/components/agent-loading-skeletons';
 import { ComposerModelSwitcher, ComposerModelWarning } from '@/domains/agents/components/composer-model-switcher';
 import { usePermissions } from '@/domains/auth/hooks/use-permissions';
-import { useThreadInput } from '@/domains/conversation';
+import { useThreadInput } from '@/domains/conversation/context/useThreadInput';
 import {
   ComposerFileReferenceList,
   FileReferenceSuggestions,

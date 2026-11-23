@@ -1,6 +1,6 @@
-import type { MemoryConfigInternal } from '@mastra/core/memory';
 import type { MastraDBMessage } from '@mastra/core/agent/message-list';
 import { RequestContext } from '@mastra/core/di';
+import type { MemoryConfigInternal } from '@mastra/core/memory';
 import { useMastraClient } from '@mastra/react';
 import {
   memoryStatusQueryKey,
@@ -104,9 +104,9 @@ interface UseChatSendHandlerArgs {
   signalTimelineRefresh: () => void;
 }
 
-const buildRequestContext = (deps: SendDeps) => {
+const buildRequestContext = (deps: SendDeps, turnContext?: Record<string, unknown>) => {
   const requestContextInstance = new RequestContext();
-  Object.entries(deps.requestContext ?? {}).forEach(([key, value]) => {
+  Object.entries({ ...deps.requestContext, ...turnContext }).forEach(([key, value]) => {
     requestContextInstance.set(key, value);
   });
   if (deps.agentVersionId) {
@@ -129,8 +129,8 @@ const mayHaveBeenStored = (error: unknown) => {
 const didUpdateWorkingMemory = (chunk: any) => {
   const result = chunk.payload?.result;
   return (
-  (chunk.type === 'tool-result' || chunk.type === 'tool-execution-end') &&
-  chunk.payload?.toolName === 'updateWorkingMemory' &&
+    (chunk.type === 'tool-result' || chunk.type === 'tool-execution-end') &&
+    chunk.payload?.toolName === 'updateWorkingMemory' &&
     typeof result === 'object' &&
     result !== null &&
     'success' in result &&
@@ -283,14 +283,19 @@ export const useChatSendHandler = ({
   );
 
   const send = useCallback(
-    async ({ message, attachments = [], deliveryMode }: ChatSendArgs): Promise<boolean> => {
+    async ({
+      message,
+      attachments = [],
+      deliveryMode,
+      requestContext: turnContext,
+    }: ChatSendArgs): Promise<boolean> => {
       const deps = sendDepsRef.current;
       if (threadSignalsUnsupportedRef.current && (isRunningStream || abortControllerRef.current)) return false;
 
       setStreamErrors([]);
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const requestContextInstance = buildRequestContext(deps);
+      const requestContextInstance = buildRequestContext(deps, turnContext);
       const heldContext = new Map(modelContextRef.current);
       modelContextRef.current.clear();
       // MCP App context is third-party content: it goes in the user turn as delimited data, never in the system prompt.

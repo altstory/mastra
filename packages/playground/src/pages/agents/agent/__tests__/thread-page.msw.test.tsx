@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { Sidebar } from '@mastra/playground-ui/components/Sidebar';
+import { readThreadDraft } from '@mastra/playground-ui/domains/agents/chat/drafts/thread-draft-storage';
 import { LinkComponentProvider } from '@mastra/playground-ui/lib/framework';
 import { MastraReactProvider } from '@mastra/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,8 +11,8 @@ import { http, HttpResponse } from 'msw';
 import { createContext, useContext, useEffect, useImperativeHandle, useState } from 'react';
 import type { ReactNode, Ref } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AgentSession from '../session';
 import AgentThread from '../thread';
 import {
@@ -33,9 +34,8 @@ import {
 import { emptyHistory, liveChunks, staleHistory } from './fixtures/thread-recovery';
 import { generatedTitleChunk, titleMemoryConfig } from './fixtures/thread-title';
 import { emptyThreadTracesList } from './fixtures/thread-traces';
-import { AgentLayout } from '@/domains/agents/agent-layout';
-import { readThreadDraft } from '@/domains/conversation/context/thread-draft-storage';
 import { installPreferenceFixture } from '@/domains/account/__tests__/fixtures/preferences';
+import { AgentLayout } from '@/domains/agents/agent-layout';
 import { installOrganizationFixture } from '@/domains/navigation/__tests__/fixtures/conversation-projects';
 import { SidebarConversations } from '@/domains/navigation/components/sidebar-conversations';
 import { agentIndexLoader, agentThreadsIndexLoader, legacyAgentChatLoader, paths } from '@/lib/app-routing';
@@ -888,13 +888,11 @@ describe('Standalone thread page', () => {
           await screen.findByRole('button', { name: 'Preview leads.csv' }, ATTACHMENT_TIMEOUT);
           const originalRead = FileReader.prototype.readAsText;
           let finishReading = () => {};
-          const reader = vi.spyOn(FileReader.prototype, 'readAsText').mockImplementationOnce(function (
-            this: FileReader,
-            file,
-            encoding,
-          ) {
-            finishReading = () => originalRead.call(this, file, encoding);
-          });
+          const reader = vi
+            .spyOn(FileReader.prototype, 'readAsText')
+            .mockImplementationOnce(function (this: FileReader, file, encoding) {
+              finishReading = () => originalRead.call(this, file, encoding);
+            });
           fireEvent.keyDown(input, { key: 'Enter' });
           if (editWhilePreparing) {
             fireEvent.change(input, { target: { value: 'Keep the next question' } });

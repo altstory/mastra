@@ -1,23 +1,22 @@
 import type { DatasetExperiment } from '@mastra/client-js';
 import { FilterBar } from '@mastra/playground-ui/components/FilterBar';
 import type { FilterBarField, FilterBarItem, FilterBarOperator } from '@mastra/playground-ui/components/FilterBar';
-import { IconCircleCheck } from '@mastra/playground-ui/icons/central/IconCircleCheck';
-import { IconLab } from '@mastra/playground-ui/icons/central/IconLab';
-import { IconTag } from '@mastra/playground-ui/icons/central/IconTag';
-
-import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
-import { hueAccentColor } from '@mastra/playground-ui/utils/colors';
-import { useMemo } from 'react';
-import type { ReviewListStatus } from './dataset-review';
-import { getExperimentDisplayName } from '@/domains/experiments/utils/experiment-display-name';
 import {
   filterBarItem,
   getFilterBarItemValue,
   targetFromItems,
   targetToItems,
   useTargetFilterFields,
-} from '@/domains/shared/hooks/use-target-filter-fields';
-import type { TargetFilterValue } from '@/domains/shared/hooks/use-target-filter-fields';
+} from '@mastra/playground-ui/domains/datasets';
+import type { TargetFilterValue } from '@mastra/playground-ui/domains/datasets';
+import { getExperimentDisplayName } from '@mastra/playground-ui/domains/experiments/utils/experiment-display-name';
+import { IconCircleCheck } from '@mastra/playground-ui/icons/central/IconCircleCheck';
+import { IconLab } from '@mastra/playground-ui/icons/central/IconLab';
+import { IconTag } from '@mastra/playground-ui/icons/central/IconTag';
+import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
+import { hueAccentColor } from '@mastra/playground-ui/utils/colors';
+import { useMemo } from 'react';
+import type { ReviewListStatus } from './dataset-review';
 
 export const EXPERIMENT_FIELD_ID = 'experiment';
 export const STATUS_FIELD_ID = 'status';
@@ -91,16 +90,19 @@ export function ReviewQueueFilterBar({
   tagOptions,
   onChange,
 }: ReviewQueueFilterBarProps) {
-  const studioLocale = useLocale();
+  useLocale();
   const targetFields = useTargetFilterFields(targetType);
 
   // Same hues as the matching trace filter fields so a "Tag" or "Experiment" chip reads alike across pages.
+  const experimentLabel = studioT('Experiment');
+  const statusLabel = studioT('Status');
+  const tagLabel = studioT('Tag');
   const fields = useMemo<FilterBarField[]>(
     () => [
       ...targetFields,
       {
         id: EXPERIMENT_FIELD_ID,
-        label: studioT('Experiment'),
+        label: experimentLabel,
         icon: IconLab,
         color: hueAccentColor('pink'),
         strict: true,
@@ -111,7 +113,7 @@ export function ReviewQueueFilterBar({
       },
       {
         id: STATUS_FIELD_ID,
-        label: studioT('Status'),
+        label: statusLabel,
         icon: IconCircleCheck,
         color: hueAccentColor('orange'),
         strict: true,
@@ -119,7 +121,7 @@ export function ReviewQueueFilterBar({
       },
       {
         id: TAG_FIELD_ID,
-        label: studioT('Tag'),
+        label: tagLabel,
         icon: IconTag,
         color: hueAccentColor('pink'),
         strict: true,
@@ -128,7 +130,7 @@ export function ReviewQueueFilterBar({
         suggestions: tagOptions,
       },
     ],
-    [targetFields, experiments, tagOptions, studioLocale],
+    [targetFields, experiments, tagOptions, experimentLabel, statusLabel, tagLabel],
   );
 
   const value = useMemo(

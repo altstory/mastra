@@ -1,4 +1,5 @@
 import type { MastraDBMessage } from '@mastra/core/agent/message-list';
+import { ThreadInputProvider } from '@mastra/playground-ui/domains/agents/chat/drafts/ThreadInputContext';
 import { MastraReactProvider } from '@mastra/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -6,13 +7,12 @@ import { http, HttpResponse } from 'msw';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentChat } from '../agent-chat';
 import { AgentSettingsProvider } from '@/domains/agents/context/agent-context';
 import { WorkingMemoryProvider } from '@/domains/agents/context/agent-working-memory-context';
 import { BrowserSessionProvider } from '@/domains/agents/context/browser-session-provider';
-import { ThreadInputProvider } from '@/domains/conversation';
 import { emptyMcpServers, memoryDisabled, v2Agent } from '@/lib/ai-ui/__tests__/fixtures/agent';
 import { server } from '@/test/msw-server';
 

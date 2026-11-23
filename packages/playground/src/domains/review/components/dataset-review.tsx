@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@mastra/playground-ui/components/Spinner';
 import { Textarea } from '@mastra/playground-ui/components/Textarea';
 import { Txt } from '@mastra/playground-ui/components/Txt';
+import { ExperimentResultsList } from '@mastra/playground-ui/domains/experiments/components/experiment-results-list';
 import { IconCircleCheck } from '@mastra/playground-ui/icons/central/IconCircleCheck';
 import { IconCrossMedium } from '@mastra/playground-ui/icons/central/IconCrossMedium';
 import { IconDotGrid1x3Horizontal } from '@mastra/playground-ui/icons/central/IconDotGrid1x3Horizontal';
@@ -40,8 +41,7 @@ import { useInfiniteCompletedItems, useInfiniteReviewItems } from '@mastra/react
 import type { ReactNode } from 'react';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ProposalTag } from './proposal-tag';
-import { ExperimentResultDetail } from '@/domains/experiments/components/experiment-result-detail';
-import { ExperimentResultsList } from '@/domains/experiments/components/experiment-results-list';
+import { StudioExperimentResultDetail } from '@/domains/experiments/components/studio-experiment-result-detail';
 import { LLMProviders, LLMModels } from '@/domains/llm';
 import { BulkTagPicker } from '@/domains/shared/components/bulk-tag-picker';
 
@@ -158,7 +158,7 @@ export function DatasetReview({
   breadcrumbs,
   withFeedback,
 }: DatasetReviewProps) {
-  const studioLocale = useLocale();
+  useLocale();
   const client = useMastraClient();
   const { paths } = useLinkComponent();
   const { data: dataset } = useDataset({ datasetId: datasetId ?? '', queryOptions: { enabled: Boolean(datasetId) } });
@@ -220,6 +220,8 @@ export function DatasetReview({
     return items.filter(i => i.tags.includes(activeTagFilter));
   }, [items, activeTagFilter]);
 
+  const allTagsLabel = studioT('All tags');
+  const untaggedLabel = studioT('Untagged');
   const tagOptions = useMemo(() => {
     const counts = new Map<string, number>();
     let untagged = 0;
@@ -231,11 +233,11 @@ export function DatasetReview({
     }
     const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => ({ value: tag, label: tag }));
     return [
-      { value: ALL_TAGS, label: studioT('All tags') },
-      ...(untagged > 0 ? [{ value: UNTAGGED, label: studioT('Untagged') }] : []),
+      { value: ALL_TAGS, label: allTagsLabel },
+      ...(untagged > 0 ? [{ value: UNTAGGED, label: untaggedLabel }] : []),
       ...sorted,
     ];
-  }, [items, studioLocale]);
+  }, [items, allTagsLabel, untaggedLabel]);
 
   const hasActiveFilters = Boolean(activeTagFilter) || showCompleted;
 
@@ -584,7 +586,7 @@ export function DatasetReview({
 
   if (isLoadingReview) {
     return (
-      <PageLayout breadcrumbs={breadcrumbs} actionRow={toolbar}>
+      <PageLayout variant="page" breadcrumbs={breadcrumbs} actionRow={toolbar}>
         <h1 className="sr-only">{studioT('Review Queue')}</h1>
         <Spinner fill />
       </PageLayout>
@@ -592,7 +594,7 @@ export function DatasetReview({
   }
 
   const detailPanel = (
-    <ExperimentResultDetail
+    <StudioExperimentResultDetail
       withFeedback={withFeedback}
       result={featuredItem ?? undefined}
       title={studioT('Review item {value0}', { value0: featuredItem?.id ?? '' })}
@@ -610,7 +612,7 @@ export function DatasetReview({
   );
 
   return (
-    <PageLayout breadcrumbs={breadcrumbs} actionRow={toolbar}>
+    <PageLayout variant="page" breadcrumbs={breadcrumbs} actionRow={toolbar}>
       <h1 className="sr-only">{studioT('Review Queue')}</h1>
       <Dialog open={showAnalyzeDialog} onOpenChange={setShowAnalyzeDialog}>
         <DialogContent>

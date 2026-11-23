@@ -98,7 +98,8 @@ export const AgentLayout = ({
 
         <AgentConfigPanel agentId={agentId!} disabled={mode === 'conversation' || activeTab === 'versions'}>
           <PageLayout
-            variant="fit"
+            variant="page"
+            body="fixed"
             breadcrumbs={mode === 'management' ? <PageBreadcrumbs crumbs={crumbs} /> : undefined}
             headerActions={
               mode === 'management' ? (

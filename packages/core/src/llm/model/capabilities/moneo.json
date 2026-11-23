@@ -33,19 +33,10 @@
         "type": "toggle"
       }
     ],
-    "deepseek-v4-1-flash-1017-uncensored": [
-      {
-        "type": "toggle"
-      },
+    "gpt-5-6-luna": [
       {
         "type": "effort",
-        "values": ["low", "high", "max"]
-      }
-    ],
-    "z-ai-glm-5-3-flash": [
-      {
-        "type": "effort",
-        "values": ["low", "high", "max"]
+        "values": ["none", "low", "medium", "high", "xhigh", "max"]
       }
     ],
     "deepseek-v4-flash:web": [
@@ -62,10 +53,19 @@
         "type": "toggle"
       }
     ],
-    "gpt-5-6-luna": [
+    "deepseek-v4-1-flash-1017-uncensored": [
+      {
+        "type": "toggle"
+      },
       {
         "type": "effort",
-        "values": ["none", "low", "medium", "high", "xhigh", "max"]
+        "values": ["low", "high", "max"]
+      }
+    ],
+    "z-ai-glm-5-3-flash": [
+      {
+        "type": "effort",
+        "values": ["low", "high", "max"]
       }
     ]
   }

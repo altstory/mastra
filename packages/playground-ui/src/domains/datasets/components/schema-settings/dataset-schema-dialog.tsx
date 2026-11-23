@@ -1,0 +1,159 @@
+import type { DatasetRecord } from '@mastra/client-js';
+import { useDatasetMutations } from '@mastra/react/hooks/datasets';
+import { Controller, useForm } from 'react-hook-form';
+import { SchemaEditorPane } from './schema-editor-pane';
+import {
+  Dialog,
+  DialogAction,
+  DialogBody,
+  DialogCancel,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/ds/components/Dialog';
+import { Notice } from '@/ds/components/Notice';
+import { Tab, TabContent, TabList, Tabs } from '@/ds/components/Tabs';
+import { t as studioT, useLocale } from '@/lib/i18n';
+import { toast } from '@/utils/toast';
+
+export interface DatasetSchemaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  dataset: DatasetRecord;
+}
+
+type SchemaKey = 'inputSchema' | 'groundTruthSchema' | 'requestContextSchema';
+type SchemaValue = Record<string, unknown> | null;
+type DatasetSchemaFormValues = Record<SchemaKey, SchemaValue>;
+
+const SCHEMA_TABS = [
+  { key: 'inputSchema', label: studioT('Input') },
+  { key: 'groundTruthSchema', label: studioT('Ground truth') },
+  { key: 'requestContextSchema', label: studioT('Request context') },
+] as const satisfies ReadonlyArray<{ key: SchemaKey; label: string }>;
+
+export function DatasetSchemaDialog({ open, onOpenChange, dataset }: DatasetSchemaDialogProps) {
+  useLocale();
+  const { updateDataset } = useDatasetMutations();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} pending={updateDataset.isPending}>
+      <DialogContent size="full">
+        <DialogHeader>
+          <DialogTitle>{studioT('Dataset schema')}</DialogTitle>
+          <DialogDescription>
+            {studioT('JSON Schemas validate the items of this dataset. Leave a schema empty to skip validation.')}
+          </DialogDescription>
+        </DialogHeader>
+        {/* Mounted only while open, so every opening starts from the dataset's current schemas. */}
+        <DatasetSchemaForm dataset={dataset} updateDataset={updateDataset} onSaved={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DatasetSchemaFormProps {
+  dataset: DatasetRecord;
+  updateDataset: ReturnType<typeof useDatasetMutations>['updateDataset'];
+  onSaved: () => void;
+}
+
+function getFailingItemsCount(error: unknown): number {
+  const failingItems = (error as { body?: { cause?: { failingItems?: unknown } } })?.body?.cause?.failingItems;
+  return Array.isArray(failingItems) ? failingItems.length : 0;
+}
+
+function DatasetSchemaForm({ dataset, updateDataset, onSaved }: DatasetSchemaFormProps) {
+  useLocale();
+  const {
+    control,
+    handleSubmit,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<DatasetSchemaFormValues>({
+    defaultValues: {
+      inputSchema: dataset.inputSchema ?? null,
+      groundTruthSchema: dataset.groundTruthSchema ?? null,
+      requestContextSchema: dataset.requestContextSchema ?? null,
+    },
+  });
+  const hasInvalidSchema = SCHEMA_TABS.some(({ key }) => errors[key]);
+
+  const setValidity = (key: SchemaKey, valid: boolean) => {
+    if (valid) clearErrors(key);
+    else setError(key, { type: 'invalid' });
+  };
+
+  const onSave = handleSubmit(async schemas => {
+    try {
+      await updateDataset.mutateAsync({ datasetId: dataset.id, ...schemas });
+      toast.success(studioT('Dataset schema saved'));
+      onSaved();
+    } catch (error) {
+      const failingCount = getFailingItemsCount(error);
+      if (failingCount > 0) {
+        setError('root.server', {
+          message: studioT('{value0} existing item(s) fail validation. Fix items or adjust schema.', {
+            value0: failingCount,
+          }),
+        });
+      } else {
+        toast.error(
+          studioT('Failed to save schema: {value0}', {
+            value0: error instanceof Error ? error.message : 'Unknown error',
+          }),
+        );
+      }
+    }
+  });
+
+  return (
+    <>
+      <DialogBody layout="fill">
+        <Tabs defaultTab={SCHEMA_TABS[0].key} className="flex min-h-0 flex-1 flex-col">
+          <TabList>
+            {SCHEMA_TABS.map(({ key, label }) => (
+              <Tab key={key} value={key}>
+                {label}
+              </Tab>
+            ))}
+          </TabList>
+          {SCHEMA_TABS.map(({ key, label }) => (
+            <TabContent key={key} value={key} keepMounted className="min-h-0 flex-1">
+              <Controller
+                control={control}
+                name={key}
+                render={({ field }) => (
+                  <SchemaEditorPane
+                    label={label}
+                    value={field.value}
+                    onChange={schema => {
+                      field.onChange(schema);
+                      clearErrors('root.server');
+                    }}
+                    onValidityChange={valid => setValidity(key, valid)}
+                  />
+                )}
+              />
+            </TabContent>
+          ))}
+        </Tabs>
+
+        {errors.root?.server ? (
+          <div role="alert">
+            <Notice variant="destructive">{errors.root.server.message}</Notice>
+          </div>
+        ) : null}
+      </DialogBody>
+      <DialogFooter>
+        <DialogCancel>{studioT('Cancel')}</DialogCancel>
+        <DialogAction onConfirm={onSave} disabled={hasInvalidSchema || updateDataset.isPending}>
+          {updateDataset.isPending ? studioT('Saving...') : studioT('Save schema')}
+        </DialogAction>
+      </DialogFooter>
+    </>
+  );
+}

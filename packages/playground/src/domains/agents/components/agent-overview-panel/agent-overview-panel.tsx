@@ -1,13 +1,14 @@
-import { t as studioT } from '@mastra/playground-ui/lib/i18n';
 import { Badge } from '@mastra/playground-ui/components/Badge';
 import { InlineCode } from '@mastra/playground-ui/components/InlineCode';
 import { Notice } from '@mastra/playground-ui/components/Notice';
 import { Skeleton } from '@mastra/playground-ui/components/Skeleton';
 import { Txt } from '@mastra/playground-ui/components/Txt';
 import { AgentConfigSurface } from '@mastra/playground-ui/domains/agents/config/agent-config-surface';
+import { AgentMemoryConfig } from '@mastra/playground-ui/domains/agents/config/agent-memory-config';
 import { AgentMetadataSection } from '@mastra/playground-ui/domains/agents/config/agent-metadata-section';
 import { AgentSystemPrompt } from '@mastra/playground-ui/domains/agents/config/agent-system-prompt';
 import { AgentMetadataWorkspaceToolsList } from '@mastra/playground-ui/domains/agents/config/agent-workspace-tools-list';
+import { extractPrompt } from '@mastra/playground-ui/domains/agents/extract-prompt';
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { AgentIcon } from '@mastra/playground-ui/icons/AgentIcon';
 import { IconBox2 } from '@mastra/playground-ui/icons/central/IconBox2';
@@ -20,6 +21,7 @@ import { IconMaintenance } from '@mastra/playground-ui/icons/central/IconMainten
 import { IconSignalTower } from '@mastra/playground-ui/icons/central/IconSignalTower';
 import { IconSparklesTwo } from '@mastra/playground-ui/icons/central/IconSparklesTwo';
 import { WorkflowIcon } from '@mastra/playground-ui/icons/WorkflowIcon';
+import { t as studioT } from '@mastra/playground-ui/lib/i18n';
 import { toast } from '@mastra/playground-ui/utils/toast';
 import {
   useAgent,
@@ -29,7 +31,6 @@ import {
 } from '@mastra/react/hooks/agents';
 import type { ComponentProps } from 'react';
 import { useWatch } from 'react-hook-form';
-import { extractPrompt } from '../../utils/extractPrompt';
 import { AgentChannels } from '../agent-channels/agent-channels';
 import {
   AgentMetadataBrowserToolsList,
@@ -41,7 +42,6 @@ import {
   AgentMetadataWorkflowList,
 } from '../agent-metadata/agent-metadata-lists';
 import { AgentMetadataModelList } from '../agent-metadata/agent-metadata-model-list';
-import { AgentMemoryConfig } from '../agent-settings/agent-memory-config';
 import type { AgentEditFormContextValue } from '@/domains/agents/context/agent-edit-form-context';
 import { useOptionalAgentEditFormContext } from '@/domains/agents/context/agent-edit-form-context';
 import { getEditorOwnership } from '@/domains/agents/utils/editor-ownership';

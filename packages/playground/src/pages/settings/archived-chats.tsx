@@ -1,7 +1,7 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { Txt } from '@mastra/playground-ui/components/Txt';
 import { t, useLocale } from '@mastra/playground-ui/lib/i18n';
-import { SettingsContainer, SettingsLayout } from '@mastra/playground-ui/new/settings';
+import { SettingsContainer } from '@mastra/playground-ui/new/settings';
 import { ArchivedChatRow } from './archived-chat-row';
 import { SettingsWorkspace } from './settings-workspace';
 import { usePermissions } from '@/domains/auth/hooks/use-permissions';
@@ -16,17 +16,15 @@ export function ArchivedChatsSettingsPage() {
   const scope = useConversationScope();
   const canRead = hasPermission('agents:read') && hasPermission('memory:read');
   return (
-    <SettingsWorkspace>
-      <SettingsLayout title={t('Archived chats')}>
-        <Txt tone="muted">{t('Restore archived chats or permanently delete them.')}</Txt>
-        {isLoading ? (
-          <Txt>{t('Loading...')}</Txt>
-        ) : canRead ? (
-          <ArchivedChatsList key={scope} scope={scope} />
-        ) : (
-          <Txt>{t('Permission Denied')}</Txt>
-        )}
-      </SettingsLayout>
+    <SettingsWorkspace title={t('Archived chats')}>
+      <Txt tone="muted">{t('Restore archived chats or permanently delete them.')}</Txt>
+      {isLoading ? (
+        <Txt>{t('Loading...')}</Txt>
+      ) : canRead ? (
+        <ArchivedChatsList key={scope} scope={scope} />
+      ) : (
+        <Txt>{t('Permission Denied')}</Txt>
+      )}
     </SettingsWorkspace>
   );
 }

@@ -4,7 +4,15 @@ import { PageLayout } from '@mastra/playground-ui/components/PageLayout';
 import { Txt } from '@mastra/playground-ui/components/Txt';
 import { PermissionDenied } from '@mastra/playground-ui/domains/auth/components/permission-denied';
 import { SessionExpired } from '@mastra/playground-ui/domains/auth/components/session-expired';
-
+import type { DatasetsFilters } from '@mastra/playground-ui/domains/datasets';
+import {
+  CreateDatasetDialog,
+  DatasetsList,
+  DatasetsListSkeleton,
+  getDatasetTagOptions,
+  NoDatasetsInfo,
+  DatasetsToolbar,
+} from '@mastra/playground-ui/domains/datasets';
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { useUrlSort } from '@mastra/playground-ui/sort/use-url-sort';
 import { is401UnauthorizedError, is403ForbiddenError } from '@mastra/playground-ui/utils/errors';
@@ -12,13 +20,6 @@ import { useInfiniteDatasets, useExperiments } from '@mastra/react/hooks/dataset
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { PageBreadcrumbs } from '@/components/ui/page-breadcrumbs';
-import { CreateDatasetDialog } from '@/domains/datasets/components/create-dataset-dialog';
-import type { DatasetsFilters } from '@/domains/datasets/components/datasets-filter-bar';
-import { DatasetsList } from '@/domains/datasets/components/datasets-list/datasets-list';
-import { DatasetsListSkeleton } from '@/domains/datasets/components/datasets-list/datasets-list-skeleton';
-import { getDatasetTagOptions } from '@/domains/datasets/components/datasets-list/helpers';
-import { NoDatasetsInfo } from '@/domains/datasets/components/datasets-list/no-datasets-info';
-import { DatasetsToolbar } from '@/domains/datasets/components/datasets-toolbar';
 import { navCrumb } from '@/domains/navigation/crumbs';
 import {
   TARGET_ID_PARAM,
@@ -98,7 +99,7 @@ export default function Datasets() {
 
   if (error && is401UnauthorizedError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Datasets')}</h1>
         <SessionExpired variant="fill" />
       </PageLayout>
@@ -107,7 +108,7 @@ export default function Datasets() {
 
   if (error && is403ForbiddenError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Datasets')}</h1>
         <PermissionDenied variant="fill" resource="datasets" />
       </PageLayout>
@@ -116,7 +117,7 @@ export default function Datasets() {
 
   if (error) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Datasets')}</h1>
         <EmptyState
           tone="error"
@@ -131,7 +132,7 @@ export default function Datasets() {
   // With a target filter active, keep the toolbar so the user can remove it.
   if (datasets.length === 0 && !isLoading && !targetType) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Datasets')}</h1>
         <NoDatasetsInfo onCreateClick={openCreateDialog} />
         {createDialog}
@@ -141,6 +142,7 @@ export default function Datasets() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
       headerActions={headerCreateAction}
       actionRow={

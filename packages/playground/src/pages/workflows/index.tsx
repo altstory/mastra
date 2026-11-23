@@ -28,7 +28,7 @@ function Workflows() {
 
   if (error && is401UnauthorizedError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Workflows')}</h1>
         <SessionExpired variant="fill" />
       </PageLayout>
@@ -37,7 +37,7 @@ function Workflows() {
 
   if (error && is403ForbiddenError(error)) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Workflows')}</h1>
         <PermissionDenied variant="fill" resource="workflows" />
       </PageLayout>
@@ -46,7 +46,7 @@ function Workflows() {
 
   if (error) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Workflows')}</h1>
         <EmptyState
           tone="error"
@@ -60,7 +60,7 @@ function Workflows() {
 
   if (Object.keys(workflows || {}).length === 0 && !isLoading) {
     return (
-      <PageLayout breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
+      <PageLayout variant="page" breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}>
         <h1 className="sr-only">{studioT('Workflows')}</h1>
         <NoWorkflowsInfo />
       </PageLayout>
@@ -69,6 +69,7 @@ function Workflows() {
 
   return (
     <PageLayout
+      variant="page"
       breadcrumbs={<PageBreadcrumbs crumbs={crumbs} />}
       actionRow={
         <ActionRow>
