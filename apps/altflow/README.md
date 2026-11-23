@@ -17,13 +17,12 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 构建依赖时逐包执行；不要从仓库根目录直接运行应用的 TypeScript 配置。
 
-1. 在 `apps/altflow/.env` 配置 `ALTFLOW_BACKEND_REPO` 和 `ALTFLOW_BACKEND_ENV_FILE`，指向含 `cmd/studio-auth` 的 Go 仓库及本地环境文件。
-2. 配置 `ALTFLOW_MODELHUB_API_KEY`；或用 `ALTFLOW_MODELHUB_ENV_FILE` 明确指定含 `LITELLM_MASTER_KEY` 的文件。启动器不会搜索其他目录的密钥。
-3. 配置服务端 `ALTFLOW_OSS_ACCESS_KEY_ID`、`ALTFLOW_OSS_ACCESS_KEY_SECRET`，以及 `.env.example` 中的 OSS 桶和区域。
-4. 分别运行 `pnpm --filter @internal/altflow dev:auth` 和 `pnpm --filter @internal/altflow start`，监听 `127.0.0.1:8080` 和 `127.0.0.1:4111`。`dev` 提供热重载，使用 DuckDB 时优先使用单进程 `start`。
-5. 运行 `pnpm --filter @internal/playground dev --port 5174`，将 `/api`、`/account`、`/storage`、`/conversation-projects`、`/account-preferences`、`/altflow` 代理到 4111。
+1. 在 `apps/altflow/.env` 配置 `ALTFLOW_BACKEND_URL`（Go 后端地址）和 `ALTFLOW_MODELHUB_API_KEY`。
+2. 配置服务端 `ALTFLOW_OSS_ACCESS_KEY_ID`、`ALTFLOW_OSS_ACCESS_KEY_SECRET`，以及 `.env.example` 中的 OSS 桶和区域。
+3. 运行 `pnpm --filter @internal/altflow start`，监听 `127.0.0.1:4111`。`dev` 提供热重载，使用 DuckDB 时优先使用单进程 `start`。
+4. 运行 `pnpm --filter @internal/playground dev --port 5174`，将 `/api`、`/account`、`/storage`、`/conversation-projects`、`/account-preferences`、`/altflow` 代理到 4111。
 
-Go 认证入口用于本地开发，不启动项目任务恢复或业务后台任务，不迁移数据库。正式部署让 `ALTFLOW_BACKEND_URL` 指向正式 Go 服务，配置 `STUDIO_ALLOWED_ORIGINS`，并使用 HTTPS 和持久化存储。
+正式部署配置 `STUDIO_ALLOWED_ORIGINS`，并使用 HTTPS 和持久化存储。
 
 ### 已有数据
 
@@ -68,9 +67,6 @@ ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_optio
 - `pnpm --filter @internal/altflow typecheck`：配置与适配器类型。
 - `pnpm --filter @internal/altflow test`：真实 AI SDK 通过本地 HTTP ModelHub 测试服务验证目录校验、模型路由、默认思考参数、刷新与故障缓存，以及真实 Agent + 临时 LibSQL 的压缩、恢复、工具配对、模型切换、取消和溢出重试；不调用付费模型。
 - 通用设置中的“繁忙时的发送行为”默认排队发送。Enter 和发送按钮遵循该选项，Cmd/Ctrl+Enter 使用另一行为；可切换为插话发送。普通用户的两种发送方式均由服务端检查会话归属。
-- 设置 `TEST_STUDIO_DATABASE_URL` 后运行 `pnpm --filter @internal/altflow verify`：真实 Go 密码验证、临时 Mastra 实例及独立账号，验证角色、跨用户隔离、私有知识、目录过滤、自动工具执行、繁忙时排队与插话、停用、角色变更和退出。
-- 测试库名必须以 `studio_auth_verify_` 开头，并预先人工准备与 Go 相同的 schema。测试不自动迁移，不使用正常业务库。
-- `TEST_STUDIO_LIVE_MODEL=1 pnpm --filter @internal/altflow verify` 使用真实 ModelHub 目录及模型，验证回复和消息保存，会产生模型费用。默认验证使用本地 HTTP 目录服务。
 
 ## 用户文件与 512 MB 配额
 
@@ -95,7 +91,7 @@ ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_optio
 
 ## 本地集成启动
 
-`pnpm --filter @internal/altflow start` 通过 `start-built.mjs` 编译后启动 4111 服务。它使用本仓库的 workspace 框架及工具包，不在输出目录重新安装公开包，以免覆盖本地框架实现。此入口没有热重载；修改运行代码后重新执行。Studio 开发入口仍为 5174，账号服务由 `pnpm --filter @internal/altflow dev:auth` 提供。
+`pnpm --filter @internal/altflow start` 通过 `start-built.mjs` 编译后启动 4111 服务。它使用本仓库的 workspace 框架及工具包，不在输出目录重新安装公开包，以免覆盖本地框架实现。此入口没有热重载；修改运行代码后重新执行。Studio 开发入口仍为 5174。
 
 部署时须携带本分支构建的框架依赖与根锁文件；公开 registry 中的同名包不能替代本分支实现。动态子智能体的契约、界面及验收边界见 [DSH-SUBAGENT-HANDOFF.md](./DSH-SUBAGENT-HANDOFF.md)。
 
