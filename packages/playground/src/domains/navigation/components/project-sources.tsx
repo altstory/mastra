@@ -78,7 +78,14 @@ export function ProjectSources({ project }: { project: ConversationProject }) {
       </Txt>
     );
   if (selected)
-    return <ConversationFilePreview key={selected.path} file={selected} onBack={() => setSelectedPath(undefined)} />;
+    return (
+      <ConversationFilePreview
+        key={selected.path}
+        file={selected}
+        scope={JSON.stringify([scope, 'project', project.id])}
+        onBack={() => setSelectedPath(undefined)}
+      />
+    );
   return (
     <div className="space-y-4 py-4">
       <Txt tone="muted">{t('Files attached or created in this project’s chats.')}</Txt>

@@ -49,7 +49,8 @@ function AgentThread() {
   const canPersistDraft = !!account || auth?.enabled === false || Boolean(signedIn);
   const draftScope = [client.options.baseUrl, client.options.apiPrefix, userId, agentId];
   const [searchParams] = useSearchParams();
-  const organization = useConversationProjects(useConversationScope());
+  const accountScope = useConversationScope();
+  const organization = useConversationProjects(accountScope);
   const selectedProjectId = projectId ?? (threadId === 'new' ? (searchParams.get('project') ?? undefined) : undefined);
   const project = organization.projects.find(project => project.id === selectedProjectId);
   const draftKey = JSON.stringify([
@@ -213,6 +214,7 @@ function AgentThread() {
                               project && isNewThread ? undefined : JSON.stringify([...draftScope, actualThreadId])
                             }
                             project={project}
+                            accountScope={accountScope}
                             agentId={agentId!}
                             agentName={agent?.name}
                             modelVersion={agent?.modelVersion}

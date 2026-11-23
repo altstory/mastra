@@ -100,16 +100,42 @@ describe('Conversation workspace', () => {
     expect(screen.getByText('Chat content')).toBeTruthy();
   });
 
-  it('restores each conversation panel separately across navigation', async () => {
+  it('restores the open preview and scroll position immediately after visiting another conversation', async () => {
     handlers();
+    const download = vi.fn(() => HttpResponse.text('# Generated draft'));
+    server.use(http.get(`${baseUrl}/storage/download`, download));
     const view = show();
     fireEvent.click(await screen.findByRole('button', { name: 'draft.md' }));
-    await screen.findByRole('heading', { name: 'Generated draft' });
+    const heading = await screen.findByRole('heading', { name: 'Generated draft' });
+    const preview = heading.closest('[data-slot="message-content"]')!.parentElement!;
+    preview.scrollTop = 160;
+    fireEvent.scroll(preview);
     view.rerender(view.workspace('thread-b'));
     expect(await screen.findByRole('button', { name: 'notes.txt' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Generated draft' })).toBeNull();
     view.rerender(view.workspace('thread-a'));
-    expect(await screen.findByRole('heading', { name: 'Generated draft' })).toBeTruthy();
+    const restored = screen.getByRole('heading', { name: 'Generated draft' });
+    expect(restored.closest('[data-slot="message-content"]')!.parentElement!.scrollTop).toBe(160);
+    expect(download).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes the cached preview when the file revision changes', async () => {
+    const storage = structuredClone(filesFixture);
+    const file = storage.files.find(entry => entry.name === 'draft.md')!;
+    let title = '# First draft';
+    server.use(
+      http.get(`${baseUrl}/storage`, () => HttpResponse.json(storage)),
+      http.get(`${baseUrl}/storage/download`, () => HttpResponse.text(title)),
+    );
+    const view = show();
+    fireEvent.click(await screen.findByRole('button', { name: 'draft.md' }));
+    await screen.findByRole('heading', { name: 'First draft' });
+    view.rerender(view.workspace('thread-b'));
+
+    file.updatedAt = '2026-11-18T03:00:00Z';
+    title = '# Updated draft';
+    view.rerender(view.workspace('thread-a'));
+    expect(await screen.findByRole('heading', { name: 'Updated draft' })).toBeTruthy();
   });
 });
 

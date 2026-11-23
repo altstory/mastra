@@ -57,7 +57,7 @@
       padding-right: 34px;
     }
 
-    :is([data-variant='pill'], [data-variant='pill-ghost']) [data-slot='tab-close'] {
+    [data-slot='tab-close'] {
       right: 12px;
     }
   }

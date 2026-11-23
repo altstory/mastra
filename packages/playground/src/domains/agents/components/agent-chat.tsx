@@ -26,6 +26,7 @@ export const AgentChat = ({
   isNewThread,
   hideModelSwitcher,
   workspaceScope,
+  accountScope,
   project,
 }: Omit<ChatProps, 'initialMessages'> & {
   memory?: boolean;
@@ -34,6 +35,7 @@ export const AgentChat = ({
   isNewThread?: boolean;
   hideModelSwitcher?: boolean;
   workspaceScope?: string;
+  accountScope?: string;
   project?: ConversationProject;
 }) => {
   const { settings } = useAgentSettings();
@@ -116,6 +118,8 @@ export const AgentChat = ({
       refreshThreadList={refreshThreadList}
       settings={settings}
       requestContext={requestContext}
+      workspaceScope={workspaceScope}
+      accountScope={accountScope}
     >
       {workspaceScope ? (
         <ConversationWorkspace

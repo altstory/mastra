@@ -38,7 +38,12 @@ import {
   WorkDetails,
   WorkDetailsToggle,
 } from '@mastra/playground-ui/domains/chat';
-import { useChatMessages, useChatRunning, useChatSend } from '@mastra/playground-ui/domains/chat/context/chat-context';
+import {
+  ChatMessagesContext,
+  useChatMessages,
+  useChatRunning,
+  useChatSend,
+} from '@mastra/playground-ui/domains/chat/context/chat-context';
 import { MessageRow } from '@mastra/playground-ui/domains/chat/messages/message-row';
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { IconArrowUp } from '@mastra/playground-ui/icons/central/IconArrowUp';
@@ -50,7 +55,7 @@ import { useSpeechRecognition } from '@mastra/react';
 import { useReadAloud } from '@mastra/react/hooks/voice';
 
 import type { MessageFactoryPart } from '@mastra/react/ui';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { AttachFileMenu } from './attachments/attach-file-menu';
@@ -165,7 +170,7 @@ const ThreadContent = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { draft, updateDraft } = useThreadInput(threadId);
 
-  const messages = useChatMessages();
+  const { messages, revealedIds } = useContext(ChatMessagesContext);
   const { isRunning } = useChatRunning();
   const fileChanges = useTurnFileChanges(threadId, workspaceFiles, isRunning);
   const [requestContext] = useEntityRequestContext('agent', agentId ?? '');
@@ -297,6 +302,7 @@ const ThreadContent = ({
                                 >
                                   <MessageRow
                                     message={message}
+                                    initiallyRevealed={revealedIds?.has(message.id)}
                                     hasModelList={hasModelList}
                                     isSpeaking={isSpeaking}
                                     onReadAloud={readAloud}

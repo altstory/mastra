@@ -17,6 +17,7 @@ function Harness({ threadId }: { threadId?: string }) {
   const [selectedPath, onSelect] = useState<string>();
   return (
     <ConversationFilesPanel
+      scope="test-conversation"
       selectedPath={selectedPath}
       onSelect={onSelect}
       agentId="creator-agent"

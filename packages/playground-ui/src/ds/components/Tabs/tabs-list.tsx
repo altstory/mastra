@@ -68,6 +68,7 @@ export const TabList = ({
   const resolvedVariant = variant ?? 'pill';
   const tabs = useContext(TabsContext);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const closeRefs = useRef(new Map<string, HTMLDivElement>());
   const tabPositions = useRef(new Map<string, number>());
   const selectedValue = useRef(tabs?.value);
@@ -146,6 +147,8 @@ export const TabList = ({
     [resolvedVariant, size, hiddenValues, register, unregister],
   );
   useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
     const nextPositions = new Map(tabPositions.current);
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     for (const tab of measurements) {
@@ -154,8 +157,9 @@ export const TabList = ({
       const previousLeft = tabPositions.current.get(tab.value);
       const close = closeRefs.current.get(tab.value);
       if (close) {
-        close.style.left = `${left}px`;
-        close.style.top = `${tab.element.offsetTop}px`;
+        // Close actions sit next to the tab list in the scroll viewport.
+        close.style.left = `${list.offsetLeft + left}px`;
+        close.style.top = `${list.offsetTop + tab.element.offsetTop}px`;
         close.style.width = `${tab.element.offsetWidth}px`;
         close.style.height = `${tab.element.offsetHeight}px`;
       }
@@ -207,6 +211,7 @@ export const TabList = ({
           )}
         >
           <BaseTabs.List
+            ref={listRef}
             data-slot="tabs-list"
             data-overflow={hiddenTabs.length > 0 || undefined}
             data-variant={resolvedVariant}

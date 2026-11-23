@@ -588,6 +588,68 @@ describe('Standalone thread page', () => {
     });
   });
 
+  describe('when returning to a conversation that is still streaming', () => {
+    it('retains visible output during replay and then displays the new text once', async () => {
+      installHandlers();
+      const streams: Array<{
+        send: (chunks: unknown[]) => void;
+        close: () => void;
+      }> = [];
+      server.use(
+        http.get(`${BASE_URL}/altflow/conversations/status`, () => HttpResponse.json({ running: [THREAD_ID] })),
+        http.get(`${BASE_URL}/api/memory/threads/${THREAD_ID}/messages`, () => HttpResponse.json(staleHistory)),
+        http.post(`${BASE_URL}/api/agents/${AGENT_ID}/threads/subscribe`, async ({ request }) => {
+          const { threadId } = (await request.json()) as { threadId: string };
+          if (threadId !== THREAD_ID) return new HttpResponse(null, { status: 404 });
+          return new HttpResponse(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                streams.push({
+                  send: chunks => {
+                    for (const chunk of chunks) {
+                      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                    }
+                  },
+                  close: () => {
+                    try {
+                      controller.close();
+                    } catch {
+                      // Navigating away may already have cancelled the response.
+                    }
+                  },
+                });
+              },
+            }),
+            { headers: { 'Content-Type': 'text/event-stream' } },
+          );
+        }),
+      );
+      const path = `/chat/${AGENT_ID}/threads/${THREAD_ID}`;
+      const router = renderAt(path);
+      try {
+        await waitFor(() => expect(streams).toHaveLength(1));
+        await act(async () => streams[0].send(liveChunks));
+        await screen.findByText('Live response survives', {}, SSE_TIMEOUT);
+        await act(async () => router.navigate(`/chat/${AGENT_ID}/threads/thread-2`));
+        expect(screen.queryByText('Live response survives')).toBeNull();
+        await act(async () => router.navigate(path));
+        await waitFor(() => expect(streams).toHaveLength(2));
+        expect(screen.getByText('Live response survives')).toBeTruthy();
+
+        await act(async () => streams[1].send(liveChunks.slice(0, 2)));
+        expect(screen.getByText('Live response survives')).toBeTruthy();
+        const tail = liveChunks[2];
+        if (tail.type !== 'text-delta') throw new Error('Expected a text delta');
+        await act(async () =>
+          streams[1].send([tail, { ...tail, payload: { ...tail.payload, text: ' and continues.' } }]),
+        );
+        expect(await screen.findByText('Live response survives and continues.', {}, SSE_TIMEOUT)).toBeTruthy();
+      } finally {
+        streams.forEach(stream => stream.close());
+      }
+    });
+  });
+
   describe('when opening a new thread', () => {
     it('shows the welcome screen immediately without a skeleton', async () => {
       installHandlers();

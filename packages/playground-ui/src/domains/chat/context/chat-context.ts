@@ -25,6 +25,8 @@ export interface ChatSendArgs {
 export interface MessagesContextValue {
   /** Live `useChat` messages merged with persisted-surviving stream errors. */
   messages: MastraDBMessage[];
+  /** Messages already presented before reconnecting to a running conversation. */
+  revealedIds?: ReadonlySet<string>;
 }
 
 export interface RunningContextValue {

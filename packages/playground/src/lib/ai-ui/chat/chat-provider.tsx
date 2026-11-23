@@ -40,6 +40,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useChatSendHandler } from './use-chat-send-handler';
+import { useLiveTranscript } from './use-live-transcript';
 import { useObservationalMemoryContext } from '@/domains/agents/context';
 import { resolveMemoryOptions, useAgentMemoryPreferences } from '@/domains/agents/context/agent-memory-preferences';
 import { useWorkingMemory } from '@/domains/agents/context/agent-working-memory-context';
@@ -67,7 +68,9 @@ export function ChatProvider({
   modelVersion,
   agentVersionId,
   supportsMemory,
-}: Readonly<{ children: ReactNode }> & ChatProps) {
+  workspaceScope,
+  accountScope,
+}: Readonly<{ children: ReactNode; workspaceScope?: string; accountScope?: string }> & ChatProps) {
   const [tracingOptions] = useEntityTracingOptions('agent', agentId);
   const modelOverride = usePlaygroundModelOptional()?.modelOverride;
 
@@ -137,6 +140,15 @@ export function ChatProvider({
       setThreadSignalsUnsupported(true);
     },
   });
+
+  // Keep the last view while the new connection replays into its own empty accumulator.
+  const { replaying, revealedIds } = useLiveTranscript(workspaceScope, accountScope, threadId, {
+    messages,
+    tasks,
+    runId: activeRunId,
+    running: isRunningStream,
+  });
+  const visibleMessages = replaying?.messages ?? messages;
 
   const { refetch: refreshWorkingMemory } = useWorkingMemory();
   const queryClient = useQueryClient();
@@ -335,20 +347,30 @@ export function ChatProvider({
   // errors live in `streamErrors`, which survives the post-stream refresh).
   const omTerminalExtractionCacheRef = useRef<OmTerminalExtractionCache>(new Map());
   const globalOmParts = useMemo(
-    () => buildGlobalOmPartsByCycleId(messages, omTerminalExtractionCacheRef.current),
-    [messages],
+    () => buildGlobalOmPartsByCycleId(visibleMessages, omTerminalExtractionCacheRef.current),
+    [visibleMessages],
   );
 
   const renderMessages = useMemo<MastraDBMessage[]>(
     () =>
       [
-        ...messages.filter(msg => msg.content?.metadata?.status !== 'error' && msg.content?.metadata?.queued !== true),
+        ...visibleMessages.filter(
+          msg => msg.content?.metadata?.status !== 'error' && msg.content?.metadata?.queued !== true,
+        ),
         ...streamErrors,
       ].map(msg => convertOmPartsInMastraMessage(msg, globalOmParts)),
-    [messages, streamErrors, globalOmParts],
+    [visibleMessages, streamErrors, globalOmParts],
   );
 
-  const isRunning = isRunningStream || isAwaitingToolApproval;
+  const isRunning = isRunningStream || isAwaitingToolApproval || Boolean(replaying);
+  const visibleRunId = activeRunId ?? replaying?.runId;
+  const cancelVisibleRun = useCallback(async () => {
+    if (!activeRunId && visibleRunId) {
+      await baseClient.getAgent(agentId).abortThread({ resourceId: agentId, threadId, expectedRunId: visibleRunId });
+    } else {
+      await cancel();
+    }
+  }, [activeRunId, agentId, baseClient, cancel, threadId, visibleRunId]);
   const usesSignalStreamTransport = !chatWithGenerate && !chatWithNetwork && !chatWithLegacyStream;
   const canSendWhileStreaming = getCanSendWhileStreaming({
     isSupportedModel,
@@ -376,13 +398,17 @@ export function ChatProvider({
     // The subscription owns convergence. A race with consumption must never remove a sent turn.
   };
 
-  const messagesValue = useMemo<MessagesContextValue>(() => ({ messages: renderMessages }), [renderMessages]);
+  const messagesValue = useMemo<MessagesContextValue>(
+    () => ({ messages: renderMessages, revealedIds }),
+    [renderMessages, revealedIds],
+  );
   const runningValue = useMemo<RunningContextValue>(
-    () => ({ isRunning, activeRunId, cancelRun: cancel, canSendWhileStreaming }),
-    [isRunning, activeRunId, cancel, canSendWhileStreaming],
+    () => ({ isRunning, activeRunId: visibleRunId, cancelRun: cancelVisibleRun, canSendWhileStreaming }),
+    [isRunning, visibleRunId, cancelVisibleRun, canSendWhileStreaming],
   );
   const sendValue = useMemo<SendContextValue>(() => ({ send, setModelContext }), [send, setModelContext]);
-  const tasksValue = useMemo<TasksContextValue>(() => ({ tasks }), [tasks]);
+  const visibleTasks = replaying?.tasks ?? tasks;
+  const tasksValue = useMemo<TasksContextValue>(() => ({ tasks: visibleTasks }), [visibleTasks]);
   const agentValue = useMemo<AgentContextValue>(
     () => ({ agentId, agentVersionId, requestContext }),
     [agentId, agentVersionId, requestContext],

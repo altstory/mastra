@@ -59,7 +59,6 @@ export function ConversationWorkspace({
   const available = new Set(storage.data?.files.map(file => file.path));
   const paths = knownPaths.filter(path => available.has(path));
   const isMobile = useIsMobile();
-  const scrollPositions = useRef(new Map<string, number>());
   const storageKey = `altflow:conversation-files:${scope}`;
   const [view, setView] = useState(() => {
     try {
@@ -70,7 +69,7 @@ export function ConversationWorkspace({
     }
     return { open: false, path: undefined, seenPaths: [] as string[], tabs: [] as string[] };
   });
-  const hasFiles = paths.length > 0;
+  const hasFiles = paths.length > 0 || view.tabs.length > 0 || Boolean(view.path);
   const open = hasFiles && (view.open || paths.some(path => !view.seenPaths.includes(path)));
   const update = (change: { open: boolean; path?: string; tabs?: string[] }) => {
     const next = {
@@ -124,7 +123,7 @@ export function ConversationWorkspace({
                 requestContext={requestContext}
                 selectedPath={view.path}
                 openPaths={tabs}
-                scrollPositions={scrollPositions.current}
+                scope={scope}
                 onSelect={path => (path ? openFile(path) : update({ open: true }))}
                 onClose={closeFile}
               />

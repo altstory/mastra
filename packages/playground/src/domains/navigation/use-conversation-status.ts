@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 
 const statusSchema = z.object({ running: z.array(z.string()) });
 
-export function useConversationStatus(scope: string) {
+export function useConversationStatus(scope: string, enabled = true) {
   const client = useMastraClient();
   return useQuery({
     queryKey: ['conversation-status', client.options.baseUrl, scope],
@@ -25,6 +25,7 @@ export function useConversationStatus(scope: string) {
       return statusSchema.parse(await response.json());
     },
     refetchInterval: query => (query.state.data === null ? false : 1000),
+    enabled,
     retry: false,
   });
 }

@@ -15,7 +15,7 @@ import { useStudioConfig } from '@/domains/configuration/context/studio-config-s
 export function ConversationFilesPanel({
   selectedPath,
   openPaths = [],
-  scrollPositions,
+  scope,
   onClose,
   onSelect,
   agentId,
@@ -24,7 +24,7 @@ export function ConversationFilesPanel({
 }: {
   selectedPath?: string;
   openPaths?: string[];
-  scrollPositions?: Map<string, number>;
+  scope: string;
   onClose?: (path: string) => void;
   onSelect: (path: string | undefined) => void;
   agentId?: string;
@@ -60,7 +60,7 @@ export function ConversationFilesPanel({
           <IconArrowRotateClockwise />
         </Button>
       </div>
-      {storage.isError || history.isError ? (
+      {(storage.isError && !storage.data) || (!selectedPath && history.isError && !history.data) ? (
         <div className="space-y-3 p-4">
           <Txt role="alert">{storage.error?.message ?? history.error?.message}</Txt>
           <Button
@@ -73,19 +73,19 @@ export function ConversationFilesPanel({
             {t('Retry')}
           </Button>
         </div>
-      ) : (storage.isPending && target.baseUrl) || (history.isFetching && !history.data) ? (
+      ) : (storage.isPending && target.baseUrl) || (!selectedPath && history.isFetching && !history.data) ? (
         <Txt tone="muted" className="p-4">
           {t('Loading...')}
         </Txt>
       ) : (
         <Tabs
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
           defaultTab={tree}
           value={selectedPath ?? tree}
           onValueChange={path => onSelect(path === tree ? undefined : path)}
         >
           {tabs.length > 0 && (
-            <TabList className="mx-3 shrink-0">
+            <TabList className="mx-3 shrink-0 gap-2">
               <Tab value={tree}>{t('Files')}</Tab>
               {tabs.map(path => {
                 const file = files.find(item => item.path === path);
@@ -116,15 +116,17 @@ export function ConversationFilesPanel({
             )}
           </TabContent>
           {tabs.map(path => {
-            const file = files.find(item => item.path === path);
+            const file = storage.data?.files.find(item => item.path === path);
             return (
-              <TabContent key={path} value={path} flush keepMounted className="min-h-0 flex-1">
+              <TabContent
+                key={path}
+                value={path}
+                flush
+                keepMounted
+                className="min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-1 overflow-hidden"
+              >
                 {file ? (
-                  <ConversationFilePreview
-                    file={file}
-                    scrollPositions={scrollPositions}
-                    onBack={() => onSelect(undefined)}
-                  />
+                  <ConversationFilePreview file={file} scope={scope} onBack={() => onSelect(undefined)} />
                 ) : (
                   <Txt tone="muted" className="p-4">
                     {t('This file is no longer available.')}

@@ -50,6 +50,8 @@ import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface MessageRowProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   message: MastraDBMessage;
+  /** Skip replaying the reveal animation for an already displayed message. */
+  initiallyRevealed?: boolean;
   hasModelList?: boolean;
   isSpeaking?: boolean;
   onReadAloud?: (text: string) => void;
@@ -155,6 +157,7 @@ const isPendingMessage = (message: MastraDBMessage): boolean => {
 };
 export const MessageRow = memo(function MessageRow({
   message,
+  initiallyRevealed,
   hasModelList,
   isSpeaking,
   onReadAloud,
@@ -177,7 +180,7 @@ export const MessageRow = memo(function MessageRow({
   const running = useChatRunning();
   const isRunning = running.isRunning && running.activeRunId !== undefined && metadata?.runId === running.activeRunId;
   const parts = dbMessage?.content.parts ?? NO_PARTS;
-  const revealed = useRevealedParts(parts, isStreaming(parts));
+  const revealed = useRevealedParts(parts, !initiallyRevealed && isStreaming(parts));
   const pacedParts = isProse(parts, metadata) ? revealed : parts;
   const shownParts = dbMessage
     ? presentedParts({ ...dbMessage, content: { ...dbMessage.content, parts: pacedParts } }, workDetails, {
