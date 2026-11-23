@@ -17,7 +17,7 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 构建依赖时逐包执行；不要从仓库根目录直接运行应用的 TypeScript 配置。
 
-1. 在 `apps/altflow/.env` 配置 `ALTFLOW_BACKEND_URL`（Go 后端地址）和 `ALTFLOW_MODELHUB_API_KEY`。
+1. 启动本地 Go 后端，在 `apps/altflow/.env` 配置 `ALTFLOW_BACKEND_URL=http://127.0.0.1:8080`、`ALTFLOW_AUTH_IDENTITY_ENDPOINT=me` 和 `ALTFLOW_MODELHUB_API_KEY`。使用提供 `/auth/validate` 的部署时，将 `ALTFLOW_AUTH_IDENTITY_ENDPOINT` 设为 `validate`。
 2. 配置服务端 `ALTFLOW_OSS_ACCESS_KEY_ID`、`ALTFLOW_OSS_ACCESS_KEY_SECRET`，以及 `.env.example` 中的 OSS 桶和区域。
 3. 运行 `pnpm --filter @internal/altflow start`，监听 `127.0.0.1:4111`。`dev` 提供热重载，使用 DuckDB 时优先使用单进程 `start`。
 4. 运行 `pnpm --filter @internal/playground dev --port 5174`，将 `/api`、`/account`、`/storage`、`/conversation-projects`、`/account-preferences`、`/altflow` 代理到 4111。
@@ -40,16 +40,17 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 只注册 AltFlow ModelHub 网关，隐藏 Mastra 公共模型供应商。目录来自 `https://modelhub.altflow.cn/v1/model-catalog` 的 `free_chat_models`，不使用包含内部路由的 `/v1/models`。
 
-选择器展示目录中的产品名称，点击后可分别切换模型和推理等级。档位来自每个模型的 `thinking_options`，切换模型时使用新模型的默认档位；选择保存在当前会话偏好中。实际调用由服务端验证所选档位，并根据该档位转换为 `target`、思考强度及预算，记录目录版本。默认 `altflow/deepseek-v4-pro`。目录缓存 60 秒，刷新失败保留上次有效目录；首次获取失败时不提供公共模型作为替代。这里沿用 DSH 的目录、档位选择和路由规则。
+选择器展示目录中的产品名称。普通用户可调整预设模型的思考强度，管理员也可切换模型。档位来自每个模型的 `thinking_options`，切换模型时使用新模型的默认档位；选择保存在当前会话偏好中。实际调用由服务端验证所选档位，并根据该档位转换为 `target`、思考强度及预算，记录目录版本。默认使用 `altflow/qwen3.8-max` 的 `medium` 档。目录缓存 60 秒，刷新失败保留上次有效目录；首次获取失败时不提供公共模型作为替代。这里沿用 DSH 的目录、档位选择和路由规则。
 
 ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_options.include_usage=true`，要求上游返回输入、输出和缓存用量。缓存是否命中由上游决定，本地 TokenCounter 只做上下文预算，不能测出供应商缓存命中。被中断的请求仍可能没有最终 usage，前端将其他已报告用量标为 `≥`，不把缺失值当成 0 或丢掉已有统计。
 
 ## 权限与数据
 
-- `admin` 角色显示管理入口；`creator`、旧 `user` 角色只能对话及读取获授权的知识。每次 API 请求向 Go 校验身份，角色变更、停用、退出立即生效。
+- `admin` 角色显示管理入口。`creator`、旧 `user` 角色可以对话和使用自己的文件工作区。每次 API 请求向 Go 校验身份，角色变更、停用、退出立即生效。
 - Cookie 使用 HttpOnly、SameSite=Lax；生产环境附加 Secure。写请求校验 Origin，远程认证服务必须 HTTPS。前端隐藏入口之外，服务端也检查权限及配置覆盖。
 - 会话、消息、工作记忆、观察记忆、私人知识按 Go 用户 ID 隔离，管理员也不能读取其他用户的这些私人数据。
-- `library:creator` 是共享创作资料，管理员维护、普通用户读取。全局管理员工作区、工作流记录和全局追踪/日志属于管理资源，**不是按账号隔离的私人空间**。正式多租户场景需另行拆分这些资源。
+- `library:creator` 和共享 Skill 由管理员维护，Agent 可以在内部查阅。普通账号的 API 响应隐藏内部资料清单及原始工具记录。[内部资料防爬设计](./INTERNAL-REFERENCE-POLICY.md)
+- 全局管理员工作区、工作流记录和全局追踪/日志由管理员共享。正式多租户场景需另行拆分这些资源。
 - `ALTFLOW_LEGACY_OWNER_ID` 可将接入账号前的本地会话明确归属给一个用户，默认不映射。
 
 ## 能力和持久化

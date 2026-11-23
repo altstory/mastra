@@ -20,7 +20,9 @@ import { z } from 'zod';
 import { DisabledRecallMemory } from './agents/disabled-recall-memory';
 import { executionPolicy } from './agents/execution-policy';
 import { HistoryMemory } from './agents/history-memory';
+import { internalReferencePolicy } from './agents/internal-reference-policy';
 import { createPrivateWorkspace } from './agents/private-workspace';
+import { protectConversationResponses } from './agents/reference-visibility';
 import { createAltFlowAuth } from './altflow-auth';
 import { ContextCompaction } from './context-compaction';
 import { CONTEXT_MEMORY_OPTIONS } from './context-memory';
@@ -56,6 +58,10 @@ const accountsOrigins = (
   .map(value => value.trim());
 const accounts = createAltFlowAuth({
   backendUrl: process.env.ALTFLOW_BACKEND_URL ?? 'http://127.0.0.1:8080',
+  identityEndpoint: z
+    .enum(['me', 'validate'])
+    .default(process.env.ALTFLOW_BACKEND_URL ? 'validate' : 'me')
+    .parse(process.env.ALTFLOW_AUTH_IDENTITY_ENDPOINT),
   origins: accountsOrigins,
   secureCookies: process.env.NODE_ENV === 'production',
   legacyOwnerId: process.env.ALTFLOW_LEGACY_OWNER_ID,
@@ -132,6 +138,8 @@ const knowledge = new Knowledge({
   embedder: localEmbedder,
   tools: true,
   pinnedContext: true,
+  instructions: ({ read, write, pins }) =>
+    [read.replace(' Cite the page or note you used.', ''), write, pins].filter(Boolean).join('\n\n'),
   scopes: {
     ...knowledgeMemoryScopes({ org: false }),
     'audience:$audience': { displayLabel: '创作者', access: [{ principal: 'self', role: 'viewer' }] },
@@ -276,6 +284,9 @@ const creatorAgent = new Agent({
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
 - 要求精确字数时用 countText，篇幅检查可调用工作流；写完剧本后用 validate_script_format 检查格式。
 
+## 内部资料
+${internalReferencePolicy}
+
 ## 事实与能力
 - 涉及事实、数据、引用时，先检索或读取来源再回答并说明出处；查不到就明说，不编造。
 - 只使用实际提供给你的工具。做不到的事，直接告诉用户，并给替代办法。不编造工具结果、文件路径或链接。
@@ -351,6 +362,7 @@ export const mastra = new Mastra({
     host: '127.0.0.1',
     port: Number(process.env.STUDIO_PORT ?? 4111),
     auth: accounts.auth,
+    middleware: protectConversationResponses,
     apiRoutes: [
       ...accounts.apiRoutes,
       conversationStatusRoute(() => creatorAgent, accounts, accountsOrigins),

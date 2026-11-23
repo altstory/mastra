@@ -16,14 +16,7 @@ const loginResult = z.object({ token: z.string().min(16), expiresIn: z.number().
 const loginInput = z.object({ email: z.string().email(), password: z.string().min(1).max(1024) });
 const tokenCookie = 'altflow_studio_token';
 const instanceCookie = 'huying_login_instance';
-export const creatorPermissions = [
-  'agents:read',
-  'agents:execute',
-  'memory:read',
-  'memory:write',
-  'memory:delete',
-  'knowledge:read',
-];
+export const creatorPermissions = ['agents:read', 'agents:execute', 'memory:read', 'memory:write', 'memory:delete'];
 export const userPermissions = (user: AltFlowUser) => (user.role === 'admin' ? ['*'] : creatorPermissions);
 
 export class AuthUpstreamError extends Error {
@@ -93,31 +86,40 @@ const conversationMemory = z
       .optional(),
   })
   .strict();
+const reasoningOptions = z.strictObject({ altflow: z.strictObject({ reasoningLevel: z.string().min(1).max(64) }) });
 const conversationStreamOptions = z
   .object({
     memory: conversationMemory.optional(),
     disableSubAgents: z.boolean().optional(),
   })
   .strict();
-function hasOverride(value: unknown): boolean {
+const messageStreamOptions = conversationStreamOptions.extend({ providerOptions: reasoningOptions.optional() });
+function hasOverride(value: unknown, location?: 'direct' | 'message' | 'ifIdle'): boolean {
   if (!value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.some(hasOverride);
+  if (Array.isArray(value)) return value.some(child => hasOverride(child));
   return Object.entries(value).some(
     ([key, child]) =>
       key.startsWith('mastra__') ||
-      (key === 'streamOptions' ? !conversationStreamOptions.safeParse(child).success : forbiddenOverrides.has(key)) ||
+      (key === 'streamOptions'
+        ? !(location === 'ifIdle' ? messageStreamOptions : conversationStreamOptions).safeParse(child).success
+        : key === 'providerOptions' && location === 'direct'
+          ? !reasoningOptions.safeParse(child).success
+          : forbiddenOverrides.has(key)) ||
       (key === 'memory' && !conversationMemory.safeParse(child).success) ||
       (key === 'disableSubAgents' && typeof child !== 'boolean') ||
-      ((key === 'requestContext' || key === 'ifIdle') && hasOverride(child)),
+      ((key === 'requestContext' || key === 'ifIdle') &&
+        hasOverride(child, key === 'ifIdle' && location === 'message' ? 'ifIdle' : undefined)),
   );
 }
 function permitted(user: AltFlowUser, path: string, method: string) {
   if (user.role === 'admin') return true;
   const route = path.replace(/^\/api(?=\/)/, '');
   if (/^\/account\/(session|sign-out)$/.test(route)) return true;
-  if (method === 'GET' && ['/agents', '/system/packages', '/system/features', '/system/status'].includes(route))
+  if (
+    method === 'GET' &&
+    ['/agents', '/agents/providers', '/system/packages', '/system/features', '/system/status'].includes(route)
+  )
     return true;
-  if (method === 'GET' && /^\/knowledge(?:\/|$)/.test(route)) return true;
   if (/^\/memory(?:\/|$)/.test(route) && !route.startsWith('/memory/network/') && !route.endsWith('/transfer'))
     return true;
   if (method === 'GET' && /^\/agents\/(creator-agent|creatorAgent)$/.test(route)) return true;
@@ -131,6 +133,7 @@ function permitted(user: AltFlowUser, path: string, method: string) {
 
 export function createAltFlowAuth(options: {
   backendUrl: string;
+  identityEndpoint?: 'me' | 'validate';
   origins: string[];
   secureCookies: boolean;
   legacyOwnerId?: string;
@@ -186,11 +189,15 @@ export function createAltFlowAuth(options: {
   async function authenticate(request: Request): Promise<AltFlowUser | null> {
     if (!tokenFrom(request)) return null;
     try {
-      const result = await upstream('/auth/validate', request);
-      const parsed = userSchema
-        .extend({ userId: z.string().min(1), id: z.string().optional() })
-        .transform(value => ({ ...value, id: value.userId }))
-        .safeParse(result.data);
+      const endpoint = options.identityEndpoint ?? 'validate';
+      const result = await upstream(`/auth/${endpoint}`, request);
+      const parsed =
+        endpoint === 'me'
+          ? userSchema.safeParse(result.data)
+          : userSchema
+              .extend({ userId: z.string().min(1), id: z.string().optional() })
+              .transform(value => ({ ...value, id: value.userId }))
+              .safeParse(result.data);
       if (!parsed.success) throw new AuthUpstreamError(403, '账号角色不支持访问 Studio');
       return parsed.data;
     } catch (error) {
@@ -221,13 +228,11 @@ export function createAltFlowAuth(options: {
           .clone()
           .json()
           .catch(() => undefined);
-        if (hasOverride(body)) return false;
+        const admittingMessage = /\/(send-message|queue-message)$/.test(path);
+        const directChat = /\/(generate|stream|stream-until-idle)$/.test(path);
+        if (hasOverride(body, admittingMessage ? 'message' : directChat ? 'direct' : undefined)) return false;
         // Message admission must carry a thread so ownership is checked before targeting a run.
-        if (
-          /\/(send-message|queue-message)$/.test(path) &&
-          (!body || typeof body.threadId !== 'string' || body.runId !== undefined)
-        )
-          return false;
+        if (admittingMessage && (!body || typeof body.threadId !== 'string' || body.runId !== undefined)) return false;
       }
       const requestContext = context.get('requestContext');
       requestContext.set(MASTRA_RESOURCE_ID_KEY, resourceFor(user));
@@ -236,11 +241,12 @@ export function createAltFlowAuth(options: {
         `resource:${resourceFor(user)}`,
         user.role === 'admin' ? 'library:creator' : 'audience:creators',
       ]);
-      // Agent identity scopes use raw Memory IDs; Knowledge addresses encode reserved characters.
-      requestContext.set('mastra__knowledgePrincipals', [
-        `resource:${encodeKnowledgeScopeId(resourceFor(user))}`,
-        user.role === 'admin' ? 'library:creator' : 'audience:creators',
-      ]);
+      if (user.role === 'admin') {
+        requestContext.set('mastra__knowledgePrincipals', [
+          `resource:${encodeKnowledgeScopeId(resourceFor(user))}`,
+          'library:creator',
+        ]);
+      }
       requestContext.set('mastra__userPermissions', userPermissions(user));
       return true;
     },

@@ -11,18 +11,177 @@ import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
 import { RequestContext, MASTRA_RESOURCE_ID_KEY, MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
 import { createTool, TaskStateProcessor } from '@mastra/core/tools';
-import { createWorkspaceTools, createSkillTools, publishSkillFromSource } from '@mastra/core/workspace';
+import {
+  LocalFilesystem,
+  Workspace,
+  createWorkspaceTools,
+  createSkillTools,
+  publishSkillFromSource,
+} from '@mastra/core/workspace';
 import { LibSQLStore } from '@mastra/libsql';
 import { Memory } from '@mastra/memory';
 import { z } from 'zod';
+import { serve } from '@hono/node-server';
+import { createHonoServer } from '../../../packages/deployer/dist/server/index.js';
 import { executionPolicy } from '../src/mastra/agents/execution-policy.ts';
 import { HistoryMemory } from '../src/mastra/agents/history-memory.ts';
 import { createPrivateWorkspace } from '../src/mastra/agents/private-workspace.ts';
+import { protectConversationResponses } from '../src/mastra/agents/reference-visibility.ts';
+import { createAltFlowAuth } from '../src/mastra/altflow-auth.ts';
 import { SharedSkillSource } from '../src/mastra/services/shared-skills.ts';
 import { createCreatorTools } from '../src/mastra/tools/index.ts';
 import { UserStorage } from '../src/mastra/user-storage.ts';
 
-import { fixture, context, runOptions, toolResults } from './tool-fixture.mjs';
+import { fixture, context, modelServer, runOptions, toolResults } from './tool-fixture.mjs';
+
+test('internal knowledge and skill tool results reach the Agent but stay out of chat responses and reopened history', async t => {
+  const { Knowledge, knowledgeMemoryScopes } = await import('@mastra/core/knowledge');
+  const { KNOWLEDGE_ROUTES } = await import('@mastra/server/server-adapter');
+  const storage = new LibSQLStore({ id: 'reference-visibility', url: ':memory:' });
+  const knowledge = new Knowledge({
+    id: 'fixture-knowledge',
+    storage,
+    tools: true,
+    scopes: {
+      ...knowledgeMemoryScopes({ org: false }),
+      'audience:$audience': { access: [{ principal: 'self', role: 'viewer' }] },
+      'library:$libraryId': {
+        access: [
+          { principal: 'self', role: 'owner' },
+          { principal: 'audience:creators', role: 'viewer' },
+        ],
+      },
+    },
+  });
+  const secret = 'FIXTURE_REFERENCE_PRIVATE_MARKER';
+  const { page } = await knowledge.upsertPage({
+    scope: 'library:creator',
+    path: 'internal',
+    name: 'Private guide',
+    body: secret,
+  });
+  const skillSecret = 'FIXTURE_SKILL_PRIVATE_MARKER';
+  const dir = await mkdtemp(join(tmpdir(), 'altflow-reference-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(join(dir, 'skills', 'private-style'), { recursive: true });
+  await writeFile(
+    join(dir, 'skills', 'private-style', 'SKILL.md'),
+    `---\nname: private-style\ndescription: Style fixture\n---\n${skillSecret}\n`,
+  );
+  const workspace = new Workspace({
+    id: 'reference-fixture',
+    filesystem: new LocalFilesystem({ basePath: dir }),
+    skills: ['skills'],
+  });
+  const edge = await modelServer(t);
+  const backend = createServer((req, res) => {
+    const role = req.headers.authorization === 'Bearer admin' ? 'admin' : 'creator';
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ code: 0, message: 'OK', data: { userId: role, username: role, role } }));
+  });
+  await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve));
+  t.after(() => {
+    backend.closeAllConnections();
+    return new Promise(resolve => backend.close(resolve));
+  });
+  const accounts = createAltFlowAuth({
+    backendUrl: `http://127.0.0.1:${backend.address().port}`,
+    origins: [],
+    secureCookies: false,
+  });
+  const agent = new Agent({
+    id: 'creator-agent',
+    name: 'Creator',
+    instructions: 'Use the requested tool.',
+    model: edge.model,
+    memory: new Memory({ storage, options: { lastMessages: 10, generateTitle: false } }),
+    scopes: ({ scopes }) => scopes,
+    knowledge,
+    workspace,
+  });
+  const mastra = new Mastra({
+    agents: { 'creator-agent': agent },
+    knowledge: { fixture: knowledge },
+    logger: false,
+    storage,
+    server: {
+      apiRoutes: [...KNOWLEDGE_ROUTES],
+      auth: accounts.auth,
+      middleware: protectConversationResponses,
+    },
+  });
+  const app = await createHonoServer(mastra);
+  const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => {
+    server.closeAllConnections();
+    return new Promise(resolve => server.close(resolve));
+  });
+  const request = (path, role, body) =>
+    fetch(`http://127.0.0.1:${server.address().port}/api${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: { Authorization: `Bearer ${role}`, 'Content-Type': 'application/json' },
+      body: body && JSON.stringify(body),
+    });
+  assert.equal((await request('/knowledge', 'creator')).status, 403);
+  assert.equal((await request('/knowledge', 'admin')).status, 200);
+  for (const path of ['/agents', '/agents/creator-agent']) {
+    const admin = await request(path, 'admin');
+    assert.equal(admin.status, 200);
+    assert.match(await admin.text(), /private-style/);
+    const ordinary = await request(path, 'creator');
+    assert.equal(ordinary.status, 200);
+    assert.doesNotMatch(await ordinary.text(), /private-style|Style fixture/);
+  }
+  const protectedContent = /FIXTURE_(REFERENCE|SKILL)_PRIVATE_MARKER|knowledge_read|Private guide|private-style/;
+  for (const method of ['stream', 'generate']) {
+    const thread = `private-reference-${method}`;
+    edge.responses.push(
+      {
+        calls: [
+          { name: 'knowledge_read', args: { page: page.id } },
+          { name: 'skill', args: { name: 'private-style' } },
+        ],
+      },
+      { text: 'Original work.' },
+    );
+    const response = await request(`/agents/creator-agent/${method}`, 'creator', {
+      messages: 'Help with my draft.',
+      memory: { thread },
+    });
+    assert.equal(response.status, 200);
+    const wire = await response.text();
+    const modelMessages = JSON.stringify(edge.requests.at(-1)?.messages);
+    assert.ok(modelMessages.includes(secret));
+    assert.ok(modelMessages.includes(skillSecret));
+    assert.match(wire, /Original work/);
+    assert.doesNotMatch(wire, protectedContent);
+    const history = await request(`/memory/threads/${thread}/messages?agentId=creator-agent`, 'creator');
+    assert.equal(history.status, 200);
+    const saved = await history.text();
+    assert.match(saved, /Original work/);
+    assert.doesNotMatch(saved, protectedContent);
+  }
+  const subscription = await request('/agents/creator-agent/threads/subscribe', 'creator', {
+    threadId: 'private-reference-stream',
+    withInitialHistory: true,
+  });
+  assert.equal(subscription.status, 200);
+  const reader = subscription.body.getReader();
+  try {
+    const decoder = new TextDecoder();
+    let wire = '';
+    while (!wire.includes('Original work')) {
+      const { value, done } = await reader.read();
+      assert.equal(done, false);
+      wire += decoder.decode(value, { stream: true });
+    }
+    assert.match(wire, /thread-history/);
+    assert.doesNotMatch(wire, protectedContent);
+  } finally {
+    await reader.cancel();
+  }
+});
 
 test('native task tools persist through a real Agent run and a reopened LibSQL store', async t => {
   const f = await fixture(t);

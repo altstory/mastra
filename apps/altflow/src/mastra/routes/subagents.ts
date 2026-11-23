@@ -2,6 +2,7 @@ import type { Agent } from '@mastra/core/agent';
 import { RequestContext, MASTRA_RESOURCE_ID_KEY, MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
 import { registerApiRoute } from '@mastra/core/server';
 import { z } from 'zod';
+import { projectConversation } from '../agents/reference-visibility';
 import { AuthUpstreamError } from '../altflow-auth';
 import type { createAltFlowAuth } from '../altflow-auth';
 import type { Actor, SubagentRuntime } from '../subagents/runtime';
@@ -52,7 +53,10 @@ export function subagentRoutes(
           // Viewing a saved tree may restore expired work using this freshly verified identity.
           const settings = await rootOptions?.(actor);
           await runtime.attach(actor, getAgent(), settings?.model, settings?.reasoningLevel);
-          if (method === 'GET') return c.json(await runtime.snapshot(actor, input.child, input.page));
+          if (method === 'GET') {
+            const snapshot = await runtime.snapshot(actor, input.child, input.page);
+            return c.json((user.role === 'admin' ? snapshot : projectConversation(snapshot)) as typeof snapshot);
+          }
           if (!input.child) return c.json({ error: '请选择子智能体' }, 400);
           const reader = c.req.raw.body?.getReader();
           const chunks: Uint8Array[] = [];
