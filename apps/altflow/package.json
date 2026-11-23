@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node start-built.mjs",
+    "start:prebuilt": "node start-built.mjs --skip-build",
+    "build:deps": "node scripts/build-deps.mjs",
     "dev": "node start-local.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "seed:shared-skills": "node --import tsx scripts/seed-shared-skills.mjs",

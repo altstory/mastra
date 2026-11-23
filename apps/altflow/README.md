@@ -24,6 +24,14 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 正式部署配置 `STUDIO_ALLOWED_ORIGINS`，并使用 HTTPS 和持久化存储。
 
+### 构建与内存
+
+全量构建依赖会同时编译几十个包，turbo 默认并行数等于核数，16GB 内存的机器可能因此内存耗尽。
+
+- 构建依赖用 `pnpm --filter @internal/altflow build:deps`：并行数限为 2，单个 node 进程堆上限 2GB，跳过 `@mastra/playground-ui`（本应用不需要，且最重）。macOS 上交换区已用超过 3GB 时拒绝执行，确认可以继续时加 `-- --force`。
+- 只改了 `.env` 或数据时，不需要重新构建：用 `pnpm --filter @internal/altflow start:prebuilt` 直接启动已有的 `.mastra/output`。`start` 每次都会先删除输出里的 `node_modules` 再完整构建。
+- 只跑应用测试（`test`、`test:tools`）时，不需要在每个新 worktree 里重新构建依赖；复用已构建过的检出。
+
 ### 已有数据
 
 源码合并不移动现有安装的数据库、环境文件、上传资料或工作区。切换服务前，停止旧进程并备份数据；通过 `ALTFLOW_RUNTIME_ROOT` 指向原有数据根目录，即可沿用原目录下的 `src/mastra/public/preview.db`、`data/`、`workspace/` 和 `.cache/embeddings/`。`MASTRA_PREVIEW_ROOT` 作为旧配置别名继续兼容。不要让两个进程同时打开同一个 DuckDB 文件。

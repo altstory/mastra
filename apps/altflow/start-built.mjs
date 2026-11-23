@@ -25,8 +25,9 @@ function run(command, args) {
 }
 // Use this checkout's workspace framework and integration packages.
 // A fresh registry install in the output directory would replace those local builds.
-await rm(resolve(root, '.mastra/output/node_modules'), { recursive: true, force: true });
-const built = await run(resolve(root, 'node_modules/.bin/mastra'), ['build']);
+const skipBuild = process.argv.includes('--skip-build');
+if (!skipBuild) await rm(resolve(root, '.mastra/output/node_modules'), { recursive: true, force: true });
+const built = skipBuild ? 0 : await run(resolve(root, 'node_modules/.bin/mastra'), ['build']);
 process.exitCode =
   built === 0 && !process.argv.includes('--build-only')
     ? await run(process.execPath, ['.mastra/output/index.mjs'])
