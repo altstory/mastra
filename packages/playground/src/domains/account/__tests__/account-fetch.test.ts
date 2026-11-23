@@ -45,6 +45,7 @@ describe('Account fetch', () => {
           messages: [{ role: 'user', content: 'hello' }],
           memory: { thread: 'thread-1', resource: 'creator-agent' },
           modelSettings: { temperature: 0.5 },
+          providerOptions: { openai: { reasoningLevel: 'high' } },
           model: 'other/model',
           requestContext: { injected: true },
           clientTools: {},
@@ -89,6 +90,7 @@ describe('Account fetch', () => {
         const target = url.replace('/stream', '/' + endpoint);
         const preferences = {
           disableSubAgents: true,
+          providerOptions: { altflow: { reasoningLevel: 'high', thinkingBudget: 50 }, openai: {} },
           memory: {
             thread: 'forged-thread',
             resource: 'forged-owner',
@@ -117,6 +119,7 @@ describe('Account fetch', () => {
         });
         const expected = {
           disableSubAgents: true,
+          providerOptions: { altflow: { reasoningLevel: 'high' } },
           memory: {
             thread: endpoint === 'stream' ? 'forged-thread' : 'owned-thread',
             resource: creatorSession.resourceId,
@@ -148,6 +151,50 @@ describe('Account fetch', () => {
       expect((await createAccountFetch(adminSession)(url, { method: 'POST', body: JSON.stringify(body) })).status).toBe(
         200,
       );
+    });
+    it('binds the memory resource to the account without touching the rest of the request', async () => {
+      const sent = { messages: [], model: 'provider/model', memory: { thread: 'thread-1', resource: 'creator-agent' } };
+      server.use(
+        http.post(url, async ({ request }) => {
+          expect(await request.json()).toEqual({
+            ...sent,
+            memory: { thread: 'thread-1', resource: adminSession.resourceId },
+          });
+          return HttpResponse.json({ ok: true });
+        }),
+      );
+      expect((await createAccountFetch(adminSession)(url, { method: 'POST', body: JSON.stringify(sent) })).status).toBe(
+        200,
+      );
+    });
+    it('binds the resource on thread messages, including idle stream options', async () => {
+      const messageUrl = url.replace('/stream', '/send-message');
+      const sent = {
+        message: 'hi',
+        threadId: 'thread-1',
+        resourceId: 'creator-agent',
+        ifIdle: {
+          streamOptions: { model: 'provider/model', memory: { thread: 'thread-1', resource: 'creator-agent' } },
+        },
+      };
+      server.use(
+        http.post(messageUrl, async ({ request }) => {
+          expect(await request.json()).toEqual({
+            ...sent,
+            resourceId: adminSession.resourceId,
+            ifIdle: {
+              streamOptions: {
+                model: 'provider/model',
+                memory: { thread: 'thread-1', resource: adminSession.resourceId },
+              },
+            },
+          });
+          return HttpResponse.json({ ok: true });
+        }),
+      );
+      expect(
+        (await createAccountFetch(adminSession)(messageUrl, { method: 'POST', body: JSON.stringify(sent) })).status,
+      ).toBe(200);
     });
   });
 });

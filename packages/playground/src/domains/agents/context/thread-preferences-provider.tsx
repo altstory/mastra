@@ -3,11 +3,12 @@ import { Txt } from '@mastra/playground-ui/components/Txt';
 import { cleanProviderId } from '@mastra/playground-ui/domains/llm';
 import { useServerPreference } from '@mastra/playground-ui/hooks/use-server-preference';
 import { t } from '@mastra/playground-ui/lib/i18n';
+import { useLLMProviders } from '@mastra/react/hooks/llm';
 import type { ReactNode } from 'react';
 import { AgentSettingsContext } from './agent-context';
 import { PlaygroundModelContext } from './playground-model-context';
 import { threadPreferencesSchema } from './thread-preferences';
-import { useAccount } from '@/domains/account/account-context';
+import { useAccount, useIsManagedAccount } from '@/domains/account/account-context';
 import { useAgentBuilderAllowedModels } from '@/domains/agent-builder/hooks/use-agent-builder-allowed-models';
 import { useBuilderSettings } from '@/domains/agent-builder/hooks/use-builder-settings';
 import { resolveChatSettings } from '@/domains/agents/utils/chat-settings';
@@ -37,6 +38,7 @@ function ThreadPreferencesState({
   threadId,
 }: ThreadPreferencesProviderProps & { storageKey: string }) {
   const account = useAccount();
+  const managed = useIsManagedAccount();
   const saved = useServerPreference({
     kind: 'thread',
     id: JSON.stringify([agentId, threadId]),
@@ -47,9 +49,10 @@ function ThreadPreferencesState({
   });
   const preferences = saved.value;
   const setPreferences = saved.setValue;
+  const { data: providers } = useLLMProviders({ queryOptions: { enabled: managed } });
 
   const { data: builderSettings, isError: policyError } = useBuilderSettings();
-  const policy = builderSettings?.modelPolicy;
+  const policy = managed ? undefined : builderSettings?.modelPolicy;
   const {
     models: allowedModels,
     isLoading: allowedModelsLoading,
@@ -57,7 +60,10 @@ function ThreadPreferencesState({
   } = useAgentBuilderAllowedModels({ enabled: policy?.active === true });
   const needsAllowlist = policy?.active && policy.allowed !== undefined;
   const policyResolved =
-    Boolean(builderSettings) && !policyError && !(needsAllowlist && (allowedModelsLoading || allowedModelsError));
+    !managed &&
+    Boolean(builderSettings) &&
+    !policyError &&
+    !(needsAllowlist && (allowedModelsLoading || allowedModelsError));
   const savedSelection = preferences.selection;
   const allowed =
     !policy?.active ||
@@ -74,19 +80,26 @@ function ThreadPreferencesState({
   const usePolicyDefault = !policyError && policy?.active && (locked || (policyResolved && savedSelection && !allowed));
   const policyDefault = usePolicyDefault ? policy?.default : undefined;
   const modelWarning =
-    policyError || (needsAllowlist && allowedModelsError && !locked)
+    !managed && (policyError || (needsAllowlist && allowedModelsError && !locked))
       ? 'Unable to verify model policy. Using the agent default until policy data is available. Your saved model is unchanged.'
       : undefined;
   const provider = selection?.provider ?? policyDefault?.provider ?? defaultProvider;
   const model = selection?.model ?? policyDefault?.modelId ?? defaultModel;
   const modelOverride = (selection || policyDefault) && provider && model ? `${provider}/${model}` : undefined;
+  const providerId = cleanProviderId(provider);
+  const managedLevel = preferences.modelSettings?.providerOptions?.[providerId]?.reasoningLevel;
+  const supportedLevels = providers?.providers.find(entry => entry.id === providerId)?.modelReasoning?.[model]?.levels;
   const settings = resolveChatSettings(
     defaultSettings,
     // Reasoning belongs to the saved model too. If policy replaces that model,
     // inherit the new route's defaults instead of sending the old route's level.
-    policyResolved && !locked && (!savedSelection || selection) && preferences.modelSettings
-      ? { modelSettings: preferences.modelSettings }
-      : undefined,
+    managed
+      ? typeof managedLevel === 'string' && supportedLevels?.includes(managedLevel)
+        ? { modelSettings: { providerOptions: { [providerId]: { reasoningLevel: managedLevel } } } }
+        : undefined
+      : policyResolved && !locked && (!savedSelection || selection) && preferences.modelSettings
+        ? { modelSettings: preferences.modelSettings }
+        : undefined,
   );
 
   settings.modelSettings.teamwork = preferences.modelSettings?.teamwork ?? false;
@@ -102,9 +115,10 @@ function ThreadPreferencesState({
         modelOverride,
         modelWarning,
         agentModel: defaultProvider && defaultModel ? { provider: defaultProvider, model: defaultModel } : undefined,
-        resetModel: savedSelection
-          ? () => setPreferences(previous => ({ ...previous, selection: undefined }))
-          : undefined,
+        resetModel:
+          !managed && savedSelection
+            ? () => setPreferences(previous => ({ ...previous, selection: undefined }))
+            : undefined,
         setProvider: provider => setPreferences(previous => ({ ...previous, selection: { provider, model: '' } })),
         setModel: (provider, model) => setPreferences(previous => ({ ...previous, selection: { provider, model } })),
       }}

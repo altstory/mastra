@@ -1,6 +1,7 @@
 import type { BuilderModelPolicy } from '@mastra/client-js';
 import { useChatSend } from '@mastra/playground-ui/domains/chat/context/chat-context';
 import { MastraReactProvider } from '@mastra/react';
+import type { AuthCapabilities } from '@mastra/react/hooks/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { HttpHandler } from 'msw';
@@ -16,9 +17,14 @@ import {
   allowedModels,
   restrictedModels,
   currentUser,
+  managedModelProviders,
   memoryConfig,
   workingMemory,
 } from './fixtures/thread-preferences';
+import { adminSession, creatorSession } from '@/domains/account/__tests__/fixtures/session';
+import type { AccountSession } from '@/domains/account/account-api';
+import { AccountContext, useIsManagedAccount } from '@/domains/account/account-context';
+import { createAccountFetch } from '@/domains/account/account-fetch';
 import { buildBuilderSettings } from '@/domains/agent-builder/hooks/__tests__/fixtures/builder-settings';
 import { ComposerModelSwitcher, ComposerModelWarning } from '@/domains/agents/components/composer-model-switcher';
 import { ChatProvider } from '@/lib/ai-ui/chat/chat-provider';
@@ -27,6 +33,9 @@ import { server } from '@/test/msw-server';
 const BASE_URL = 'http://localhost:4111';
 const defaults = { modelSettings: { temperature: 0.9, maxSteps: 5, chatWithLegacyStream: false } };
 const messages: [] = [];
+const savedModelHandler = http.get(`${BASE_URL}/account-preferences`, () =>
+  HttpResponse.json({ value: { selection: { provider: 'openai', model: 'gpt-4o-mini' } }, revision: 1 }),
+);
 
 function Controls() {
   const { model, setModel, setProvider } = usePlaygroundModel();
@@ -79,12 +88,13 @@ function Chat({ agentId, threadId }: { agentId: string; threadId: string }) {
 }
 
 function Session({ threadId, agentId = 'agent-1' }: { threadId: string; agentId?: string }) {
+  const managed = useIsManagedAccount();
   return (
     <ThreadPreferencesProvider
       agentId={agentId}
       threadId={threadId}
-      defaultProvider="openai"
-      defaultModel="gpt-4o"
+      defaultProvider={managed ? 'altflow' : 'openai'}
+      defaultModel={managed ? 'qwen3.8-max' : 'gpt-4o'}
       defaultSettings={defaults}
     >
       <Chat agentId={agentId} threadId={threadId} />
@@ -97,17 +107,22 @@ function mountSession(
   modelPolicy: BuilderModelPolicy = { active: false },
   modelsHandler?: HttpHandler,
   providers = allowedModels,
+  { account, handlers = [] }: { account?: AccountSession; handlers?: HttpHandler[] } = {},
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   client.setQueryData(['builder-settings'], buildBuilderSettings({ modelPolicy }));
+  const customFetch = account ? createAccountFetch(account) : undefined;
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <MastraReactProvider baseUrl={BASE_URL}>
+    <MastraReactProvider baseUrl={BASE_URL} customFetch={customFetch}>
       <QueryClientProvider client={client}>
-        <MemoryRouter>{children}</MemoryRouter>
+        <AccountContext.Provider value={account}>
+          <MemoryRouter>{children}</MemoryRouter>
+        </AccountContext.Provider>
       </QueryClientProvider>
     </MastraReactProvider>
   );
   server.use(
+    ...handlers,
     http.get(`${BASE_URL}/api/editor/builder/settings`, () => HttpResponse.json(buildBuilderSettings({ modelPolicy }))),
     modelsHandler ??
       http.get(`${BASE_URL}/api/editor/builder/models/available`, () => HttpResponse.json({ providers: [] })),
@@ -126,6 +141,66 @@ afterEach(() => {
 });
 
 describe('ThreadPreferencesProvider', () => {
+  describe('when a managed account opens a chat with a saved model', () => {
+    it('uses the preset model without checking the administrator catalog or showing a warning', async () => {
+      const forbidden = vi.fn(() => new HttpResponse(null, { status: 403 }));
+      mountSession(undefined, undefined, undefined, undefined, {
+        account: creatorSession,
+        handlers: [
+          http.get(`${BASE_URL}/api/auth/capabilities`, () =>
+            HttpResponse.json<AuthCapabilities>({ enabled: true, login: null }),
+          ),
+          savedModelHandler,
+          http.get(`${BASE_URL}/api/editor/builder/settings`, forbidden),
+          http.get(`${BASE_URL}/api/editor/builder/models/available`, forbidden),
+        ],
+      });
+
+      await screen.findByRole('button', { name: /Model:.*Qwen.*Max/i });
+      expect(screen.getByText('qwen3.8-max:default')).toBeTruthy();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(forbidden).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when a managed account selects a reasoning level', () => {
+    it('restores it on reopening the conversation and sends it with the preset model', async () => {
+      let value = {};
+      let revision = 0;
+      const bodies: unknown[] = [];
+      const handlers = [
+        http.get(`${BASE_URL}/account-preferences`, () => HttpResponse.json({ value, revision })),
+        http.post(`${BASE_URL}/account-preferences`, async ({ request }) => {
+          const { patch } = (await request.json()) as { patch: Record<string, unknown> };
+          value = { ...value, ...patch };
+          return HttpResponse.json({ value, revision: ++revision });
+        }),
+        http.post(`${BASE_URL}/api/agents/:agentId/stream`, async ({ request }) => {
+          bodies.push(await request.json());
+          return new HttpResponse('data: {"type":"finish","payload":{}}\n\n', {
+            headers: { 'content-type': 'text/event-stream' },
+          });
+        }),
+      ];
+      const mount = () =>
+        mountSession(undefined, undefined, undefined, managedModelProviders, { account: creatorSession, handlers });
+      const view = mount();
+      fireEvent.click(await screen.findByRole('button', { name: /Model:.*Qwen.*Max Medium/i }));
+      expect((screen.getByRole('button', { name: /^Model Qwen/i }) as HTMLButtonElement).disabled).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: /Reasoning level/ }));
+      fireEvent.click(await screen.findByRole('option', { name: 'High' }));
+      await screen.findByRole('button', { name: /Model:.*Qwen.*Max High/i });
+      view.unmount();
+
+      mount();
+      await screen.findByRole('button', { name: /Model:.*Qwen.*Max High/i });
+      fireEvent.click(screen.getByText('Send'));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(bodies[0]).toMatchObject({ providerOptions: { altflow: { reasoningLevel: 'high' } } });
+      expect(bodies[0]).not.toHaveProperty('model');
+    });
+  });
+
   describe('when a customized chat is revisited', () => {
     it('isolates a different chat and restores the original preferences', async () => {
       const view = mountSession();
@@ -269,10 +344,6 @@ describe('ThreadPreferencesProvider', () => {
 
   describe('when the allowed-model request fails', () => {
     it('warns about the agent-default fallback and restores the saved model after recovery', async () => {
-      localStorage.setItem(
-        'mastra-thread-preferences-["agent-1","thread-a"]',
-        JSON.stringify({ selection: { provider: 'openai', model: 'gpt-4o-mini' } }),
-      );
       const sent = vi.fn();
       server.use(
         http.post(`${BASE_URL}/api/agents/:agentId/stream`, async ({ request }) => {
@@ -286,6 +357,16 @@ describe('ThreadPreferencesProvider', () => {
         'thread-a',
         { active: true, allowed: [{ provider: 'openai' }], default: { provider: 'openai', modelId: 'gpt-5-mini' } },
         http.get(`${BASE_URL}/api/editor/builder/models/available`, () => new HttpResponse(null, { status: 500 })),
+        undefined,
+        {
+          account: adminSession,
+          handlers: [
+            savedModelHandler,
+            http.get(`${BASE_URL}/api/auth/capabilities`, () =>
+              HttpResponse.json<AuthCapabilities>({ enabled: true, login: null }),
+            ),
+          ],
+        },
       );
       expect(await screen.findByText(/Unable to verify model policy/)).toBeTruthy();
       expect(screen.getByText('gpt-4o:default')).toBeTruthy();

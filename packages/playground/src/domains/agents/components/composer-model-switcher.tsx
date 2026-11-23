@@ -11,7 +11,7 @@ import { Trans } from '@mastra/playground-ui/lib/i18n/trans';
 import { useLLMProviders } from '@mastra/react/hooks/llm';
 import { useAgentSettings } from '../context/agent-context';
 import { usePlaygroundModelOptional } from '../context/playground-model-context';
-import { useAccount } from '@/domains/account/account-context';
+import { useIsManagedAccount } from '@/domains/account/account-context';
 import { useBuilderFilteredModels, useBuilderFilteredProviders, useBuilderModelPolicy } from '@/domains/agent-builder';
 import { useAgentBuilderAllowedModels } from '@/domains/agent-builder/hooks/use-agent-builder-allowed-models';
 import { findProviderById } from '@/domains/llm';
@@ -20,15 +20,18 @@ import { useFilteredProviders } from '@/domains/llm/hooks/use-filtered-providers
 
 export const ComposerModelSwitcher = () => {
   useLocale();
-  const account = useAccount();
+  const managed = useIsManagedAccount();
   const messages = useChatMessages();
-  const managed = Boolean(account && account.user.role !== 'admin');
   const selection = usePlaygroundModelOptional();
   const { settings, setSettings } = useAgentSettings();
-  const { data: dataProviders, isLoading: providersLoading } = useLLMProviders({ queryOptions: { enabled: !managed } });
+  const { data: dataProviders, isLoading: providersLoading } = useLLMProviders();
   const policy = useBuilderModelPolicy();
-  const allProviders = dataProviders?.providers || [];
-  const sortedProviders = useFilteredProviders(useBuilderFilteredProviders(allProviders, policy), '', false);
+  const allProviders = dataProviders?.providers ?? [];
+  const sortedProviders = useFilteredProviders(
+    useBuilderFilteredProviders(managed ? [] : allProviders, policy),
+    '',
+    false,
+  );
   const allowedModels = useBuilderFilteredModels(useAllModels(allProviders), policy);
   const pickerProviders: ModelPickerProvider[] = sortedProviders.map(provider => ({
     id: provider.id,
@@ -86,6 +89,7 @@ export const ComposerModelSwitcher = () => {
   return (
     <ModelSettingsPicker
       modelLocked={modelLocked}
+      reasoningLocked={!managed && modelLocked}
       teamwork={{
         enabled: settings?.modelSettings.teamwork ?? false,
         hasMessages: messages.length > 0,
@@ -131,8 +135,9 @@ export const ComposerModelSwitcher = () => {
 
 export const ComposerModelWarning = () => {
   useLocale();
+  const managed = useIsManagedAccount();
   const selection = usePlaygroundModelOptional();
-  const { data: dataProviders, isLoading: providersLoading } = useLLMProviders();
+  const { data: dataProviders, isLoading: providersLoading } = useLLMProviders({ queryOptions: { enabled: !managed } });
   const policy = useBuilderModelPolicy();
   const {
     models: allowedModels,
@@ -140,7 +145,7 @@ export const ComposerModelWarning = () => {
     isError: allowedModelsError,
   } = useAgentBuilderAllowedModels();
 
-  if (providersLoading || !selection) return null;
+  if (managed || providersLoading || !selection) return null;
 
   const providers = dataProviders?.providers || [];
   const { provider, model, modelWarning } = selection;

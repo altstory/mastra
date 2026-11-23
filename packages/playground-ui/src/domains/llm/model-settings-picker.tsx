@@ -19,6 +19,7 @@ import { formatModelName } from '@/utils/model';
 export interface ModelSettingsPickerProps {
   providers: ModelPickerProvider[];
   modelLocked?: boolean;
+  reasoningLocked?: boolean;
   value?: ModelPickerValue;
   onValueChange: (value: ModelPickerValue) => void;
   defaultModel?: ModelPickerValue;
@@ -72,6 +73,7 @@ function focusPane(element: HTMLDivElement | null) {
 export function ModelSettingsPicker({
   providers,
   modelLocked = false,
+  reasoningLocked = modelLocked,
   value,
   onValueChange,
   defaultModel,
@@ -133,7 +135,7 @@ export function ModelSettingsPicker({
                 <span className="ml-auto truncate text-muted-foreground">{name}</span>
                 <IconChevronRightMedium aria-hidden className="size-icon-sm shrink-0" />
               </button>
-              {reasoning && !modelLocked && (
+              {reasoning && !reasoningLocked && (
                 <button type="button" className={rowClass} onClick={() => setPane('reasoning')}>
                   <span>{t('Reasoning level')}</span>
                   <span className="ml-auto text-muted-foreground">{levelName(reasoning.value)}</span>

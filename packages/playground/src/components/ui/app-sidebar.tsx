@@ -69,6 +69,7 @@ export function AppSidebar() {
 
   const filterItem = (item: NavItem) => {
     if (item.hidden) return false;
+    if (account && account.user.role !== 'admin' && (item.url === '/agents' || item.url === '/knowledge')) return false;
     if (item.url === '/connections' && !isConnectSurfaceMounted) return false;
     if (cmsOnlyLinks.has(item.url) && !isCmsAvailable && !isCmsLoading) return false;
     if (isMastraPlatform && !item.isOnMastraPlatform) return false;

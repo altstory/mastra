@@ -17,6 +17,10 @@ const memoryBody = z.object({
 const conversationPreferences = z.object({
   memory: memoryBody.optional(),
   disableSubAgents: z.boolean().optional(),
+  providerOptions: z
+    .object({ altflow: z.object({ reasoningLevel: z.string().min(1).max(64) }) })
+    .optional()
+    .catch(undefined),
 });
 const chatBody = conversationPreferences.extend({
   messages: z.unknown(),
@@ -27,6 +31,22 @@ const threadMessageBody = z.object({
   threadId: z.string(),
   ifIdle: z.object({ streamOptions: conversationPreferences.optional() }).optional(),
 });
+
+// Studio defaults the memory resource to the agent id, but the server scopes every account to its own resource.
+function bindResource(body: unknown, resource: string): unknown {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+  const bound: Record<string, unknown> = { ...body };
+  if (isRecord(bound.memory)) bound.memory = { ...bound.memory, resource };
+  if ('resourceId' in bound) bound.resourceId = resource;
+  if (isRecord(bound.ifIdle) && isRecord(bound.ifIdle.streamOptions)) {
+    bound.ifIdle = { ...bound.ifIdle, streamOptions: bindResource(bound.ifIdle.streamOptions, resource) };
+  }
+  return bound;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 
 // Studio normally sends editable run settings. Managed accounts use the preset
 // assistant, so send conversation data and bounded preferences; the server independently rejects overrides.
@@ -39,11 +59,15 @@ export function createAccountFetch(account: AccountSession, apiPrefix = '/api'):
     const route = prefix === '/' ? pathname : pathname.startsWith(prefix + '/') ? pathname.slice(prefix.length) : '';
     const chat = /^\/agents\/[^/]+\/(stream|generate|stream-until-idle)$/.test(route);
     const threadMessage = /^\/agents\/[^/]+\/(send-message|queue-message)$/.test(route);
-    if (!managed || (!chat && !threadMessage) || request.method !== 'POST') return fetch(request);
+    if ((!chat && !threadMessage) || request.method !== 'POST') return fetch(request);
+    if (!managed) {
+      const body = await request.clone().json();
+      return fetch(new Request(request, { body: JSON.stringify(bindResource(body, account.resourceId)) }));
+    }
     if (threadMessage) {
       const parsed = threadMessageBody.parse(await request.clone().json());
       const streamOptions = parsed.ifIdle?.streamOptions;
-      const hasPreferences = streamOptions && Object.keys(streamOptions).length > 0;
+      const hasPreferences = streamOptions && Object.values(streamOptions).some(value => value !== undefined);
       const body = {
         message: parsed.message,
         threadId: parsed.threadId,

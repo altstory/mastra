@@ -34,11 +34,11 @@ function renderActions() {
 afterEach(cleanup);
 describe('Go account permissions', () => {
   describe('when Go returns a creator', () => {
-    it('offers chat and knowledge without editing the assistant', async () => {
+    it('offers chat and keeps knowledge and assistant management restricted', async () => {
       server.use(http.get(`${endpoint}/account/session`, () => HttpResponse.json(creatorSession)));
       renderActions();
       expect(await screen.findByRole('button', { name: '对话' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: '知识库' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: '知识库' })).toBeNull();
       expect(screen.queryByRole('button', { name: '编辑助手' })).toBeNull();
     });
   });
@@ -47,6 +47,7 @@ describe('Go account permissions', () => {
       server.use(http.get(`${endpoint}/account/session`, () => HttpResponse.json(adminSession)));
       renderActions();
       expect(await screen.findByRole('button', { name: '编辑助手' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: '知识库' })).toBeTruthy();
     });
   });
 });

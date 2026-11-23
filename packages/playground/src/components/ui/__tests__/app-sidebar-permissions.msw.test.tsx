@@ -31,14 +31,15 @@ afterEach(() => cleanup());
 
 describe('AppSidebar permissions', () => {
   describe('when a Go account is a regular user', () => {
-    it.each(['user', 'creator'] as const)('hides empty management groups for the %s role', async role => {
+    it.each(['user', 'creator'] as const)('hides management navigation for the %s role', async role => {
       server.use(authHandler({ enabled: true, login: null }));
-      renderSidebar('/knowledge', { ...creatorSession, user: { ...creatorSession.user, role } });
+      renderSidebar('/chat/creator-agent/threads/new', { ...creatorSession, user: { ...creatorSession.user, role } });
 
-      await screen.findByRole('link', { name: 'Knowledge' });
-      expect(screen.getByRole('link', { name: 'Agents' })).toBeTruthy();
+      expect(await screen.findByRole('link', { name: 'New Thread' })).toBeTruthy();
       expect(screen.queryByText('Evaluation')).toBeNull();
       expect(screen.queryByText('Observability')).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Agents' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Knowledge' })).toBeNull();
       for (const name of ['Scorers', 'Datasets', 'Experiments', 'Review Queue', 'Metrics', 'Traces', 'Logs']) {
         expect(screen.queryByRole('link', { name })).toBeNull();
       }
@@ -51,6 +52,7 @@ describe('AppSidebar permissions', () => {
       renderSidebar('/knowledge', adminSession);
 
       await screen.findByRole('link', { name: 'Knowledge' });
+      expect(screen.getByRole('link', { name: 'Agents' })).toBeTruthy();
       expect(screen.getByText('Evaluation')).toBeTruthy();
       expect(screen.getByText('Observability')).toBeTruthy();
       for (const name of ['Scorers', 'Datasets', 'Experiments', 'Review Queue', 'Metrics', 'Traces', 'Logs']) {

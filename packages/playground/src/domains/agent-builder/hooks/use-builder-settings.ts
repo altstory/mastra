@@ -2,6 +2,7 @@ import type { BuilderSettingsResponse } from '@mastra/client-js';
 import { useMastraClient } from '@mastra/react';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useIsManagedAccount } from '@/domains/account/account-context';
 
 type BuilderModelPolicy = NonNullable<BuilderSettingsResponse['modelPolicy']>;
 
@@ -15,11 +16,12 @@ interface UseBuilderSettingsOptions {
  */
 export const useBuilderSettings = (options?: UseBuilderSettingsOptions) => {
   const client = useMastraClient();
+  const managed = useIsManagedAccount();
 
   return useQuery({
     queryKey: ['builder-settings'],
     queryFn: () => client.getBuilderSettings(),
-    enabled: options?.enabled ?? true,
+    enabled: !managed && (options?.enabled ?? true),
   });
 };
 
@@ -51,8 +53,9 @@ const INACTIVE_POLICY: BuilderModelPolicy = { active: false };
  * can rely on `policy.active === false` as the "no admin policy" guard.
  */
 export const useBuilderModelPolicy = (): BuilderModelPolicy => {
+  const managed = useIsManagedAccount();
   const { data } = useBuilderSettings();
-  return data?.modelPolicy ?? INACTIVE_POLICY;
+  return managed ? INACTIVE_POLICY : (data?.modelPolicy ?? INACTIVE_POLICY);
 };
 
 export interface BuilderPickerVisibility {

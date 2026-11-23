@@ -19,3 +19,16 @@ export const agentModelProviders: RouteResponse<'GET /agents/providers'> = {
     { id: 'openai', name: 'OpenAI', envVar: 'OPENAI_API_KEY', connected: true, models: ['gpt-4o', 'gpt-4o-mini'] },
   ],
 };
+export const managedModelProviders: RouteResponse<'GET /agents/providers'> = {
+  providers: [
+    {
+      id: 'altflow',
+      name: 'Altflow',
+      envVar: 'ALTFLOW_MODELHUB_API_KEY',
+      connected: true,
+      models: ['qwen3.8-max'],
+      modelNames: { 'qwen3.8-max': 'Qwen3.8 Max' },
+      modelReasoning: { 'qwen3.8-max': { levels: ['medium', 'high'], defaultLevel: 'medium' } },
+    },
+  ],
+};

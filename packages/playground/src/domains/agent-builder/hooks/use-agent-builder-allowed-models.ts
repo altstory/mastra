@@ -2,6 +2,7 @@ import type { Provider } from '@mastra/client-js';
 import { useMastraClient } from '@mastra/react';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useIsManagedAccount } from '@/domains/account/account-context';
 import { useAllModels } from '@/domains/llm';
 import type { ModelInfo } from '@/domains/llm/hooks/use-filtered-models';
 
@@ -25,11 +26,12 @@ export const useAgentBuilderAllowedModels = ({
   enabled = true,
 }: { enabled?: boolean } = {}): AgentBuilderAllowedModels => {
   const client = useMastraClient();
+  const managed = useIsManagedAccount();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['builder-available-models'],
     queryFn: () => client.getBuilderAvailableModels(),
-    enabled,
+    enabled: enabled && !managed,
   });
 
   const providers = useMemo<Provider[]>(() => (data?.providers as Provider[]) ?? [], [data]);
