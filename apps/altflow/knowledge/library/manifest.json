@@ -1,0 +1,200 @@
+[
+  {
+    "file": "genre-first-principles",
+    "path": "research/genre-first-principles",
+    "name": "短剧类型第一性原理分析",
+    "description": "用一个词概括每种短剧类型的底层逻辑，用于类型判断、策划和互动设计。"
+  },
+  {
+    "file": "male-short-drama-hit-cases",
+    "path": "research/male-short-drama-hit-cases",
+    "name": "男频爆款短剧案例分析",
+    "description": "提炼男频短剧爆款案例的成功规律，用于对标和改编参考。"
+  },
+  {
+    "file": "male-short-drama-audience",
+    "path": "research/male-short-drama-audience",
+    "name": "男频短剧用户画像",
+    "description": "男频短剧用户的分层、核心群体与需求，用于受众分析。"
+  },
+  {
+    "file": "interactive-audience-shift",
+    "path": "research/interactive-audience-shift",
+    "name": "互动短剧用户画像变化",
+    "description": "短剧加入互动后用户群体的流失与新增，用于互动设计与受众判断。"
+  },
+  {
+    "file": "interaction-experiences",
+    "path": "method/interaction-experiences",
+    "name": "四类主互动体验设计要点",
+    "description": "情感抉择、命运逆转、权谋博弈、生存闯关四类主互动体验的口径、状态、选项数量、反馈与钩子倾向。"
+  },
+  {
+    "file": "interaction-dimensions",
+    "path": "method/interaction-dimensions",
+    "name": "互动设计四维度问题清单",
+    "description": "节奏、钩子、选择机制、状态与反馈四个维度的问题，按四类体验分别改写，以及风险校验。"
+  },
+  {
+    "file": "relationship-choice-prototypes",
+    "path": "method/relationship-choice-prototypes",
+    "name": "关系抉择原型",
+    "description": "情感抉择类作品的关系模式、状态字段、互动题型样例、关系钩子、弧线阶段与选项设计铁律。"
+  },
+  {
+    "file": "node-type-groups",
+    "path": "method/node-type-groups",
+    "name": "互动节点类型组",
+    "description": "按题材与互动重心划分的四组互动节点类型，含默认占比与每集上限。"
+  },
+  {
+    "file": "meaningful-choices",
+    "path": "method/meaningful-choices",
+    "name": "有意义的选择",
+    "description": "选择的三个层次、好选择的四条标准、选项设计原则与常见问题（虚假选择、明显最优、选择过多）。"
+  },
+  {
+    "file": "experience-balance",
+    "path": "method/experience-balance",
+    "name": "互动体验平衡",
+    "description": "不同路径之间在长度、深度、难度、奖励上的平衡，以及调整策略和验证流程。"
+  },
+  {
+    "file": "player-psychology",
+    "path": "method/player-psychology",
+    "name": "玩家心理",
+    "description": "代理感、预测性、一致性，玩家行为模式、选择焦虑与后悔管理、反馈设计。"
+  },
+  {
+    "file": "spindle-structure",
+    "path": "method/spindle-structure",
+    "name": "纺锤形结构",
+    "description": "早期分叉、中期收束、后期再分叉的互动结构，收束点设计与常见问题。"
+  },
+  {
+    "file": "dialogue-techniques",
+    "path": "craft/dialogue-techniques",
+    "name": "对话写作技巧",
+    "description": "写自然、符合人物、有潜台词的对话；角色语音、推进剧情、常见错误。"
+  },
+  {
+    "file": "scene-structure",
+    "path": "craft/scene-structure",
+    "name": "场景结构写作技巧",
+    "description": "场景-续场模型、场景节奏点、张力管理与逐拍结构。"
+  },
+  {
+    "file": "fast-paced-payoff",
+    "path": "craft/fast-paced-payoff",
+    "name": "爽点与快节奏写作规范",
+    "description": "每章至少两个爽点、冲突密集、章章有钩子；打脸、装逼、升级的步骤公式；节奏控制与禁忌。"
+  },
+  {
+    "file": "anti-ai-wordlist",
+    "path": "craft/anti-ai-wordlist",
+    "name": "AI 去味词表（激进版）",
+    "description": "禁用词汇、禁用句式、形容词与成语限制。很激进，会让文字变直变硬，只在用户明确要求彻底去 AI 味时使用。"
+  },
+  {
+    "file": "writing-requirements",
+    "path": "craft/writing-requirements",
+    "name": "写作要求速查",
+    "description": "五类常见写作要求：无毒点、强情绪、严肃文学、甜文、虐文，各自的核心理念和具体要求。"
+  },
+  {
+    "file": "genre-revenge",
+    "path": "genre/revenge",
+    "name": "复仇爽文创作知识",
+    "description": "复仇类故事的仇恨设定、打脸节奏、实力成长、仇人设定、道德平衡与章节规划。"
+  },
+  {
+    "file": "genre-romance",
+    "path": "genre/romance",
+    "name": "言情创作知识",
+    "description": "言情类故事的关系设定、情感节奏、人物塑造、章节规划与质量检查。"
+  },
+  {
+    "file": "genre-mystery",
+    "path": "genre/mystery",
+    "name": "悬疑推理创作知识",
+    "description": "悬疑推理类故事的谜团设计、线索时间线、反转与公平性、章节规划与检查。"
+  },
+  {
+    "file": "genre-historical",
+    "path": "genre/historical",
+    "name": "历史题材创作知识",
+    "description": "历史类故事的考据、时代细节、权谋、人物与章节规划。"
+  },
+  {
+    "file": "genre-wuxia",
+    "path": "genre/wuxia",
+    "name": "武侠创作知识",
+    "description": "武侠类故事的世界、门派、武功体系与江湖规矩的要点。"
+  },
+  {
+    "file": "genre-fantasy",
+    "path": "genre/fantasy",
+    "name": "奇幻创作知识",
+    "description": "奇幻类故事的世界规则、力量体系、设定一致性与章节规划。"
+  },
+  {
+    "file": "style-natural-voice",
+    "path": "style/natural-voice",
+    "name": "自然人声写作风格",
+    "description": "像真人写作的风格：句式、对话、段落、场景与心理描写、时间处理、自检清单。"
+  },
+  {
+    "file": "style-web-novel",
+    "path": "style/web-novel",
+    "name": "网文风格",
+    "description": "网络小说的叙述节奏、句式与读者体验要点。"
+  },
+  {
+    "file": "style-ancient-style",
+    "path": "style/ancient-style",
+    "name": "古风风格",
+    "description": "古风叙述的用词、句式与氛围营造。"
+  },
+  {
+    "file": "style-literary",
+    "path": "style/literary",
+    "name": "文学风格",
+    "description": "文学性叙述的意象、节奏与心理深度。"
+  },
+  {
+    "file": "style-minimal",
+    "path": "style/minimal",
+    "name": "极简风格",
+    "description": "极简叙述：克制的描写与留白。"
+  },
+  {
+    "file": "template-character-profiles",
+    "path": "template/character-profiles",
+    "name": "角色档案模板",
+    "description": "角色档案的结构模板，用于人物设计文档。"
+  },
+  {
+    "file": "template-world-setting",
+    "path": "template/world-setting",
+    "name": "世界设定模板",
+    "description": "世界设定的结构模板，用于世界观设定文档。"
+  },
+  {
+    "file": "template-locations",
+    "path": "template/locations",
+    "name": "地点档案模板",
+    "description": "场景与地点的结构模板。"
+  },
+  {
+    "file": "template-character-voices",
+    "path": "template/character-voices",
+    "name": "角色语言档案模板",
+    "description": "记录每个角色说话方式、对话范例与语言禁忌的模板。"
+  },
+  {
+    "file": "state-variables",
+    "path": "method/state-variables",
+    "name": "状态变量设计规范",
+    "description": "状态变量的类型、命名、可见性与设计要点，以及与剧本的衔接。"
+  }
+]
