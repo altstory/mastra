@@ -4,7 +4,7 @@
 
 ## 能力
 
-显式工具：count-text、web_fetch、ask_user、submit_plan、task_write、task_update、task_complete、task_check、session_search、present、validate_script_format。配置搜索凭据后再注册 web_search，共 12 个。另有动态子智能体与团队工具 10 个：subagent、subagent_fork、list_agents、send_message、wait_agent、interrupt_agent、team_task_create/get/list/update；总计 21 个，配置搜索后为 22 个。
+显式工具：count-text、web_fetch、ask_user、submit_plan、task_write、task_update、task_complete、task_check、session_search、present、validate_script_format、project_status、analyze_script_graph、story_ledger_read、story_ledger_save。配置搜索凭据后再注册 web_search，共 15 个。另有动态子智能体与团队工具 10 个：subagent、subagent_fork、list_agents、send_message、wait_agent、interrupt_agent、team_task_create/get/list/update；总计 25 个，配置搜索后为 26 个。
 
 工作区文件、知识库、技能、recall、工作流仍使用 Mastra 原生工具。动态子智能体基于原生 Agent/Memory/Signal 运行，调度与持久化由 `subagents/` 管理。`/altflow/tools/catalog` 是鉴权只读目录，显示来源及未配置原因，不提供运行时工具的无会话执行旁路。
 

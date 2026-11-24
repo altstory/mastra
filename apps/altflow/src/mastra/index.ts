@@ -44,6 +44,7 @@ import { ConversationProjects } from './services/conversation-projects';
 import { ConversationFiles } from './services/conversation-files';
 import { CreativeMemoryStore } from './services/creative-memory';
 import { UserDeliveryService } from './services/delivery';
+import { StoryLedgerStore } from './services/story-ledger';
 import { OfficeReader } from './services/office';
 import { turnFileChangesProcessor } from './services/turn-file-changes';
 import { createAgentTree } from './subagents/agents';
@@ -235,6 +236,8 @@ const creativeMemory = creativeMemoryProcessor({
 const creatorGatewayClient = process.env.ALTFLOW_CREATOR_SHARED_SECRET
   ? createClient({ url: `file:${previewPath('data/creator-gateway.db')}` })
   : undefined;
+const storyLedger = new StoryLedgerStore(`file:${previewPath('data/story-ledger.db')}`);
+await storyLedger.init();
 const sessionClient = createClient({ url: `file:${previewPath('src/mastra/public/preview.db')}` });
 const fileScope = conversationFiles.processor((context, thread) => agentTree.runtime.actor(context, thread));
 const documents = createDocumentTools(new OfficeReader(conversationFiles));
@@ -245,6 +248,7 @@ const creatorToolBundle = createCreatorTools({
   sessionSearch: new LibSQLSessionSearch(sessionClient),
   delivery: new UserDeliveryService(conversationFiles),
   projectFiles: conversationFiles,
+  storyLedger,
 });
 const scriptReviewer = createScriptReviewer(() =>
   modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }),

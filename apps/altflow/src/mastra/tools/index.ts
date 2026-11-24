@@ -16,8 +16,11 @@ import {
   taskCheckTool,
 } from '@mastra/core/tools';
 import type { ToolAction } from '@mastra/core/tools';
+import type { StoryLedgerStore } from '../services/story-ledger';
 import { createProjectStatusTool } from './project-status';
 import type { ProjectFiles } from './project-status';
+import { createScriptGraphTool } from './script-graph';
+import { createStoryLedgerTools } from './story-ledger';
 import { createValidateScriptFormatTool } from './validate-script-format';
 
 export function createCreatorTools(options: {
@@ -25,6 +28,7 @@ export function createCreatorTools(options: {
   sessionSearch: SessionSearchService;
   delivery: DeliveryService;
   projectFiles: ProjectFiles;
+  storyLedger: StoryLedgerStore;
   env?: Record<string, string | undefined>;
 }) {
   const env = options.env ?? process.env;
@@ -48,6 +52,8 @@ export function createCreatorTools(options: {
     present: createPresentTool({ service: options.delivery }),
     validate_script_format: createValidateScriptFormatTool(),
     project_status: createProjectStatusTool({ files: options.projectFiles }),
+    analyze_script_graph: createScriptGraphTool(),
+    ...createStoryLedgerTools({ store: options.storyLedger }),
     ...(provider ? { web_search: createWebSearchTool({ provider }) } : {}),
   };
   return { tools, providerConfigured: Boolean(provider), providerName };

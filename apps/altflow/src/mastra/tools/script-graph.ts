@@ -1,3 +1,6 @@
+import { createTool } from '@mastra/core/tools';
+import { z } from 'zod';
+
 const EPISODE = /^(?:#+\s*)?(?:第\s*(\d+)\s*集|EP\s*(\d+))(?:\s*[：:]?\s*.*)?$/i;
 const SCENE = /^(\d+)-(\d+)(?:-([A-F]))?\s+\S.*$/;
 const INTERACTION = /^(\d+)-(\d+)-互动(?:\s+.*)?$/;
@@ -137,7 +140,12 @@ export function analyzeScriptGraph(script: string): GraphReport {
   }
   for (const scene of scenes) {
     if (!reachable.has(scene.key))
-      issues.push({ severity: 'error', rule: '孤立场景', message: `场景 ${scene.key} 从开头无法到达。`, scenes: [scene.key] });
+      issues.push({
+        severity: 'error',
+        rule: '孤立场景',
+        message: `场景 ${scene.key} 从开头无法到达。`,
+        scenes: [scene.key],
+      });
   }
 
   const last = scenes.at(-1)?.key;
@@ -209,7 +217,10 @@ export function analyzeScriptGraph(script: string): GraphReport {
       const children = out.map(walk).filter(child => child.count > 0);
       result = children.length
         ? {
-            count: Math.min(1e12, children.reduce((sum, child) => sum + child.count, 0)),
+            count: Math.min(
+              1e12,
+              children.reduce((sum, child) => sum + child.count, 0),
+            ),
             min: 1 + Math.min(...children.map(child => child.min)),
             max: 1 + Math.max(...children.map(child => child.max)),
           }
@@ -248,4 +259,31 @@ export function analyzeScriptGraph(script: string): GraphReport {
       maxPathScenes: total.max,
     },
   };
+}
+
+export function createScriptGraphTool() {
+  return createTool({
+    id: 'analyze_script_graph',
+    description:
+      '分析互动剧本的场景图：孤立场景、死路、选项过多、虚假自由（选项导向相同或近似内容）、路径数量膨胀、路径长度失衡，并给出场景数、结局数和路径数。不调用模型，可在写完一场或一集后随时使用。传入剧本全文，使用 X-Y 场景编号格式。',
+    inputSchema: z.object({ script: z.string().min(1).describe('剧本全文') }),
+    outputSchema: z.object({
+      issues: z.array(
+        z.object({
+          severity: z.enum(['error', 'warn']),
+          rule: z.string(),
+          message: z.string(),
+          scenes: z.array(z.string()),
+        }),
+      ),
+      stats: z.object({
+        scenes: z.number(),
+        endings: z.number(),
+        pathCount: z.number(),
+        minPathScenes: z.number(),
+        maxPathScenes: z.number(),
+      }),
+    }),
+    execute: async ({ script }) => analyzeScriptGraph(script),
+  });
 }

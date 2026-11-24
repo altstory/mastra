@@ -20,6 +20,7 @@ import { HistoryMemory } from '../src/mastra/agents/history-memory.ts';
 import { SharedSkillSource } from '../src/mastra/services/shared-skills.ts';
 import { createAgentTree } from '../src/mastra/subagents/agents.ts';
 import { SubagentStore } from '../src/mastra/subagents/store.ts';
+import { StoryLedgerStore } from '../src/mastra/services/story-ledger.ts';
 import { createCreatorTools } from '../src/mastra/tools/index.ts';
 
 // Only the paid model edge is a fixture. Agent execution, suspension, memory,
@@ -147,6 +148,9 @@ export async function fixture(t) {
       generateTitle: false,
     },
   });
+  const storyLedger = new StoryLedgerStore(`file:${join(dir, 'story-ledger.db')}`);
+  await storyLedger.init();
+  t.after(() => storyLedger.close());
   const bundle = createCreatorTools({
     env: {},
     countText: createTool({
@@ -158,6 +162,7 @@ export async function fixture(t) {
     sessionSearch: new LibSQLSessionSearch(client),
     delivery: { present: async () => [] },
     projectFiles: { list: async () => [] },
+    storyLedger,
   });
   const memoryStore = await storage.getStore('memory');
   const treeStore = new SubagentStore(`file:${join(dir, 'subagents.db')}`);

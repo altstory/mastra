@@ -266,9 +266,11 @@ test('ordinary conversations cannot read internal references and return only own
 
 test('native task tools persist through a real Agent run and a reopened LibSQL store', async t => {
   const f = await fixture(t);
-  assert.equal(Object.keys(f.bundle.tools).length, 12);
+  assert.equal(Object.keys(f.bundle.tools).length, 15);
   assert.ok('validate_script_format' in f.bundle.tools);
   assert.ok('project_status' in f.bundle.tools);
+  assert.ok('analyze_script_graph' in f.bundle.tools);
+  assert.ok('story_ledger_read' in f.bundle.tools && 'story_ledger_save' in f.bundle.tools);
   assert.equal('web_search' in f.bundle.tools, false);
   assert.equal(
     Object.keys(f.bundle.tools).some(name => name.startsWith('schedule')),
