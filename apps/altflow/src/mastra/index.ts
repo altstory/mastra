@@ -26,7 +26,7 @@ import { createPrivateWorkspace } from './agents/private-workspace';
 import { isolateConversationReferences, protectConversationResponses } from './agents/reference-visibility';
 import { createAltFlowAuth } from './altflow-auth';
 import { ContextCompaction } from './context-compaction';
-import { CONTEXT_MEMORY_OPTIONS } from './context-memory';
+import { CONTEXT_MEMORY_OPTIONS, CREATOR_MEMORY_OPTIONS } from './context-memory';
 import { localEmbedder } from './embedding';
 import { conversationModels, defaultConversationModel, defaultReasoningLevel } from './model-policy';
 import { ModelHubGateway } from './modelhub-gateway';
@@ -206,13 +206,7 @@ const creatorMemory = new HistoryMemory({
   vector,
   embedder: localEmbedder,
   options: {
-    ...CONTEXT_MEMORY_OPTIONS,
-    semanticRecall: true,
-    workingMemory: {
-      enabled: true,
-      scope: 'resource',
-      template: '# 作者偏好\n\n# 当前作品\n\n# 人物与世界观\n\n# 已确认的约束\n\n# 创作进度\n',
-    },
+    ...CREATOR_MEMORY_OPTIONS,
     generateTitle: { instructions: '根据首条用户消息生成简洁的中文对话标题，不超过 12 个汉字，只输出标题。' },
   },
 });
@@ -227,7 +221,9 @@ const creatorToolBundle = createCreatorTools({
   delivery: new UserDeliveryService(userFiles),
   projectFiles: userFiles,
 });
-const scriptReviewer = createScriptReviewer(() => modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }));
+const scriptReviewer = createScriptReviewer(() =>
+  modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }),
+);
 const scriptQa = createScriptQaWorkflow(scriptReviewer.review);
 const privateWorkspace = createPrivateWorkspace(userFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
@@ -302,7 +298,7 @@ ${internalReferencePolicy}
 
 ## 文件与记忆
 - 用户的附件和你生成的文件都在用户自己的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
-- 只把用户明确提供的偏好、设定和进度写入记忆。回看历史对话时，先 session_search，再用 recall 读取原文。
+- 只在当前会话的工作记忆中记录这个会话的偏好、设定和进度。用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。
 - 不接触其他用户的数据。
 
 ## 对用户说话
