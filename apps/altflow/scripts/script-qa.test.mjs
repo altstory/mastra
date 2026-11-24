@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createScriptReviewer } from '../src/mastra/agents/script-reviewer.ts';
 import { createScriptQaWorkflow, REVIEW_DIMENSIONS } from '../src/mastra/workflows/script-qa.ts';
-import { modelServer } from './tool-fixture.mjs';
+import { context, modelServer } from './tool-fixture.mjs';
 
 const valid = `第1集 雨夜来客
 1-1 老宅门口（夜）
@@ -74,4 +74,59 @@ test('the reviewer is a standalone agent that resolves its model lazily', async 
     issues.map(issue => issue.location),
     ['1-3'],
   );
+});
+
+const twoEpisodes = `${valid}第2集 暗线
+2-1 书房（晨）
+林川：账本呢？
+本集结束
+`;
+
+const ledgerEntries = [
+  { kind: 'character', key: '林川', episode: 1, content: '死于雨夜', status: 'dead', revision: 1, updatedAt: '' },
+  { kind: 'foreshadow', key: '账本', episode: 1, content: '缺页', plannedRevealEpisode: 2, revision: 1, updatedAt: '' },
+  { kind: 'foreshadow', key: '雨声', episode: 1, content: '重复的雨声', revealedEpisode: 2, revision: 1, updatedAt: '' },
+];
+
+async function runWithLedger(script, ledger, extra = { project: '雨夜' }) {
+  const workflow = createScriptQaWorkflow(async () => [], ledger);
+  const result = await (await workflow.createRun()).start({
+    inputData: { script, ...extra },
+    requestContext: context('alice'),
+  });
+  assert.equal(result.status, 'success');
+  return result.result;
+}
+
+test('the ledger of the calling user is checked for dead characters and overdue foreshadowing', async () => {
+  const owners = [];
+  const output = await runWithLedger(twoEpisodes, {
+    read: async (owner, project) => {
+      owners.push([owner, project]);
+      return ledgerEntries;
+    },
+  });
+  assert.deepEqual(owners, [['alice', '雨夜']]);
+  assert.equal(output.passed, false);
+  assert.match(output.report, /\[角色状态矛盾\] 角色「林川」在第 1 集已死亡，但场景 2-1 中仍有他的台词/);
+  assert.match(output.report, /\[伏笔未回收\] 伏笔「账本」/);
+  assert.doesNotMatch(output.report, /伏笔「雨声」/);
+});
+
+test('an empty ledger is reported, and no project means no ledger lookup', async () => {
+  const empty = await runWithLedger(valid, { read: async () => [] });
+  assert.match(empty.report, /台账还是空的/);
+  let reads = 0;
+  const skipped = await runWithLedger(
+    valid,
+    {
+      read: async () => {
+        reads += 1;
+        return ledgerEntries;
+      },
+    },
+    {},
+  );
+  assert.equal(reads, 0);
+  assert.doesNotMatch(skipped.report, /台账/);
 });

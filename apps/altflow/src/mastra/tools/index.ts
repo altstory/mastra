@@ -51,7 +51,7 @@ export function createCreatorTools(options: {
     session_search: createSessionSearchTool({ service: options.sessionSearch }),
     present: createPresentTool({ service: options.delivery }),
     validate_script_format: createValidateScriptFormatTool(),
-    project_status: createProjectStatusTool({ files: options.projectFiles }),
+    project_status: createProjectStatusTool({ files: options.projectFiles, ledger: options.storyLedger }),
     analyze_script_graph: createScriptGraphTool(),
     ...createStoryLedgerTools({ store: options.storyLedger }),
     ...(provider ? { web_search: createWebSearchTool({ provider }) } : {}),

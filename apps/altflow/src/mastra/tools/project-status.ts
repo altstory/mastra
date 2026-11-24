@@ -2,6 +2,10 @@ import { toolIdentity } from '@mastra/altflow-tools';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
+export interface ProjectLedger {
+  read(owner: string, project: string): Promise<Array<{ kind: string; revealedEpisode?: number }>>;
+}
+
 export interface ProjectFiles {
   list(owner: string): Promise<Array<{ path: string; updatedAt: string }>>;
 }
@@ -54,11 +58,11 @@ export function describeProjects(files: Array<{ path: string; updatedAt: string 
   };
 }
 
-export function createProjectStatusTool(options: { files: ProjectFiles }) {
+export function createProjectStatusTool(options: { files: ProjectFiles; ledger?: ProjectLedger }) {
   return createTool({
     id: 'project_status',
     description:
-      '查看创作项目的进度：各环节的产出文件是否已存在，写剧本前还缺哪些。文件仅在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（00 需求确认、01 创意构思、02 世界观设定、03 人物设计、04 故事架构、05 互动设计、06 分集大纲、07 互动剧本、08 质量检查报告、09 迭代优化记录）。不传项目名则只列出当前会话的项目，不读取账号的其他会话。',
+      '查看创作项目的进度：各环节的产出文件是否已存在，写剧本前还缺哪些。指定项目时还会给出设定与伏笔台账的条目数和未回收伏笔数。文件仅在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（00 需求确认、01 创意构思、02 世界观设定、03 人物设计、04 故事架构、05 互动设计、06 分集大纲、07 互动剧本、08 质量检查报告、09 迭代优化记录）。不传项目名则只列出当前会话的项目，不读取账号的其他会话。',
     inputSchema: z.object({ project: z.string().min(1).optional().describe('项目名，即 projects 下的目录名') }),
     outputSchema: z.object({
       projects: z.array(z.string()).optional(),
@@ -77,10 +81,27 @@ export function createProjectStatusTool(options: { files: ProjectFiles }) {
       readyForScript: z.boolean().optional(),
       missingForScript: z.array(z.string()).optional(),
       nextStage: z.string().optional(),
+      ledger: z
+        .object({
+          counts: z.record(z.string(), z.number()),
+          openForeshadows: z.number(),
+        })
+        .optional(),
     }),
     execute: async ({ project }, context) => {
       const identity = toolIdentity(context);
-      return describeProjects(await options.files.list(identity.userId), project);
+      const status = describeProjects(await options.files.list(identity.userId), project);
+      if (!project || !options.ledger) return status;
+      const entries = await options.ledger.read(identity.userId, project);
+      const counts: Record<string, number> = {};
+      for (const entry of entries) counts[entry.kind] = (counts[entry.kind] ?? 0) + 1;
+      return {
+        ...status,
+        ledger: {
+          counts,
+          openForeshadows: entries.filter(entry => entry.kind === 'foreshadow' && !entry.revealedEpisode).length,
+        },
+      };
     },
   });
 }

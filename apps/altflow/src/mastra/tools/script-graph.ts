@@ -27,7 +27,7 @@ export interface GraphReport {
   stats: { scenes: number; endings: number; pathCount: number; minPathScenes: number; maxPathScenes: number };
 }
 
-interface SceneNode {
+export interface SceneNode {
   key: string;
   episode: number;
   index: number;
@@ -54,7 +54,7 @@ function similarity(a: string, b: string) {
   return shared / (left.size + right.size - shared);
 }
 
-function parse(script: string) {
+export function parseScenes(script: string) {
   const scenes: SceneNode[] = [];
   let episode = 0;
   let current: SceneNode | undefined;
@@ -113,7 +113,7 @@ function parse(script: string) {
 }
 
 export function analyzeScriptGraph(script: string): GraphReport {
-  const scenes = parse(script);
+  const scenes = parseScenes(script);
   const issues: GraphIssue[] = [];
   const byKey = new Map(scenes.map(scene => [scene.key, scene]));
   const edges = new Map<string, string[]>();

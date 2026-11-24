@@ -253,7 +253,7 @@ const creatorToolBundle = createCreatorTools({
 const scriptReviewer = createScriptReviewer(() =>
   modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }),
 );
-const scriptQa = createScriptQaWorkflow(scriptReviewer.review);
+const scriptQa = createScriptQaWorkflow(scriptReviewer.review, storyLedger);
 const privateWorkspace = createPrivateWorkspace(conversationFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
 await subagentStore.init();

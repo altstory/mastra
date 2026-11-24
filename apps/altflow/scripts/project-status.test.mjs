@@ -54,4 +54,26 @@ test('the tool lists files for the calling user only', async () => {
   );
   assert.deepEqual(owners, ['alice']);
   assert.equal(result.stages[1].done, true);
+  assert.equal(result.ledger, undefined);
+});
+
+test('a named project also reports its ledger counts and unrevealed foreshadows', async () => {
+  const tool = createProjectStatusTool({
+    files: { list: async () => files(['/projects/雨夜/01-创意构思.md']) },
+    ledger: {
+      read: async (owner, project) => {
+        assert.deepEqual([owner, project], ['alice', '雨夜']);
+        return [
+          { kind: 'character' },
+          { kind: 'foreshadow' },
+          { kind: 'foreshadow', revealedEpisode: 3 },
+        ];
+      },
+    },
+  });
+  const agent = { agentId: 'creator-agent', threadId: 't', toolCallId: 'c' };
+  const named = await tool.execute({ project: '雨夜' }, { requestContext: context('alice'), agent });
+  assert.deepEqual(named.ledger, { counts: { character: 1, foreshadow: 2 }, openForeshadows: 1 });
+  const listing = await tool.execute({}, { requestContext: context('alice'), agent });
+  assert.equal(listing.ledger, undefined);
 });
