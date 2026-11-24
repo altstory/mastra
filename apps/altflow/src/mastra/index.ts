@@ -21,6 +21,8 @@ import { createScriptReviewer } from './agents/script-reviewer';
 import { DisabledRecallMemory } from './agents/disabled-recall-memory';
 import { executionPolicy } from './agents/execution-policy';
 import { HistoryMemory } from './agents/history-memory';
+import { CreatorMemory } from './agents/creator-memory';
+import { creativeMemoryProcessor } from './agents/creative-memory-processor';
 import { internalReferencePolicy } from './agents/internal-reference-policy';
 import { createPrivateWorkspace } from './agents/private-workspace';
 import { isolateConversationReferences, protectConversationResponses } from './agents/reference-visibility';
@@ -39,6 +41,7 @@ import { toolCatalogRoute } from './routes/tool-catalog';
 import { accountMemory } from './services/account-memory';
 import { AccountPreferences } from './services/account-preferences';
 import { ConversationProjects } from './services/conversation-projects';
+import { CreativeMemoryStore } from './services/creative-memory';
 import { UserDeliveryService } from './services/delivery';
 import { OfficeReader } from './services/office';
 import { turnFileChangesProcessor } from './services/turn-file-changes';
@@ -201,7 +204,7 @@ const textReview = createWorkflow({
   .then(composeReport)
   .commit();
 const contextCompaction = new ContextCompaction({ gateway: modelHub, storage });
-const creatorMemory = new HistoryMemory({
+const creatorMemory = new CreatorMemory({
   storage,
   vector,
   embedder: localEmbedder,
@@ -211,6 +214,15 @@ const creatorMemory = new HistoryMemory({
   },
 });
 const disabledRecallMemory = new DisabledRecallMemory({ storage, options: { generateTitle: true } });
+const creativeMemoryStore = new CreativeMemoryStore(`file:${previewPath('data/creative-memory.db')}`);
+await creativeMemoryStore.init();
+const creativeMemory = creativeMemoryProcessor({
+  store: creativeMemoryStore,
+  memory: projectMemory,
+  projects: conversationProjects,
+  preferences: accountPreferences,
+  files: userFiles,
+});
 const sessionClient = createClient({ url: `file:${previewPath('src/mastra/public/preview.db')}` });
 const documents = createDocumentTools(new OfficeReader(userFiles));
 const toolPolicy = conversationToolPolicy();
@@ -298,7 +310,8 @@ ${internalReferencePolicy}
 
 ## 文件与记忆
 - 用户的附件和你生成的文件都在用户自己的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
-- 只在当前会话的工作记忆中记录这个会话的偏好、设定和进度。用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。
+- 当前会话的目标、候选方案、待选事项和执行进度使用 updateWorkingMemory。用户明确确认的长期作者偏好、当前关联项目约定和带版本的作品事实使用 remember；更正时更新原条目，要求忘记时用 forget_memory。以记忆内容规则和工具结果为准，不把未确认的建议变成事实。
+- 用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。历史记录不能直接作为写入长期记忆的确认依据。
 - 不接触其他用户的数据。
 
 ## 对用户说话
@@ -318,6 +331,7 @@ ${internalReferencePolicy}
   memory: accountMemory(accountPreferences, creatorMemory, disabledRecallMemory),
   inputProcessors: [
     new TaskStateProcessor(),
+    creativeMemory,
     agentTree.processor,
     documents.processor,
     turnFileChanges,

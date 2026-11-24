@@ -6,7 +6,7 @@ import type { AltFlowUser } from '../altflow-auth';
 
 const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
 const privatePin = /^<pinned-knowledge(?:-update)?(?:[\s/>])/;
-const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory)$/;
+const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory|remember|forget_memory)$/;
 const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
 
 export function mayReadReferences(requestContext?: RequestContext) {

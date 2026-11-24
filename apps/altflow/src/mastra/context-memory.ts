@@ -1,4 +1,5 @@
 import type { MemoryConfigInternal } from '@mastra/core/memory';
+import { SESSION_MEMORY_TEMPLATE } from './agents/creative-memory-policy';
 
 /** Load the full transcript so ContextCompaction owns the provider's history budget. */
 export const CONTEXT_MEMORY_OPTIONS = {
@@ -12,6 +13,6 @@ export const CREATOR_MEMORY_OPTIONS = {
   workingMemory: {
     enabled: true,
     scope: 'thread',
-    template: '# 作者偏好\n\n# 当前作品\n\n# 人物与世界观\n\n# 已确认的约束\n\n# 创作进度\n',
+    template: SESSION_MEMORY_TEMPLATE,
   },
 } satisfies MemoryConfigInternal;
