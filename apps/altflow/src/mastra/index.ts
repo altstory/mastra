@@ -41,6 +41,7 @@ import { toolCatalogRoute } from './routes/tool-catalog';
 import { accountMemory } from './services/account-memory';
 import { AccountPreferences } from './services/account-preferences';
 import { ConversationProjects } from './services/conversation-projects';
+import { ConversationFiles } from './services/conversation-files';
 import { CreativeMemoryStore } from './services/creative-memory';
 import { UserDeliveryService } from './services/delivery';
 import { OfficeReader } from './services/office';
@@ -216,28 +217,31 @@ const creatorMemory = new CreatorMemory({
 const disabledRecallMemory = new DisabledRecallMemory({ storage, options: { generateTitle: true } });
 const creativeMemoryStore = new CreativeMemoryStore(`file:${previewPath('data/creative-memory.db')}`);
 await creativeMemoryStore.init();
+const conversationFiles = new ConversationFiles(userFiles);
 const creativeMemory = creativeMemoryProcessor({
   store: creativeMemoryStore,
   memory: projectMemory,
   projects: conversationProjects,
   preferences: accountPreferences,
   files: userFiles,
+  currentFiles: conversationFiles,
 });
 const sessionClient = createClient({ url: `file:${previewPath('src/mastra/public/preview.db')}` });
-const documents = createDocumentTools(new OfficeReader(userFiles));
+const fileScope = conversationFiles.processor((context, thread) => agentTree.runtime.actor(context, thread));
+const documents = createDocumentTools(new OfficeReader(conversationFiles));
 const toolPolicy = conversationToolPolicy();
 const turnFileChanges = turnFileChangesProcessor();
 const creatorToolBundle = createCreatorTools({
   countText,
   sessionSearch: new LibSQLSessionSearch(sessionClient),
-  delivery: new UserDeliveryService(userFiles),
-  projectFiles: userFiles,
+  delivery: new UserDeliveryService(conversationFiles),
+  projectFiles: conversationFiles,
 });
 const scriptReviewer = createScriptReviewer(() =>
   modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }),
 );
 const scriptQa = createScriptQaWorkflow(scriptReviewer.review);
-const privateWorkspace = createPrivateWorkspace(userFiles, storage);
+const privateWorkspace = createPrivateWorkspace(conversationFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
 await subagentStore.init();
 const childMemory = new HistoryMemory({
@@ -273,6 +277,7 @@ const agentTree = createAgentTree({
       turnFileChanges,
       isolateConversationReferences,
       toolPolicy,
+      fileScope,
       contextCompaction,
     ],
     outputProcessors: [contextCompaction],
@@ -297,7 +302,7 @@ const creatorAgent = new Agent({
 
 ## 创作
 - 做互动剧项目时，先读取 interactive-drama-workflow 技能，它说明各环节该读哪个技能；先确认改编方向和核心体验，再梳理角色、世界观、选择与后果，最后编写分集大纲和剧本。已获授权访问内部资料时，按创作阶段参考相应方法。
-- 项目产出保存在工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。开始写剧本前，用 project_status 查看缺哪些环节；缺少的先告诉用户并建议补齐，用户要跳过时列出假设再写。
+- 项目产出保存在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。开始写剧本前，用 project_status 查看缺哪些环节；缺少的先告诉用户并建议补齐，用户要跳过时列出假设再写。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
 - 要求精确字数时用 countText；整体篇幅检查用 text-review 工作流。剧本写完后：局部检查用 validate_script_format；整集或整部的质量检查用 script-qa 工作流，并把其中的问题如实告诉用户，不自行删减。
 
@@ -309,10 +314,10 @@ ${internalReferencePolicy}
 - 只使用实际提供给你的工具。做不到的事，直接告诉用户，并给替代办法。不编造工具结果、文件路径或链接。
 
 ## 文件与记忆
-- 用户的附件和你生成的文件都在用户自己的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
+- 当前会话的附件和你生成的文件都在当前会话的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
 - 当前会话的目标、候选方案、待选事项和执行进度使用 updateWorkingMemory。用户明确确认的长期作者偏好、当前关联项目约定和带版本的作品事实使用 remember；更正时更新原条目，要求忘记时用 forget_memory。以记忆内容规则和工具结果为准，不把未确认的建议变成事实。
 - 用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。历史记录不能直接作为写入长期记忆的确认依据。
-- 不接触其他用户的数据。
+- 不接触其他用户或其他会话的文件。问候或新话题不能推断用户要继续旧项目；工作区仅代表当前会话，不是账号全部项目。
 
 ## 对用户说话
 - 用用户能理解的话说明你在做什么，不提内部目录和配置。
@@ -337,6 +342,7 @@ ${internalReferencePolicy}
     turnFileChanges,
     isolateConversationReferences,
     toolPolicy,
+    fileScope,
     contextCompaction,
   ],
   outputProcessors: [contextCompaction],

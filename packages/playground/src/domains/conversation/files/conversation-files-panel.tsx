@@ -36,12 +36,14 @@ export function ConversationFilesPanel({
   const account = useAccount();
   const { history, paths } = useConversationFilePaths({ agentId, threadId, requestContext });
   const storage = useQuery({
-    queryKey: ['account-storage', target.baseUrl, account?.user.id, target.headers],
-    queryFn: () => getStorage(target),
-    enabled: Boolean(target.baseUrl),
+    queryKey: ['conversation-storage', target.baseUrl, account?.user.id, target.headers, threadId],
+    queryFn: () => getStorage(target, threadId),
+    enabled: Boolean(target.baseUrl && threadId),
     refetchInterval: 10_000,
   });
-  const files = (storage.data?.files ?? []).filter(file => paths.includes(file.path));
+  const files = (storage.data?.files ?? []).filter(
+    file => paths.includes(file.path) || (file.storagePath !== undefined && paths.includes(file.storagePath)),
+  );
   const tree = 'file-tree';
   const tabs = openPaths.length ? openPaths : selectedPath ? [selectedPath] : [];
   return (
@@ -73,7 +75,7 @@ export function ConversationFilesPanel({
             {t('Retry')}
           </Button>
         </div>
-      ) : (storage.isPending && target.baseUrl) || (!selectedPath && history.isFetching && !history.data) ? (
+      ) : (storage.isLoading && target.baseUrl) || (!selectedPath && history.isFetching && !history.data) ? (
         <Txt tone="muted" className="p-4">
           {t('Loading...')}
         </Txt>
@@ -88,7 +90,7 @@ export function ConversationFilesPanel({
             <TabList className="mx-3 shrink-0 gap-2">
               <Tab value={tree}>{t('Files')}</Tab>
               {tabs.map(path => {
-                const file = files.find(item => item.path === path);
+                const file = files.find(item => item.path === path || item.storagePath === path);
                 const name = file?.name ?? path.split('/').at(-1);
                 const FileIcon = file?.mimeType.startsWith('image/')
                   ? FileImage
@@ -116,7 +118,7 @@ export function ConversationFilesPanel({
             )}
           </TabContent>
           {tabs.map(path => {
-            const file = storage.data?.files.find(item => item.path === path);
+            const file = storage.data?.files.find(item => item.path === path || item.storagePath === path);
             return (
               <TabContent
                 key={path}

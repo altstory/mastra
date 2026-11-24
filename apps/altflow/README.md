@@ -92,7 +92,9 @@ ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_optio
 - 文件内容使用阿里云 OSS 官方 Node.js SDK、V4 签名和 HTTPS，写入私有桶 `altflow-harness`。对象键为 `users/<用户ID的SHA256>/objects/<UUID>`；文件名和权限由服务端账本管理，不接受前端传入的用户 ID。密钥只在服务端环境中配置。
 - `data/user-files.db` 保存路径、文件大小、来源、摘要、配额预留和失败清理记录。它是新建的专用文件账本，不修改账号/会话库 schema。部署时必须同时持久化、备份该账本与 OSS 对象；多实例须使用同一个账本，不能各自用本地 SQLite。
 - 每个账号 `512 × 1024 × 1024` 字节。上传和 Agent 写文件共用事务配额预留，并发上传不能超额。相同上传 ID 与内容可安全重试；覆盖只计算新旧文件的大小差额。删除 OSS 成功后才释放容量；失败保留文件及容量。覆盖产生的旧对象清理失败会持久化记录，启动时和每 10 分钟重试。
-- 附件先保存再发送消息。文本/其他文档通过工作区文件工具读取，图片和 PDF 同时保留原生模型输入。Agent 的 `read_file`、`write_file`、`edit_file`、`list_files` 等工具都使用同一账号空间，不再落入全局管理员目录。生成文件在设置的存储页可下载。
+- 附件先保存再发送消息。文本/其他文档通过工作区文件工具读取，图片和 PDF 同时保留原生模型输入。Agent 的文件工具、`project_status`、`read_document` 和 `present` 只访问当前会话文件；同一会话的子 Agent 共享该范围。不同会话写入同名路径不会覆盖彼此，容量仍按账号累计。生成文件在设置的存储页可下载。
+- 新上传的文件只有随用户消息明确附加后，才进入该会话。旧文件只根据唯一会话的写入记录和当前内容版本恢复归属；归属不明确的文件保留在账号存储页，不自动开放给 Agent。编辑旧文件或附件会生成当前会话副本，原件保留。
+- 会话文件面板通过 `/storage?thread=<会话 ID>` 获取隔离列表，并校验会话所有权；账号存储管理仍可查看自己的全部文件。逻辑路径用于 Agent 读写，`storagePath` 用于已有的鉴权预览和下载接口。
 - `/storage`、`/storage/upload`、`/storage/download`、`/storage/file` 每次复用 Go 身份验证；Cookie 写请求校验 Origin，下载无公共 OSS URL。页面支持容量条、文件/图像分类、搜索、下载、删除确认和错误恢复。
 - 当前身份需有桶内 `users/*` 的 `oss:PutObject`、`oss:GetObject`、`oss:DeleteObject` 权限。验证前缀 `integration-tests/*` 用于独立连通性检查。删除权限缺失时页面会报错，不会伪造删除成功。
 - `node --import tsx scripts/import-legacy-files.mjs` 可恢复历史会话中的原始文本附件和内联文件，按会话账本归属写入用户空间。旧 `creator-agent` 资源必须有明确的 `ALTFLOW_LEGACY_OWNER_ID`；不推断归属、不下载历史外部 URL、不改写会话，重复执行不会重复占用空间。

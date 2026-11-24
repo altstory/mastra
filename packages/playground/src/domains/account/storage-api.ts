@@ -4,6 +4,7 @@ import type { StudioConfig } from '@/domains/configuration/types';
 
 export const storedFileSchema = z.object({
   path: z.string(),
+  storagePath: z.string().optional(),
   name: z.string(),
   size: z.number().nonnegative(),
   mimeType: z.string(),
@@ -38,8 +39,10 @@ async function storageRequest(target: Target, action: string, init?: RequestInit
   }
   return response;
 }
-export async function getStorage(target: Target) {
-  return storageSchema.parse(await (await storageRequest(target, '')).json());
+export async function getStorage(target: Target, thread?: string) {
+  return storageSchema.parse(
+    await (await storageRequest(target, '', undefined, thread ? { thread } : undefined)).json(),
+  );
 }
 export async function uploadStoredFile(target: Target, file: File, id: string, contentType: string) {
   return storedFileSchema.parse(
@@ -61,7 +64,7 @@ export async function deleteStoredFile(target: Target, path: string) {
   await storageRequest(target, '/file', { method: 'DELETE' }, { path });
 }
 export async function downloadStoredFile(target: Target, file: StoredFile) {
-  const response = await storageRequest(target, '/download', undefined, { path: file.path });
+  const response = await storageRequest(target, '/download', undefined, { path: file.storagePath ?? file.path });
   const url = URL.createObjectURL(await response.blob());
   const link = document.createElement('a');
   link.href = url;
@@ -75,7 +78,7 @@ export const FILE_PREVIEW_LIMIT = 10 * 1024 * 1024;
 export async function readStoredFile(target: Target, file: StoredFile, signal?: AbortSignal) {
   const tooLarge = () => new Error(t('This file is too large to preview. Download it to view.'));
   if (file.size > FILE_PREVIEW_LIMIT) throw tooLarge();
-  const response = await storageRequest(target, '/download', { signal }, { path: file.path });
+  const response = await storageRequest(target, '/download', { signal }, { path: file.storagePath ?? file.path });
   if (Number(response.headers.get('Content-Length')) > FILE_PREVIEW_LIMIT) {
     await response.body?.cancel();
     throw tooLarge();

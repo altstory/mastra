@@ -33,6 +33,11 @@ export const filesFixture: StorageSummary = {
   ],
 };
 
+export const scopedFilesFixture: StorageSummary = {
+  ...filesFixture,
+  files: [{ ...filesFixture.files[1], storagePath: '/conversations/current/outputs/draft.md' }],
+};
+
 export const fileMessages: MastraDBMessage[] = [
   {
     id: 'upload',

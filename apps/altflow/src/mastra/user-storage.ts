@@ -23,6 +23,7 @@ export class FileStorageError extends Error {
 }
 export type UserFile = {
   path: string;
+  storagePath?: string;
   name: string;
   size: number;
   mimeType: string;
@@ -87,6 +88,9 @@ export class UserStorage {
         UNIQUE(owner, path));
       CREATE TABLE IF NOT EXISTS file_garbage (object_key TEXT PRIMARY KEY, owner TEXT NOT NULL, created INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS user_directories (owner TEXT NOT NULL, path TEXT NOT NULL, PRIMARY KEY(owner,path));
+      CREATE TABLE IF NOT EXISTS conversation_files (
+        owner TEXT NOT NULL, thread TEXT NOT NULL, path TEXT NOT NULL,
+        PRIMARY KEY(owner,thread,path));
     `);
     await this.db.executeMultiple(turnChangesSchema);
     await this.recover();
@@ -131,6 +135,32 @@ export class UserStorage {
       args: [owner],
     });
     return result.rows.map(toFile);
+  }
+  async conversationLinks(owner: string, thread: string) {
+    const result = await this.db.execute({
+      sql: `SELECT f.* FROM user_files f JOIN conversation_files c ON f.owner=c.owner AND f.path=c.path
+        WHERE c.owner=? AND c.thread=?`,
+      args: [owner, thread],
+    });
+    return result.rows.map(toFile);
+  }
+  async linkConversationUpload(owner: string, thread: string, path: string) {
+    await this.db.execute({
+      sql: `INSERT OR IGNORE INTO conversation_files SELECT owner,?,path FROM user_files
+        WHERE owner=? AND path=? AND source='upload' AND substr(path,1,9)='/uploads/'`,
+      args: [thread, owner, filePath(path)],
+    });
+  }
+  async linkLegacyConversationFiles(owner: string, thread: string) {
+    await this.db.execute({
+      sql: `INSERT OR IGNORE INTO conversation_files
+        SELECT f.owner,?,f.path FROM user_files f
+        WHERE f.owner=? AND substr(f.path,1,15) != '/conversations/'
+          AND EXISTS (SELECT 1 FROM turn_file_changes c WHERE c.owner=f.owner AND c.path=f.path
+            AND c.thread=? AND c.after_digest=f.digest)
+          AND NOT EXISTS (SELECT 1 FROM turn_file_changes c WHERE c.owner=f.owner AND c.path=f.path AND c.thread!=?)`,
+      args: [thread, owner, thread, thread],
+    });
   }
   async summary(owner: string) {
     const result = await this.db.execute({

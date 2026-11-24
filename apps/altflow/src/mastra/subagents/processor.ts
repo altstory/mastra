@@ -44,7 +44,7 @@ export function subagentProcessor(runtime: SubagentRuntime, getAgent?: () => Age
         );
       args.messageList.clearSystemMessages('altflow-subagents');
       args.messageList.addSystem(
-        `Your name is ${await runtime.selfName(actor)}. You share the current account's workspace with collaborators. Use subagent or subagent_fork for independent work and send_message to continue collaborators. Wait for required child results before answering. Do not claim a child result before it arrives.${enabled ? '\nAgent teamwork is enabled. Use team_task_list/get, claim with the latest revision, perform work, then complete. Dependencies order work. Write scopes are advisory; split file edits to avoid overlaps. Task changes do not start agents or send messages. Use send_message when another agent must act.' : ''}`,
+        `Your name is ${await runtime.selfName(actor)}. You share only this conversation's workspace with its collaborators, never files from other conversations. Use subagent or subagent_fork for independent work and send_message to continue collaborators. Wait for required child results before answering. Do not claim a child result before it arrives.${enabled ? '\nAgent teamwork is enabled. Use team_task_list/get, claim with the latest revision, perform work, then complete. Dependencies order work. Write scopes are advisory; split file edits to avoid overlaps. Task changes do not start agents or send messages. Use send_message when another agent must act.' : ''}`,
         'altflow-subagents',
       );
       return {

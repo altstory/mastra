@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ConversationFilesPanel } from '../conversation-files-panel';
-import { fileMessages, filesFixture } from './fixtures/files';
+import { fileMessages, filesFixture, scopedFilesFixture } from './fixtures/files';
 import { StudioConfigContext } from '@/domains/configuration/context/studio-config-state';
 import { server } from '@/test/msw-server';
 
@@ -25,7 +25,12 @@ function Harness({ threadId }: { threadId?: string }) {
     />
   );
 }
-function show(messages = fileMessages, threadId?: string) {
+function show(messages = fileMessages, threadId: string | undefined = 'active') {
+  server.use(
+    http.get(`${baseUrl}/api/memory/threads/active/messages`, () =>
+      HttpResponse.json({ messages: [], hasMore: false, total: 0, page: 0, perPage: 100 }),
+    ),
+  );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -44,6 +49,26 @@ function show(messages = fileMessages, threadId?: string) {
 }
 
 describe('Conversation files', () => {
+  describe('when the conversation has a private copy of a file', () => {
+    it('requests the conversation scope and previews the corresponding stored bytes', async () => {
+      server.use(
+        http.get(`${baseUrl}/storage`, ({ request }) =>
+          new URL(request.url).searchParams.get('thread') === 'active'
+            ? HttpResponse.json(scopedFilesFixture)
+            : new HttpResponse(null, { status: 403 }),
+        ),
+        http.get(`${baseUrl}/storage/download`, ({ request }) =>
+          new URL(request.url).searchParams.get('path') === scopedFilesFixture.files[0].storagePath
+            ? new HttpResponse('# Current conversation draft', { headers: { 'Content-Type': 'text/markdown' } })
+            : new HttpResponse(null, { status: 404 }),
+        ),
+      );
+      show(fileMessages.slice(1, 2));
+      fireEvent.click(await screen.findByRole('button', { name: 'draft.md' }));
+      expect(await screen.findByText('Current conversation draft')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'notes.txt' })).toBeNull();
+    });
+  });
   it('keeps a new conversation empty even when the user has files from other chats', async () => {
     server.use(http.get(`${baseUrl}/storage`, () => HttpResponse.json(filesFixture)));
     show([]);

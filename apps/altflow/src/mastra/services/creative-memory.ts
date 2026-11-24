@@ -45,7 +45,7 @@ export interface CreativeMemoryEntry {
   status: 'confirmed' | 'deleted';
   content?: string;
   version?: string;
-  document?: { path: string; updatedAt: string };
+  document?: { path: string; storagePath?: string; updatedAt: string };
   expiresAt?: string;
   source: MemorySource;
   updatedAt: string;

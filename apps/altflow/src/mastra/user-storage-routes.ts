@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AltFlowUser } from './altflow-auth.ts';
 import { FileStorageError } from './user-storage.ts';
 import type { UserStorage } from './user-storage.ts';
+import { ConversationFiles } from './services/conversation-files';
 
 const uploadParams = z.object({
   id: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
@@ -41,6 +42,7 @@ export function userStorageRoutes(
   origins: string[],
   canReadThread?: (user: AltFlowUser, threadId: string) => Promise<boolean>,
 ) {
+  const scoped = new ConversationFiles(store);
   // Custom routes share Go-backed authentication and validate Origin for cookie writes.
   const route = (
     path: string,
@@ -70,9 +72,15 @@ export function userStorageRoutes(
       },
     });
   return [
-    route('/storage', 'GET', async (_, owner) =>
-      Response.json({ ...(await store.summary(owner)), files: await store.list(owner) }),
-    ),
+    route('/storage', 'GET', async (request, owner, user) => {
+      const thread = new URL(request.url).searchParams.get('thread');
+      if (thread && (!canReadThread || !(await canReadThread(user, thread))))
+        throw new FileStorageError('会话不存在', 404);
+      const files = thread
+        ? await scoped.run({ owner, root: thread }, () => scoped.list(owner))
+        : await store.list(owner);
+      return Response.json({ ...(await store.summary(owner)), files });
+    }),
     route('/storage/changes', 'GET', async (request, owner, user) => {
       const { thread, turn, path } = z
         .object({

@@ -20,6 +20,7 @@ export function creativeMemoryProcessor(options: {
   projects: ConversationProjects;
   preferences: AccountPreferences;
   files: Pick<UserStorage, 'info'>;
+  currentFiles?: Pick<UserStorage, 'info'>;
 }) {
   const projectFor = async (actor: ToolIdentity) => {
     const thread = actor.threadId && (await options.memory.getThreadById({ threadId: actor.threadId }));
@@ -75,7 +76,7 @@ export function creativeMemoryProcessor(options: {
                 : undefined;
           if (!invalid && entry.document) {
             try {
-              const file = await options.files.info(actor.userId, entry.document.path);
+              const file = await options.files.info(actor.userId, entry.document.storagePath ?? entry.document.path);
               if (file.updatedAt !== entry.document.updatedAt) invalid = 'source_changed';
             } catch {
               invalid = 'source_unavailable';
@@ -114,14 +115,18 @@ ${JSON.stringify({ project: project ? { id: project.id, name: project.name } : n
         inputSchema: rememberSchema,
         execute: async (input, context) => {
           const evidence = await source(input.evidence, context);
-          const file = input.document ? await options.files.info(actor.userId, input.document) : undefined;
+          const file = input.document
+            ? await (options.currentFiles ?? options.files).info(actor.userId, input.document)
+            : undefined;
           return options.store.write(actor.userId, project?.id, input.revision, {
             kind: input.kind,
             key: input.key,
             status: input.status,
             content: input.content,
             ...(input.version ? { version: input.version } : {}),
-            ...(file ? { document: { path: file.path, updatedAt: file.updatedAt } } : {}),
+            ...(file
+              ? { document: { path: file.path, storagePath: file.storagePath, updatedAt: file.updatedAt } }
+              : {}),
             ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
             source: evidence,
           });

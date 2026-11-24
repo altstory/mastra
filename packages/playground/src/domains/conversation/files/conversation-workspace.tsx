@@ -43,9 +43,9 @@ export function ConversationWorkspace({
   const account = useAccount();
   const { paths: knownPaths } = useConversationFilePaths({ agentId, threadId, requestContext });
   const storage = useQuery({
-    queryKey: ['account-storage', target.baseUrl, account?.user.id, target.headers],
-    queryFn: () => getStorage(target),
-    enabled: Boolean(target.baseUrl && knownPaths.length),
+    queryKey: ['conversation-storage', target.baseUrl, account?.user.id, target.headers, threadId],
+    queryFn: () => getStorage(target, threadId),
+    enabled: Boolean(target.baseUrl && threadId && knownPaths.length),
     refetchInterval: 10_000,
   });
   const signature = JSON.stringify(knownPaths);
@@ -54,9 +54,9 @@ export function ConversationWorkspace({
   useEffect(() => {
     if (signature === previousSignature.current) return;
     previousSignature.current = signature;
-    if (target.baseUrl && signature !== '[]') void refetch({ cancelRefetch: false });
-  }, [refetch, signature, target.baseUrl]);
-  const available = new Set(storage.data?.files.map(file => file.path));
+    if (target.baseUrl && threadId && signature !== '[]') void refetch({ cancelRefetch: false });
+  }, [refetch, signature, target.baseUrl, threadId]);
+  const available = new Set(storage.data?.files.flatMap(file => [file.path, file.storagePath]));
   const paths = knownPaths.filter(path => available.has(path));
   const isMobile = useIsMobile();
   const storageKey = `altflow:conversation-files:${scope}`;

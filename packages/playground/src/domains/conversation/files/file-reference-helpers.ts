@@ -34,8 +34,10 @@ export function useFileReferenceSuggestions(query: string | undefined, enabled: 
   });
   return {
     files: (storage.data?.files ?? [])
-      .filter(file => file.name.toLocaleLowerCase().includes(query?.toLocaleLowerCase() ?? ''))
-      .sort((a, b) => Number(currentFiles.includes(b.path)) - Number(currentFiles.includes(a.path)))
+      .filter(
+        file =>
+          currentFiles.includes(file.path) && file.name.toLocaleLowerCase().includes(query?.toLocaleLowerCase() ?? ''),
+      )
       .slice(0, 8),
     pending: storage.isFetching,
   };

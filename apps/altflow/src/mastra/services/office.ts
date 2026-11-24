@@ -40,7 +40,7 @@ function officeConverter() {
 export class OfficeReader {
   private active = 0;
   private queue: Array<() => void> = [];
-  constructor(private readonly storage: UserStorage) {}
+  constructor(private readonly storage: Pick<UserStorage, 'info' | 'read' | 'write' | 'remove'>) {}
 
   async read(owner: string, path: string, signal?: AbortSignal): Promise<string> {
     return this.withSnapshot(owner, path, signal, async ({ inputPath, extension, directory, bytes }) => {

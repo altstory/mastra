@@ -20,6 +20,11 @@ afterEach(() => {
 });
 
 function show(scope = 'thread-a') {
+  server.use(
+    http.get(`${baseUrl}/api/memory/threads/:thread/messages`, () =>
+      HttpResponse.json({ messages: [], hasMore: false, total: 0, page: 0, perPage: 100 }),
+    ),
+  );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const workspace = (
     nextScope: string,
@@ -38,7 +43,7 @@ function show(scope = 'thread-a') {
                 messages,
               }}
             >
-              <ConversationWorkspace key={nextScope} scope={nextScope} agentId="creator-agent">
+              <ConversationWorkspace key={nextScope} scope={nextScope} threadId={nextScope} agentId="creator-agent">
                 <a href={`${baseUrl}/storage/download?path=${encodeURIComponent('/outputs/draft.md')}`}>
                   Download draft
                 </a>

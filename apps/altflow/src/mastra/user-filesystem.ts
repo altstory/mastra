@@ -11,7 +11,7 @@ import type {
   FileStat,
   ProviderStatus,
 } from '@mastra/core/workspace';
-import type { UserStorage } from './user-storage.ts';
+import type { WorkspaceFiles } from './services/conversation-files';
 import { FileStorageError, filePath } from './user-storage.ts';
 
 /** All agent file tools use the same private namespace and quota as uploads. */
@@ -20,9 +20,9 @@ export class UserFilesystem extends MastraFilesystem {
   readonly name = '用户文件';
   readonly provider = 'aliyun-oss';
   status: ProviderStatus = 'ready';
-  private store: UserStorage;
+  private store: WorkspaceFiles;
   private owner: string;
-  constructor(store: UserStorage, owner: string) {
+  constructor(store: WorkspaceFiles, owner: string) {
     super({ name: '用户文件' });
     this.store = store;
     this.owner = owner;

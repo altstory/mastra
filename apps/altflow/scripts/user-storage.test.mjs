@@ -205,3 +205,254 @@ test('file delivery references the private ledger without duplicating quota and 
   await fixture.store.remove('alice', '/report.md');
   await assert.rejects(delivery.present({ userId: 'alice' }, [{ path: '/report.md' }]), /不存在/);
 });
+
+for (const mode of ['stream', 'generate']) {
+  test(`${mode}: workspace tools cannot discover or read another conversation's files`, async t => {
+    const { Agent } = await import('@mastra/core/agent');
+    const { createAgentTree } = await import('../src/mastra/subagents/agents.ts');
+    const { SubagentStore } = await import('../src/mastra/subagents/store.ts');
+    const { Mastra } = await import('@mastra/core/mastra');
+    const { Memory } = await import('@mastra/memory');
+    const { LibSQLStore } = await import('@mastra/libsql');
+    const { Workspace } = await import('@mastra/core/workspace');
+    const { createPresentTool } = await import('@mastra/altflow-tools');
+    const { ConversationFiles } = await import('../src/mastra/services/conversation-files.ts');
+    const { createProjectStatusTool } = await import('../src/mastra/tools/project-status.ts');
+    const { UserDeliveryService } = await import('../src/mastra/services/delivery.ts');
+    const { OfficeReader } = await import('../src/mastra/services/office.ts');
+    const { createDocumentTools } = await import('../src/mastra/tools/read-document.ts');
+    const { turnFileChangesProcessor } = await import('../src/mastra/services/turn-file-changes.ts');
+    const { modelServer, context } = await import('./tool-fixture.mjs');
+    const f = await setup(t);
+    const edge = await modelServer(t);
+    const storage = new LibSQLStore({ id: 'file-isolation', url: ':memory:' });
+    await storage.init();
+    const { mkdtemp, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const treeDir = await mkdtemp(join(tmpdir(), 'conversation-tree-'));
+    const treeStore = new SubagentStore(`file:${join(treeDir, 'tree.db')}`);
+    await treeStore.init();
+    const runtimes = [];
+    t.after(async () => {
+      for (const runtime of runtimes) await runtime.close();
+      treeStore.close();
+      await storage.close();
+      await rm(treeDir, { recursive: true, force: true });
+    });
+    let currentTree;
+    const memory = await storage.getStore('memory');
+    let scoped = new ConversationFiles(f.store);
+    const build = () => {
+      const documents = createDocumentTools(new OfficeReader(scoped));
+      const scope = scoped.processor((ctx, thread) => tree.runtime.actor(ctx, thread));
+      const workspace = ({ user }) =>
+        new Workspace({ id: `files-${user.id}`, filesystem: new UserFilesystem(scoped, user.id) });
+      const tree = createAgentTree({
+        store: treeStore,
+        memory,
+        childMemory: new Memory({ storage, options: { generateTitle: false } }),
+        model: edge.model,
+        tools: documents.tools,
+        teamEnabled: async () => false,
+        childConfig: { workspace, inputProcessors: [documents.processor, scope] },
+        getMastra: () => mastra,
+        getRootAgent: () => agent,
+      });
+      runtimes.push(tree.runtime);
+      currentTree = tree;
+      const agent = new Agent({
+        id: 'creator-agent',
+        name: 'Creator',
+        instructions: 'Use the requested tools.',
+        model: edge.model,
+        memory: new Memory({ storage, options: { lastMessages: 20, generateTitle: false } }),
+        workspace,
+        tools: {
+          project_status: createProjectStatusTool({ files: scoped }),
+          present: createPresentTool({ service: new UserDeliveryService(scoped) }),
+          ...documents.tools,
+        },
+        inputProcessors: [tree.processor, documents.processor, turnFileChangesProcessor(), scope],
+      });
+      const mastra = new Mastra({ agents: { creator: agent }, storage });
+      return agent;
+    };
+    let agent = build();
+    const run = async (thread, calls, text = '检查当前会话的文件。', owner = 'alice') => {
+      const start = edge.requests.length;
+      edge.responses.push({ calls }, { text: 'Done.' });
+      const result = await agent[mode](text, {
+        memory: { thread, resource: `altflow:${owner}` },
+        requestContext: context(owner),
+        maxSteps: 2,
+      });
+      await result.text;
+      const request = edge.requests.slice(start).at(-1);
+      return request.messages
+        .filter(message => message.role === 'tool')
+        .map(message => message.content)
+        .join('\n');
+    };
+    const path = '/projects/山猫轩/01-创意构思.md';
+    await run('a', [{ name: 'mastra_workspace_write_file', args: { path, content: 'ONLY_CONVERSATION_A' } }]);
+    const own = await run('a', [
+      { name: 'project_status', args: {} },
+      { name: 'mastra_workspace_read_file', args: { path } },
+    ]);
+    assert.match(own, /山猫轩/);
+    assert.match(own, /ONLY_CONVERSATION_A/);
+    const [physical] = await f.store.list('alice');
+    await f.store.write('alice', '/uploads/other/private.docx', Buffer.from('OTHER_CONVERSATION_DOCUMENT'), {
+      source: 'upload',
+    });
+    assert.ok(physical.path.endsWith(path));
+    for (const target of ['b', 'c']) {
+      const isolated = await run(target, [
+        { name: 'project_status', args: {} },
+        { name: 'mastra_workspace_list_files', args: { path: '/', recursive: true } },
+        { name: 'mastra_workspace_read_file', args: { path } },
+        { name: 'mastra_workspace_read_file', args: { path: physical.path } },
+        { name: 'present', args: { files: [{ path }] } },
+        { name: 'read_document', args: { path: '/uploads/other/private.docx' } },
+      ]);
+      assert.doesNotMatch(isolated, /ONLY_CONVERSATION_A|OTHER_CONVERSATION_DOCUMENT|不支持的文档|Office|解析/);
+      assert.match(isolated, /"projects":\[\]/);
+      assert.doesNotMatch(isolated, /downloadUrl/);
+    }
+    await run('b', [{ name: 'mastra_workspace_write_file', args: { path, content: 'ONLY_CONVERSATION_B' } }]);
+    assert.equal((await f.store.list('alice')).filter(file => file.path.startsWith('/conversations/')).length, 2);
+    scoped = new ConversationFiles(await f.reopen());
+    agent = build();
+    assert.match(await run('a', [{ name: 'mastra_workspace_read_file', args: { path } }]), /ONLY_CONVERSATION_A/);
+    assert.match(await run('b', [{ name: 'mastra_workspace_read_file', args: { path } }]), /ONLY_CONVERSATION_B/);
+    const foreign = await run('bob', [{ name: 'mastra_workspace_read_file', args: { path } }], '读取文件。', 'bob');
+    assert.doesNotMatch(foreign, /ONLY_CONVERSATION_[AB]/);
+    await f.store.write('alice', '/uploads/selected/input.txt', Buffer.from('EXPLICIT_ATTACHMENT'), {
+      source: 'upload',
+    });
+    await f.store.write('alice', '/uploads/unselected/input.txt', Buffer.from('UNSELECTED_ATTACHMENT'), {
+      source: 'upload',
+    });
+    const attached = await run(
+      'c',
+      [{ name: 'mastra_workspace_read_file', args: { path: '/uploads/selected/input.txt' } }],
+      '<attachment name="input.txt">文件已保存到当前用户工作区：/uploads/selected/input.txt\n请读取附件。</attachment>',
+    );
+    assert.match(attached, /EXPLICIT_ATTACHMENT/);
+    const hidden = await run('b', [
+      { name: 'mastra_workspace_read_file', args: { path: '/uploads/selected/input.txt' } },
+      { name: 'mastra_workspace_read_file', args: { path: '/uploads/unselected/input.txt' } },
+    ]);
+    assert.doesNotMatch(hidden, /EXPLICIT_ATTACHMENT|UNSELECTED_ATTACHMENT/);
+    const presented = await run('b', [{ name: 'present', args: { files: [{ path }] } }]);
+    assert.match(presented, /downloadUrl/);
+    const { Hono } = await import('hono');
+    const { serve } = await import('@hono/node-server');
+    const { userStorageRoutes } = await import('../src/mastra/user-storage-routes.ts');
+    const app = new Hono();
+    for (const route of userStorageRoutes(
+      f.store,
+      async () => ({ id: 'alice', username: 'Alice', role: 'creator' }),
+      [],
+      async (_, thread) => ['a', 'b', 'c'].includes(thread),
+    ))
+      app.on(route.method, route.path, route.handler);
+    const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
+    await new Promise(resolve => server.once('listening', resolve));
+    t.after(
+      () =>
+        new Promise(resolve => {
+          server.closeAllConnections();
+          server.close(resolve);
+        }),
+    );
+    const base = `http://127.0.0.1:${server.address().port}`;
+    assert.equal((await fetch(`${base}/storage?thread=foreign`)).status, 404);
+    const ownFiles = await (await fetch(`${base}/storage?thread=b`)).json();
+    assert.deepEqual(
+      ownFiles.files.map(file => file.path),
+      [path],
+    );
+    const download = await fetch(
+      `${base}/storage/download?${new URLSearchParams({ path: ownFiles.files[0].storagePath })}`,
+    );
+    assert.equal(await download.text(), 'ONLY_CONVERSATION_B');
+    const [fileB] = await scoped.run({ owner: 'alice', root: 'b' }, () => scoped.list('alice'));
+    assert.equal((await f.store.read('alice', fileB.storagePath)).toString(), 'ONLY_CONVERSATION_B');
+    edge.setHandler(body => {
+      if (
+        !body.messages.some(
+          message => message.role === 'system' && String(message.content).includes('Your name is reader.'),
+        )
+      )
+        return { text: 'Done.' };
+      return body.messages.some(message => message.role === 'tool')
+        ? { text: 'Child finished reading.' }
+        : { calls: [{ name: 'mastra_workspace_read_file', args: { path } }] };
+    });
+    const actor = await currentTree.runtime.actor(context('alice'), 'a');
+    await currentTree.runtime.spawn(actor, {
+      name: 'reader',
+      description: 'Read the parent file',
+      prompt: 'Read the current draft.',
+    });
+    const deadline = Date.now() + 5000;
+    while (!(await treeStore.read('alice', 'a')).children.some(child => child.state === 'completed')) {
+      assert.ok(Date.now() < deadline, 'child must finish reading the parent conversation file');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    const childMessages = edge.requests
+      .filter(body =>
+        body.messages.some(
+          message => message.role === 'system' && String(message.content).includes('Your name is reader.'),
+        ),
+      )
+      .flatMap(body => body.messages);
+    assert.match(JSON.stringify(childMessages), /ONLY_CONVERSATION_A/);
+    assert.doesNotMatch(JSON.stringify(childMessages), /ONLY_CONVERSATION_B/);
+  });
+}
+
+test('legacy file recovery requires a unique recorded conversation and concurrent scopes stay independent', async t => {
+  const { ConversationFiles } = await import('../src/mastra/services/conversation-files.ts');
+  const { trackTurnFiles } = await import('../src/mastra/services/turn-file-changes.ts');
+  const f = await setup(t);
+  await trackTurnFiles.run({ owner: 'alice', thread: 'a', turn: 'one' }, () =>
+    f.store.write('alice', '/projects/旧作/01-创意构思.md', Buffer.from('confirmed old owner')),
+  );
+  for (const thread of ['a', 'b'])
+    await trackTurnFiles.run({ owner: 'alice', thread, turn: 'two' }, () =>
+      f.store.write('alice', '/ambiguous.md', Buffer.from(`written by ${thread}`)),
+    );
+  await f.store.write('alice', '/unassigned.md', Buffer.from('no provenance'));
+  await f.store.linkLegacyConversationFiles('alice', 'a');
+  await f.store.linkLegacyConversationFiles('alice', 'b');
+  const scoped = new ConversationFiles(f.store);
+  const a = { owner: 'alice', root: 'a' };
+  const b = { owner: 'alice', root: 'b' };
+  assert.deepEqual(
+    (await scoped.run(a, () => scoped.list('alice'))).map(file => file.path),
+    ['/projects/旧作/01-创意构思.md'],
+  );
+  assert.deepEqual(await scoped.run(b, () => scoped.list('alice')), []);
+  await assert.rejects(
+    scoped.run(a, () => scoped.read('alice', '/ambiguous.md')),
+    /不存在/,
+  );
+  await assert.rejects(
+    scoped.run(a, () => scoped.read('alice', '/unassigned.md')),
+    /不存在/,
+  );
+  for (let round = 0; round < 20; round++) {
+    await Promise.all(
+      [a, b].map(scope =>
+        scoped.run(scope, async () => {
+          await scoped.write('alice', '/parallel.md', Buffer.from(scope.root));
+          assert.equal((await scoped.read('alice', '/parallel.md')).toString(), scope.root);
+        }),
+      ),
+    );
+  }
+  assert.equal((await f.store.read('alice', '/unassigned.md')).toString(), 'no provenance');
+});
