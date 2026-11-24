@@ -132,19 +132,24 @@ test('managed users cannot smuggle agent configuration through conversation pref
   }
 });
 
-test('managed users can choose the preset model reasoning for direct and queued chat', async () => {
+test('managed users can choose either product model and its reasoning for direct and queued chat', async () => {
   const providerOptions = { altflow: { reasoningLevel: 'high' } };
-  for (const endpoint of ['generate', 'stream', 'stream-until-idle']) {
-    assert.equal(await authorized({ messages: [], providerOptions }, endpoint), true);
-  }
-  for (const endpoint of ['send-message', 'queue-message']) {
-    assert.equal(
-      await authorized(
-        { threadId: 'owned-thread', message: {}, ifIdle: { streamOptions: { providerOptions } } },
-        endpoint,
-      ),
-      true,
-    );
-    assert.equal(await authorized({ threadId: 'owned-thread', message: {}, providerOptions }, endpoint), false);
+  for (const model of ['altflow/qwen3.8-flash', 'altflow/qwen3.8-max']) {
+    for (const endpoint of ['generate', 'stream', 'stream-until-idle']) {
+      assert.equal(await authorized({ messages: [], model, providerOptions }, endpoint), true);
+    }
+    for (const endpoint of ['send-message', 'queue-message']) {
+      assert.equal(
+        await authorized(
+          { threadId: 'owned-thread', message: {}, ifIdle: { streamOptions: { model, providerOptions } } },
+          endpoint,
+        ),
+        true,
+      );
+      assert.equal(
+        await authorized({ threadId: 'owned-thread', message: {}, model, providerOptions }, endpoint),
+        false,
+      );
+    }
   }
 });

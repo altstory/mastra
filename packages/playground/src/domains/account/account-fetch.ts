@@ -15,6 +15,11 @@ const memoryBody = z.object({
   options: memoryPreferences.optional(),
 });
 const conversationPreferences = z.object({
+  model: z
+    .string()
+    .regex(/^altflow\/[^/\s]+$/)
+    .optional()
+    .catch(undefined),
   memory: memoryBody.optional(),
   disableSubAgents: z.boolean().optional(),
   providerOptions: z

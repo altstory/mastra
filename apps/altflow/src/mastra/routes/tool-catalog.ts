@@ -42,7 +42,7 @@ export function toolCatalogRoute(options: {
   tools: Record<string, CatalogTool>;
   memory: HistoryMemory;
   knowledge: Knowledge;
-  workspace: (userId: string) => Promise<Workspace>;
+  workspace: (user: AltFlowUser) => Promise<Workspace>;
   providerConfigured: boolean;
 }) {
   return registerApiRoute('/altflow/tools/catalog', {
@@ -67,7 +67,7 @@ export function toolCatalogRoute(options: {
       const requestContext = new RequestContext();
       requestContext.setRaw(MASTRA_NORMALIZED_USER_KEY, user);
       requestContext.set(MASTRA_RESOURCE_ID_KEY, options.accounts.session(user).resourceId);
-      const workspace = await options.workspace(user.id);
+      const workspace = await options.workspace(user);
       const entries = new Map<string, CatalogEntry>();
       const collect = (tools: Record<string, CatalogTool>, source: string, runtime: boolean) => {
         for (const [name, tool] of Object.entries(tools)) {
@@ -90,7 +90,7 @@ export function toolCatalogRoute(options: {
         if (!['countText', 'web_fetch', 'web_search'].includes(entry.name)) entry.runtime = true;
       collect(await createWorkspaceTools(workspace, { workspace, requestContext }), '工作区', true);
       collect(options.memory.listTools(), '记忆', true);
-      collect(options.knowledge.createTools(), '知识库', true);
+      if (user.role === 'admin') collect(options.knowledge.createTools(), '知识库', true);
       if (workspace.skills) collect(createSkillTools(workspace.skills), '技能', true);
       entries.set('workflow-textReview', {
         id: 'workflow-textReview',

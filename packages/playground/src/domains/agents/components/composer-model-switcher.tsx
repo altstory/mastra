@@ -27,8 +27,9 @@ export const ComposerModelSwitcher = () => {
   const { data: dataProviders, isLoading: providersLoading } = useLLMProviders();
   const policy = useBuilderModelPolicy();
   const allProviders = dataProviders?.providers ?? [];
+  const filteredProviders = useBuilderFilteredProviders(allProviders, policy);
   const sortedProviders = useFilteredProviders(
-    useBuilderFilteredProviders(managed ? [] : allProviders, policy),
+    managed ? allProviders.filter(provider => provider.id === 'altflow') : filteredProviders,
     '',
     false,
   );
@@ -61,7 +62,7 @@ export const ComposerModelSwitcher = () => {
 
   const { provider: selectedProvider, model: selectedModel, agentModel, resetModel, setModel } = selection;
 
-  const modelLocked = managed || (policy.active && policy.pickerVisible === false);
+  const modelLocked = !managed && policy.active && policy.pickerVisible === false;
 
   // Resolve the full provider ID (handles gateway prefix, e.g., 'custom' -> 'acme/custom')
   const fullProviderId = resolveProviderId(selectedProvider);

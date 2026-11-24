@@ -163,8 +163,8 @@ describe('ThreadPreferencesProvider', () => {
     });
   });
 
-  describe('when a managed account selects a reasoning level', () => {
-    it('restores it on reopening the conversation and sends it with the preset model', async () => {
+  describe('when a managed account selects a model and reasoning level', () => {
+    it('restores both preferences on reopening and sends the selected product model', async () => {
       let value = {};
       let revision = 0;
       const bodies: unknown[] = [];
@@ -186,18 +186,22 @@ describe('ThreadPreferencesProvider', () => {
         mountSession(undefined, undefined, undefined, managedModelProviders, { account: creatorSession, handlers });
       const view = mount();
       fireEvent.click(await screen.findByRole('button', { name: /Model:.*Qwen.*Max Medium/i }));
-      expect((screen.getByRole('button', { name: /^Model Qwen/i }) as HTMLButtonElement).disabled).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: /^Model Qwen/i }));
+      fireEvent.click(await screen.findByRole('option', { name: /Qwen.*Flash/i }));
+      fireEvent.click(await screen.findByRole('button', { name: /Model:.*Qwen.*Flash Medium/i }));
       fireEvent.click(screen.getByRole('button', { name: /Reasoning level/ }));
       fireEvent.click(await screen.findByRole('option', { name: 'High' }));
-      await screen.findByRole('button', { name: /Model:.*Qwen.*Max High/i });
+      await screen.findByRole('button', { name: /Model:.*Qwen.*Flash High/i });
       view.unmount();
 
       mount();
-      await screen.findByRole('button', { name: /Model:.*Qwen.*Max High/i });
+      await screen.findByRole('button', { name: /Model:.*Qwen.*Flash High/i });
       fireEvent.click(screen.getByText('Send'));
       await waitFor(() => expect(bodies).toHaveLength(1));
-      expect(bodies[0]).toMatchObject({ providerOptions: { altflow: { reasoningLevel: 'high' } } });
-      expect(bodies[0]).not.toHaveProperty('model');
+      expect(bodies[0]).toMatchObject({
+        model: 'altflow/qwen3.8-flash',
+        providerOptions: { altflow: { reasoningLevel: 'high' } },
+      });
     });
   });
 

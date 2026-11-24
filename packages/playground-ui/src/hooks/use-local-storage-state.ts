@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod/v4';
 
 interface LocalStorageStateOptions<T> {
-  initialKey: string;
+  initialKey?: string;
   defaultValue: T;
   schema: z.ZodType<T>;
   serialize?: (value: T) => string;
@@ -18,6 +18,7 @@ export function useLocalStorageState<T>({
 }: LocalStorageStateOptions<T>): [T, Dispatch<SetStateAction<T>>] {
   const [storageKey] = useState(initialKey);
   const [value, setValue] = useState<T>(() => {
+    if (storageKey === undefined) return defaultValue;
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored !== null) {
@@ -31,6 +32,7 @@ export function useLocalStorageState<T>({
   });
 
   useEffect(() => {
+    if (storageKey === undefined) return;
     try {
       localStorage.setItem(storageKey, serialize(value));
     } catch {

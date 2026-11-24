@@ -5,13 +5,12 @@ import { UserFilesystem } from '../user-filesystem';
 import type { UserStorage } from '../user-storage';
 
 export function createPrivateWorkspace(files: UserStorage, storage: MastraCompositeStore) {
-  return async (userId: string) => {
+  return async (user: { id: string; role?: string }) => {
     const workspace = new Workspace({
-      id: `files-${userId}`,
+      id: `files-${user.id}`,
       name: '我的文件',
-      filesystem: new UserFilesystem(files, userId),
-      skills: ['.'],
-      skillSource: await resolvePublishedSkills(storage),
+      filesystem: new UserFilesystem(files, user.id),
+      ...(user.role === 'admin' && { skills: ['.'], skillSource: await resolvePublishedSkills(storage) }),
     });
     await workspace.init();
     return workspace;

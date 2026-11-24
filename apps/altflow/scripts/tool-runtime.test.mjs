@@ -10,47 +10,52 @@ import { LibSQLSessionSearch } from '@mastra/altflow-tools';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
 import { RequestContext, MASTRA_RESOURCE_ID_KEY, MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
+import { MastraCompositeStore } from '@mastra/core/storage';
 import { createTool, TaskStateProcessor } from '@mastra/core/tools';
-import {
-  LocalFilesystem,
-  Workspace,
-  createWorkspaceTools,
-  createSkillTools,
-  publishSkillFromSource,
-} from '@mastra/core/workspace';
+import { createWorkspaceTools, createSkillTools, publishSkillFromSource } from '@mastra/core/workspace';
+import { DuckDBStore } from '@mastra/duckdb';
+import { MastraStorageExporter, Observability } from '@mastra/observability';
 import { LibSQLStore } from '@mastra/libsql';
-import { Memory } from '@mastra/memory';
 import { z } from 'zod';
 import { serve } from '@hono/node-server';
 import { createHonoServer } from '../../../packages/deployer/dist/server/index.js';
 import { executionPolicy } from '../src/mastra/agents/execution-policy.ts';
 import { HistoryMemory } from '../src/mastra/agents/history-memory.ts';
 import { createPrivateWorkspace } from '../src/mastra/agents/private-workspace.ts';
-import { protectConversationResponses } from '../src/mastra/agents/reference-visibility.ts';
+import {
+  isolateConversationReferences,
+  protectConversationResponses,
+} from '../src/mastra/agents/reference-visibility.ts';
 import { createAltFlowAuth } from '../src/mastra/altflow-auth.ts';
+import { conversationMetricsRoute } from '../src/mastra/routes/conversation-metrics.ts';
 import { SharedSkillSource } from '../src/mastra/services/shared-skills.ts';
 import { createCreatorTools } from '../src/mastra/tools/index.ts';
 import { UserStorage } from '../src/mastra/user-storage.ts';
 
 import { fixture, context, modelServer, runOptions, toolResults } from './tool-fixture.mjs';
 
-test('internal knowledge and skill tool results reach the Agent but stay out of chat responses and reopened history', async t => {
+test('ordinary conversations cannot read internal references and return only owned trace metrics', async t => {
   const { Knowledge, knowledgeMemoryScopes } = await import('@mastra/core/knowledge');
   const { KNOWLEDGE_ROUTES } = await import('@mastra/server/server-adapter');
-  const storage = new LibSQLStore({ id: 'reference-visibility', url: ':memory:' });
+  const duck = new DuckDBStore({ path: ':memory:', threads: 1 });
+  const storage = new MastraCompositeStore({
+    id: 'reference-visibility',
+    default: new LibSQLStore({ id: 'reference-fixture-memory', url: ':memory:' }),
+    domains: { observability: duck.observability },
+  });
+  const exporter = new MastraStorageExporter({ maxBatchWaitMs: 25 });
+  t.after(async () => {
+    await exporter.shutdown();
+    await duck.close();
+  });
   const knowledge = new Knowledge({
     id: 'fixture-knowledge',
     storage,
     tools: true,
+    instructions: false,
     scopes: {
       ...knowledgeMemoryScopes({ org: false }),
-      'audience:$audience': { access: [{ principal: 'self', role: 'viewer' }] },
-      'library:$libraryId': {
-        access: [
-          { principal: 'self', role: 'owner' },
-          { principal: 'audience:creators', role: 'viewer' },
-        ],
-      },
+      'library:$libraryId': { access: [{ principal: 'self', role: 'owner' }] },
     },
   });
   const secret = 'FIXTURE_REFERENCE_PRIVATE_MARKER';
@@ -68,16 +73,26 @@ test('internal knowledge and skill tool results reach the Agent but stay out of 
     join(dir, 'skills', 'private-style', 'SKILL.md'),
     `---\nname: private-style\ndescription: Style fixture\n---\n${skillSecret}\n`,
   );
-  const workspace = new Workspace({
-    id: 'reference-fixture',
-    filesystem: new LocalFilesystem({ basePath: dir }),
-    skills: ['skills'],
-  });
+  const [skills, blobs] = await Promise.all([storage.getStore('skills'), storage.getStore('blobs')]);
+  const source = new SharedSkillSource(join(dir, 'skills'));
+  const { snapshot, tree, files } = await publishSkillFromSource(source, 'private-style', blobs);
+  await skills.create({ skill: { id: 'private-style', visibility: 'public', ...snapshot, tree, files } });
+  await skills.update({ id: 'private-style', activeVersionId: (await skills.getLatestVersion('private-style')).id });
+  const userFiles = new UserStorage({ client: {}, databaseUrl: `file:${join(dir, 'user-files.db')}` });
+  await userFiles.init();
+  t.after(() => userFiles.close());
+  const workspace = createPrivateWorkspace(userFiles, storage);
   const edge = await modelServer(t);
   const backend = createServer((req, res) => {
-    const role = req.headers.authorization === 'Bearer admin' ? 'admin' : 'creator';
+    const id = req.headers.authorization?.split(' ')[1];
+    if (!id) {
+      res.writeHead(401);
+      res.end();
+      return;
+    }
+    const role = id === 'admin' ? 'admin' : 'creator';
     res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ code: 0, message: 'OK', data: { userId: role, username: role, role } }));
+    res.end(JSON.stringify({ code: 0, message: 'OK', data: { userId: id, username: id, role } }));
   });
   await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve));
   t.after(() => {
@@ -94,18 +109,22 @@ test('internal knowledge and skill tool results reach the Agent but stay out of 
     name: 'Creator',
     instructions: 'Use the requested tool.',
     model: edge.model,
-    memory: new Memory({ storage, options: { lastMessages: 10, generateTitle: false } }),
+    memory: new HistoryMemory({ storage, options: { lastMessages: 10, generateTitle: false } }),
     scopes: ({ scopes }) => scopes,
     knowledge,
-    workspace,
+    workspace: ({ user }) => (user?.id ? workspace(user) : undefined),
+    inputProcessors: [isolateConversationReferences],
   });
   const mastra = new Mastra({
     agents: { 'creator-agent': agent },
     knowledge: { fixture: knowledge },
     logger: false,
     storage,
+    observability: new Observability({
+      configs: { default: { serviceName: 'reference-fixture', exporters: [exporter] } },
+    }),
     server: {
-      apiRoutes: [...KNOWLEDGE_ROUTES],
+      apiRoutes: [...KNOWLEDGE_ROUTES, conversationMetricsRoute(storage, accounts, [])],
       auth: accounts.auth,
       middleware: protectConversationResponses,
     },
@@ -134,26 +153,37 @@ test('internal knowledge and skill tool results reach the Agent but stay out of 
     assert.doesNotMatch(await ordinary.text(), /private-style|Style fixture/);
   }
   const protectedContent = /FIXTURE_(REFERENCE|SKILL)_PRIVATE_MARKER|knowledge_read|Private guide|private-style/;
+  const privateCalls = {
+    calls: [
+      { name: 'knowledge_read', args: { page: page.id } },
+      { name: 'skill', args: { name: 'private-style' } },
+    ],
+  };
+  edge.responses.push(privateCalls, { text: 'Admin work.' });
+  assert.equal(
+    (
+      await request('/agents/creator-agent/generate', 'admin', {
+        messages: 'Apply both references.',
+        memory: { thread: 'admin-reference' },
+      })
+    ).status,
+    200,
+  );
+  const adminMessages = JSON.stringify(edge.requests.at(-1)?.messages);
+  assert.match(adminMessages, new RegExp(secret));
+  assert.match(adminMessages, new RegExp(skillSecret));
   for (const method of ['stream', 'generate']) {
     const thread = `private-reference-${method}`;
-    edge.responses.push(
-      {
-        calls: [
-          { name: 'knowledge_read', args: { page: page.id } },
-          { name: 'skill', args: { name: 'private-style' } },
-        ],
-      },
-      { text: 'Original work.' },
-    );
+    const requestIndex = edge.requests.length;
+    edge.responses.push({ text: 'Original work.' });
     const response = await request(`/agents/creator-agent/${method}`, 'creator', {
       messages: 'Help with my draft.',
       memory: { thread },
     });
     assert.equal(response.status, 200);
     const wire = await response.text();
-    const modelMessages = JSON.stringify(edge.requests.at(-1)?.messages);
-    assert.ok(modelMessages.includes(secret));
-    assert.ok(modelMessages.includes(skillSecret));
+    assert.ok(edge.requests.length > requestIndex);
+    assert.doesNotMatch(JSON.stringify(edge.requests.slice(requestIndex)), protectedContent);
     assert.match(wire, /Original work/);
     assert.doesNotMatch(wire, protectedContent);
     const history = await request(`/memory/threads/${thread}/messages?agentId=creator-agent`, 'creator');
@@ -162,6 +192,57 @@ test('internal knowledge and skill tool results reach the Agent but stay out of 
     assert.match(saved, /Original work/);
     assert.doesNotMatch(saved, protectedContent);
   }
+  await exporter.flush();
+  const metricsURL = `http://127.0.0.1:${server.address().port}/altflow/conversations/metrics?threadId=private-reference-stream`;
+  assert.equal((await fetch(metricsURL)).status, 401);
+  assert.equal((await fetch(metricsURL, { headers: { Authorization: 'Bearer another-user' } })).status, 404);
+  const stats = await fetch(metricsURL, { headers: { Authorization: 'Bearer creator' } });
+  assert.equal(stats.status, 200);
+  assert.equal(stats.headers.get('cache-control'), 'no-store');
+  const payload = await stats.text();
+  assert.doesNotMatch(payload, /Help with my draft|Original work|FIXTURE|finishReason|attributes|mock-provider/);
+  const measured = JSON.parse(payload);
+  assert.equal(measured.incomplete, false);
+  assert.equal(measured.metrics.length, 1);
+  assert.equal(measured.metrics[0].steps, 1);
+  assert.ok(measured.metrics[0].models.some(usage => usage.input === 10 && usage.output === 5));
+  assert.equal((await request('/observability/traces', 'creator')).status, 403);
+  const memory = await storage.getStore('memory');
+  const legacyThread = 'private-reference-generate';
+  const { messages: adminHistory } = await memory.listMessages({
+    threadId: 'admin-reference',
+    resourceId: 'altflow:admin',
+    page: 0,
+    perPage: false,
+  });
+  const oldToolMessages = adminHistory.filter(message =>
+    message.content.parts.some(part => part.type === 'tool-invocation'),
+  );
+  assert.ok(oldToolMessages.length > 0);
+  await memory.saveMessages({
+    messages: oldToolMessages.map(message => ({
+      ...message,
+      id: 'legacy-' + message.id,
+      threadId: legacyThread,
+      resourceId: 'altflow:creator',
+    })),
+  });
+  const requestIndex = edge.requests.length;
+  edge.responses.push(
+    { calls: [{ name: 'recall', args: { mode: 'messages', detail: 'high' } }] },
+    { text: 'Past draft checked.' },
+  );
+  const resumed = await request('/agents/creator-agent/generate', 'creator', {
+    messages: 'Review my earlier draft.',
+    memory: { thread: legacyThread },
+  });
+  assert.equal(resumed.status, 200);
+  assert.match(await resumed.text(), /Past draft checked/);
+  assert.equal(edge.requests.length, requestIndex + 2);
+  const recalled = JSON.stringify(edge.requests.slice(requestIndex).map(call => call.messages));
+  assert.doesNotMatch(recalled, protectedContent);
+  const recallResults = edge.requests.at(-1).messages.filter(message => message.role === 'tool');
+  assert.match(JSON.stringify(recallResults), /Original work/);
   const subscription = await request('/agents/creator-agent/threads/subscribe', 'creator', {
     threadId: 'private-reference-stream',
     withInitialHistory: true,
@@ -321,14 +402,16 @@ test('private workspaces load the active public skill snapshot from LibSQL', asy
   await files.init();
   t.after(() => files.close());
   const resolveWorkspace = createPrivateWorkspace(files, f.storage);
-  const alice = await resolveWorkspace('alice');
+  const alice = await resolveWorkspace({ id: 'alice', role: 'admin' });
   assert.deepEqual(
     (await alice.skills.list()).map(skill => skill.name),
     ['style-guide'],
   );
   assert.match((await alice.skills.get('style-guide')).instructions, /First published instruction/);
   await skills.update({ id: 'style-guide', activeVersionId: latest.id });
-  const bob = await resolveWorkspace('bob');
+  const ordinary = await resolveWorkspace({ id: 'bob', role: 'creator' });
+  assert.equal((await ordinary.skills?.list())?.length ?? 0, 0);
+  const bob = await resolveWorkspace({ id: 'bob', role: 'admin' });
   assert.match((await bob.skills.get('style-guide')).instructions, /Unpublished instruction/);
   assert.match((await alice.skills.get('style-guide')).instructions, /First published instruction/);
 });
@@ -441,5 +524,6 @@ test('authenticated tool catalog exposes real runtime capabilities, not schedule
       false,
     );
     assert.equal(entries.find(entry => entry.id === 'present').runtime, true);
+    assert.ok(!entries.some(entry => /^(knowledge_|skill(?:_|$))/.test(entry.id)));
   }
 });

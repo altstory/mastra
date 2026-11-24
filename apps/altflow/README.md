@@ -40,7 +40,7 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 只注册 AltFlow ModelHub 网关，隐藏 Mastra 公共模型供应商。目录来自 `https://modelhub.altflow.cn/v1/model-catalog` 的 `free_chat_models`，不使用包含内部路由的 `/v1/models`。
 
-选择器展示目录中的产品名称。普通用户可调整预设模型的思考强度，管理员也可切换模型。档位来自每个模型的 `thinking_options`，切换模型时使用新模型的默认档位；选择保存在当前会话偏好中。实际调用由服务端验证所选档位，并根据该档位转换为 `target`、思考强度及预算，记录目录版本。默认使用 `altflow/qwen3.8-max` 的 `medium` 档。目录缓存 60 秒，刷新失败保留上次有效目录；首次获取失败时不提供公共模型作为替代。这里沿用 DSH 的目录、档位选择和路由规则。
+选择器展示目录中的产品名称。所有登录用户都可切换 Qwen3.8 Flash 和 Qwen3.8 Max，并调整当前模型的思考强度。档位来自每个模型的 `thinking_options`，切换模型时使用新模型的默认档位；选择保存在当前会话偏好中。实际调用由服务端验证所选档位，并根据该档位转换为 `target`、思考强度及预算，记录目录版本。默认使用 `altflow/qwen3.8-max` 的 `medium` 档。目录缓存 60 秒，刷新失败保留上次有效目录；首次获取失败时不提供公共模型作为替代。这里沿用 DSH 的目录、档位选择和路由规则。
 
 ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_options.include_usage=true`，要求上游返回输入、输出和缓存用量。缓存是否命中由上游决定，本地 TokenCounter 只做上下文预算，不能测出供应商缓存命中。被中断的请求仍可能没有最终 usage，前端将其他已报告用量标为 `≥`，不把缺失值当成 0 或丢掉已有统计。
 
@@ -56,6 +56,8 @@ ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_optio
 ## 能力和持久化
 
 默认开启工作记忆、中文标题和 DSH 检查点压缩。Agent 默认无需审批即可执行已提供的工具。字符统计工具、篇幅检查工作流、知识库管理、编辑器、MCP 及全局可观测性保留给管理员。所有已登录用户均可通过 Agent 使用自己的私有文件工作区。
+
+普通账号可以使用 `GET /altflow/conversations/metrics?threadId=<会话 ID>` 读取自己的会话统计。响应包含 `metrics`（每次运行的步骤数、耗时、用量和上下文占用）和 `incomplete`（是否有尚不可读取的记录）。原始追踪接口由管理员使用。
 
 ### DSH 上下文策略
 

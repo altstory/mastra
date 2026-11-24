@@ -3,6 +3,7 @@ import { encodeKnowledgeScopeId } from '@mastra/core/knowledge';
 import { MASTRA_RESOURCE_ID_KEY, MASTRA_SCOPES_KEY } from '@mastra/core/request-context';
 import { defineAuth, registerApiRoute } from '@mastra/core/server';
 import { z } from 'zod';
+import { conversationModelRoutes } from './model-policy';
 
 const userSchema = z.object({
   id: z.string().min(1),
@@ -87,13 +88,17 @@ const conversationMemory = z
   })
   .strict();
 const reasoningOptions = z.strictObject({ altflow: z.strictObject({ reasoningLevel: z.string().min(1).max(64) }) });
+const conversationModel = z.enum(conversationModelRoutes);
 const conversationStreamOptions = z
   .object({
     memory: conversationMemory.optional(),
     disableSubAgents: z.boolean().optional(),
   })
   .strict();
-const messageStreamOptions = conversationStreamOptions.extend({ providerOptions: reasoningOptions.optional() });
+const messageStreamOptions = conversationStreamOptions.extend({
+  model: conversationModel.optional(),
+  providerOptions: reasoningOptions.optional(),
+});
 function hasOverride(value: unknown, location?: 'direct' | 'message' | 'ifIdle'): boolean {
   if (!value || typeof value !== 'object') return false;
   if (Array.isArray(value)) return value.some(child => hasOverride(child));
@@ -102,9 +107,11 @@ function hasOverride(value: unknown, location?: 'direct' | 'message' | 'ifIdle')
       key.startsWith('mastra__') ||
       (key === 'streamOptions'
         ? !(location === 'ifIdle' ? messageStreamOptions : conversationStreamOptions).safeParse(child).success
-        : key === 'providerOptions' && location === 'direct'
-          ? !reasoningOptions.safeParse(child).success
-          : forbiddenOverrides.has(key)) ||
+        : key === 'model' && location === 'direct'
+          ? !conversationModel.safeParse(child).success
+          : key === 'providerOptions' && location === 'direct'
+            ? !reasoningOptions.safeParse(child).success
+            : forbiddenOverrides.has(key)) ||
       (key === 'memory' && !conversationMemory.safeParse(child).success) ||
       (key === 'disableSubAgents' && typeof child !== 'boolean') ||
       ((key === 'requestContext' || key === 'ifIdle') &&
@@ -239,7 +246,7 @@ export function createAltFlowAuth(options: {
       requestContext.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, resourceFor(user));
       requestContext.set(MASTRA_SCOPES_KEY, [
         `resource:${resourceFor(user)}`,
-        user.role === 'admin' ? 'library:creator' : 'audience:creators',
+        ...(user.role === 'admin' ? ['library:creator'] : []),
       ]);
       if (user.role === 'admin') {
         requestContext.set('mastra__knowledgePrincipals', [

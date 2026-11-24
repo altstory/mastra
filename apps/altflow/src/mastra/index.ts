@@ -22,7 +22,7 @@ import { executionPolicy } from './agents/execution-policy';
 import { HistoryMemory } from './agents/history-memory';
 import { internalReferencePolicy } from './agents/internal-reference-policy';
 import { createPrivateWorkspace } from './agents/private-workspace';
-import { protectConversationResponses } from './agents/reference-visibility';
+import { isolateConversationReferences, protectConversationResponses } from './agents/reference-visibility';
 import { createAltFlowAuth } from './altflow-auth';
 import { ContextCompaction } from './context-compaction';
 import { CONTEXT_MEMORY_OPTIONS } from './context-memory';
@@ -31,6 +31,7 @@ import { conversationModels, defaultConversationModel, defaultReasoningLevel } f
 import { ModelHubGateway } from './modelhub-gateway';
 import { accountPreferenceRoutes } from './routes/account-preferences';
 import { conversationProjectRoutes } from './routes/conversation-projects';
+import { conversationMetricsRoute } from './routes/conversation-metrics';
 import { conversationStatusRoute } from './routes/conversation-status';
 import { subagentRoutes } from './routes/subagents';
 import { toolCatalogRoute } from './routes/tool-catalog';
@@ -138,18 +139,13 @@ const knowledge = new Knowledge({
   embedder: localEmbedder,
   tools: true,
   pinnedContext: true,
-  instructions: ({ read, write, pins }) =>
-    [read.replace(' Cite the page or note you used.', ''), write, pins].filter(Boolean).join('\n\n'),
+  instructions: false,
   scopes: {
     ...knowledgeMemoryScopes({ org: false }),
-    'audience:$audience': { displayLabel: '创作者', access: [{ principal: 'self', role: 'viewer' }] },
     'library:$libraryId': {
       displayLabel: '创作资料',
       description: '管理员维护的共享创作方法库。',
-      access: [
-        { principal: 'self', role: 'owner' },
-        { principal: 'audience:creators', role: 'viewer' },
-      ],
+      access: [{ principal: 'self', role: 'owner' }],
     },
   },
 });
@@ -259,10 +255,16 @@ const agentTree = createAgentTree({
     );
   },
   childConfig: {
-    inputProcessors: [documents.processor, turnFileChanges, toolPolicy, contextCompaction],
+    inputProcessors: [
+      documents.processor,
+      turnFileChanges,
+      isolateConversationReferences,
+      toolPolicy,
+      contextCompaction,
+    ],
     outputProcessors: [contextCompaction],
     errorProcessors: [contextCompaction],
-    workspace: ({ user }) => (user?.id ? privateWorkspace(user.id) : undefined),
+    workspace: ({ user }) => (user?.id ? privateWorkspace(user) : undefined),
     knowledge,
     scopes: ({ scopes }) => scopes,
   },
@@ -280,7 +282,7 @@ const creatorAgent = new Agent({
 - 并行或耗时的子任务可以交给子智能体，结果由你汇总后再告诉用户。
 
 ## 创作
-- 做互动剧项目时，先读取「互动剧创作流程」技能，再按用户所处的环节读取对应技能。需要行业资料、用户研究或方法参考时检索知识库，只借鉴要点，不照搬原文。
+- 做互动剧项目时，先确认改编方向和核心体验，再梳理角色、世界观、选择与后果，最后编写分集大纲和剧本。已获授权访问内部资料时，按创作阶段参考相应方法。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
 - 要求精确字数时用 countText，篇幅检查可调用工作流；写完剧本后用 validate_script_format 检查格式。
 
@@ -306,7 +308,7 @@ ${internalReferencePolicy}
     ...executionPolicy().loop,
     providerOptions: { altflow: { reasoningLevel: defaultReasoningLevel } },
   },
-  workspace: ({ user }) => (user?.id ? privateWorkspace(user.id) : undefined),
+  workspace: ({ user }) => (user?.id ? privateWorkspace(user) : undefined),
   knowledge,
   // Server auth supplies library access; do not grant every caller ownership.
   scopes: ({ scopes }) => scopes,
@@ -316,6 +318,7 @@ ${internalReferencePolicy}
     agentTree.processor,
     documents.processor,
     turnFileChanges,
+    isolateConversationReferences,
     toolPolicy,
     contextCompaction,
   ],
@@ -365,6 +368,7 @@ export const mastra = new Mastra({
     middleware: protectConversationResponses,
     apiRoutes: [
       ...accounts.apiRoutes,
+      conversationMetricsRoute(storage, accounts, accountsOrigins),
       conversationStatusRoute(() => creatorAgent, accounts, accountsOrigins),
       ...subagentRoutes(
         agentTree.runtime,

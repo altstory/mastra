@@ -1,7 +1,53 @@
+import type { Processor } from '@mastra/core/processors';
+import { MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
+import type { RequestContext } from '@mastra/core/request-context';
 import type { Middleware } from '@mastra/core/server';
 import type { AltFlowUser } from '../altflow-auth';
 
-const internalTool = /^(?:knowledge_|skill(?:_|$)|read_tool_result$|recall$|session_search$|updateWorkingMemory$)/;
+const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
+const privatePin = /^<pinned-knowledge(?:-update)?(?:[\s/>])/;
+const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory)$/;
+const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
+
+export function mayReadReferences(requestContext?: RequestContext) {
+  return (requestContext?.getRaw(MASTRA_NORMALIZED_USER_KEY) as AltFlowUser | undefined)?.role === 'admin';
+}
+
+export const isolateConversationReferences = {
+  id: 'altflow-reference-read-policy',
+  processInputStep({ tools, activeTools, requestContext }) {
+    if (mayReadReferences(requestContext)) return;
+    const allowed = (name: string) => !privateReferenceTool.test(name);
+    return {
+      tools: Object.fromEntries(Object.entries(tools ?? {}).filter(([name]) => allowed(name))),
+      activeTools: activeTools?.filter(allowed),
+    };
+  },
+  processLLMRequest({ prompt, requestContext }) {
+    if (mayReadReferences(requestContext)) return;
+    const allowed = (part: { type: string; toolName?: string; text?: string }) =>
+      !(part.toolName && privateReferenceTool.test(part.toolName)) &&
+      !(part.type === 'text' && part.text && privatePin.test(part.text.trimStart()));
+    return {
+      prompt: prompt.flatMap<(typeof prompt)[number]>(message => {
+        if (message.role === 'system') return privatePin.test(message.content.trimStart()) ? [] : [message];
+        if (message.role === 'user') {
+          const content = message.content.filter(allowed);
+          return content.length ? [{ ...message, content }] : [];
+        }
+        if (message.role === 'assistant') {
+          const content = message.content.filter(allowed);
+          return content.length ? [{ ...message, content }] : [];
+        }
+        if (message.role === 'tool') {
+          const content = message.content.filter(allowed);
+          return content.length ? [{ ...message, content }] : [];
+        }
+        return [message];
+      }),
+    };
+  },
+} satisfies Processor;
 const internalPart = /^(?:reasoning(?:-|$)|redacted-reasoning$|tool-call-delta$|raw$)/;
 const internalFields = new Set([
   'reasoning',
@@ -15,19 +61,26 @@ const internalFields = new Set([
 
 export function projectConversation(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(projectConversation).filter(item => item !== undefined);
-  if (value === null || typeof value !== 'object') return value;
+  if (value === null || typeof value !== 'object' || value instanceof Date) return value;
   const record = value as Record<string, unknown>;
   const payload = record.payload as Record<string, unknown> | undefined;
   const invocation = record.toolInvocation as Record<string, unknown> | undefined;
+  const metadata = record.metadata as Record<string, unknown> | undefined;
   const type = record.type;
   if (
+    [type, record.tagName, payload?.tagName, metadata?.tagName].some(
+      tag => tag === 'pinned-knowledge' || tag === 'pinned-knowledge-update',
+    )
+  )
+    return undefined;
+  if (
     typeof type === 'string' &&
-    (internalPart.test(type) || (type.startsWith('tool-') && internalTool.test(type.slice(5))))
+    (internalPart.test(type) || (type.startsWith('tool-') && isInternalTool(type.slice(5))))
   )
     return undefined;
   if (
     [record.toolName, payload?.toolName, invocation?.toolName].some(
-      name => typeof name === 'string' && internalTool.test(name),
+      name => typeof name === 'string' && isInternalTool(name),
     )
   )
     return undefined;
@@ -41,7 +94,7 @@ export function projectConversation(value: unknown): unknown {
         return [[key, projectConversation(response)]];
       }
       if (key === 'tools' && Array.isArray(child)) {
-        child = child.filter(tool => typeof tool?.name !== 'string' || !internalTool.test(tool.name));
+        child = child.filter(tool => typeof tool?.name !== 'string' || !isInternalTool(tool.name));
       }
       const projected = projectConversation(child);
       return projected === undefined ? [] : [[key, projected]];

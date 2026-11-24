@@ -100,7 +100,7 @@ describe('Account fetch', () => {
               observationalMemory: false,
             },
           },
-          model: 'forged-model',
+          model: 'altflow/qwen3.8-flash',
         };
         let captured: unknown;
         server.use(
@@ -118,6 +118,7 @@ describe('Account fetch', () => {
           ),
         });
         const expected = {
+          model: preferences.model,
           disableSubAgents: true,
           providerOptions: { altflow: { reasoningLevel: 'high' } },
           memory: {

@@ -26,9 +26,12 @@ export const managedModelProviders: RouteResponse<'GET /agents/providers'> = {
       name: 'Altflow',
       envVar: 'ALTFLOW_MODELHUB_API_KEY',
       connected: true,
-      models: ['qwen3.8-max'],
-      modelNames: { 'qwen3.8-max': 'Qwen3.8 Max' },
-      modelReasoning: { 'qwen3.8-max': { levels: ['medium', 'high'], defaultLevel: 'medium' } },
+      models: ['qwen3.8-max', 'qwen3.8-flash'],
+      modelNames: { 'qwen3.8-max': 'Qwen3.8 Max', 'qwen3.8-flash': 'Qwen3.8 Flash' },
+      modelReasoning: {
+        'qwen3.8-max': { levels: ['medium', 'high'], defaultLevel: 'medium' },
+        'qwen3.8-flash': { levels: ['medium', 'high'], defaultLevel: 'medium' },
+      },
     },
   ],
 };

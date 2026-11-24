@@ -30,3 +30,7 @@ export { calculateObservedUsage, isUsageIncomplete } from './usage';
 
 /** @internal Origin accounting shared with independently upgraded observability packages. */
 export { claimSpanError, getSpanErrorOrigin, setSpanErrorOrigin } from './error-count';
+
+/** @internal Durable chat metrics shared by Studio and server projections. */
+export { count as readChatMetricCount, instant as readChatMetricInstant, projectRunMetrics } from './chat-run-metrics';
+export type { ContextReading, ModelUsage, RunMetrics } from './chat-run-metrics';

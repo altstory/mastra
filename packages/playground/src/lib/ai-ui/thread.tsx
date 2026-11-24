@@ -1,4 +1,5 @@
 import type { MastraDBMessage } from '@mastra/core/agent/message-list';
+import type { RunMetrics } from '@mastra/core/observability';
 import {
   ChatAnnotationsProvider,
   ComposerAnnotations,
@@ -51,7 +52,7 @@ import { IconMicrophone } from '@mastra/playground-ui/icons/central/IconMicropho
 
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { quietTextHover } from '@mastra/playground-ui/primitives/typography';
-import { useSpeechRecognition } from '@mastra/react';
+import { useMastraClient, useSpeechRecognition } from '@mastra/react';
 import { useReadAloud } from '@mastra/react/hooks/voice';
 
 import type { MessageFactoryPart } from '@mastra/react/ui';
@@ -70,6 +71,7 @@ import { MarkdownComposerInput } from './components/markdown-composer-input';
 import { useComposerAutofocus } from './hooks/use-composer-autofocus';
 import { SuggestedPromptList } from './suggested-prompt-list';
 import { TaskPanel } from './task-panel';
+import { useAccount } from '@/domains/account/account-context';
 import type { StoredFileReference } from '@/domains/account/storage-api';
 import { BrowserThumbnail, useBrowserSession } from '@/domains/agents';
 import { AgentChannelsCard } from '@/domains/agents/components/agent-channels/agent-channels-card';
@@ -389,8 +391,30 @@ export const Thread = (props: ThreadProps) => {
   const annotation = useOptionalChatAnnotations();
   const messages = useChatMessages();
   const { isRunning } = useChatRunning();
+  const account = useAccount();
+  const client = useMastraClient();
+  const loadMetrics = useCallback(
+    async (threadId: string, signal: AbortSignal): Promise<{ metrics: RunMetrics[]; incomplete: boolean }> => {
+      const path = new URLSearchParams({ threadId });
+      const fetcher = client.options.fetch ?? fetch;
+      const response = await fetcher(
+        client.options.baseUrl.replace(/\/$/, '') + '/altflow/conversations/metrics?' + path,
+        { credentials: 'include', cache: 'no-store', redirect: 'error', signal, headers: client.options.headers },
+      );
+      if (!response.ok) throw new Error('Conversation metrics unavailable');
+      return response.json();
+    },
+    [client],
+  );
   return (
-    <ChatMetricsProvider messages={messages} running={isRunning} agentId={props.agentId} threadId={props.threadId}>
+    <ChatMetricsProvider
+      messages={messages}
+      running={isRunning}
+      agentId={props.agentId}
+      threadId={props.threadId}
+      accountId={account?.user.id}
+      loadMetrics={account && account.user.role !== 'admin' ? loadMetrics : undefined}
+    >
       {annotation ? (
         <ThreadContent {...props} />
       ) : (

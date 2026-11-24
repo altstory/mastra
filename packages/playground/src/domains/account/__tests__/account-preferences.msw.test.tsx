@@ -1,14 +1,12 @@
 import { useChatPreferences } from '@mastra/playground-ui/domains/chat';
-import { act, waitFor, screen, fireEvent } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { act, waitFor, screen, fireEvent, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AccountChatPreferences } from '../account-chat-preferences';
 import { AccountContext } from '../account-context';
 import { installPreferenceFixture } from './fixtures/preferences';
 import { creatorSession } from './fixtures/session';
 import { useAgentMemoryPreferences } from '@/domains/agents/context/agent-memory-preferences';
-import { server } from '@/test/msw-server';
-import { renderHookWithProviders, renderWithProviders, TEST_BASE_URL } from '@/test/render';
+import { makeWrapper, renderWithProviders } from '@/test/render';
 
 function PreferencesProbe() {
   const { preferences, updatePreferences } = useChatPreferences();
@@ -25,20 +23,28 @@ function MemoryProbe() {
 
 beforeEach(() => {
   localStorage.clear();
-  server.use(
-    http.get(`${TEST_BASE_URL}/api/auth/capabilities`, () => HttpResponse.json({ enabled: false, login: null })),
-  );
 });
+
+function renderAccountMemory() {
+  const { wrapper: Providers } = makeWrapper();
+  return renderHook(() => useAgentMemoryPreferences('creator-agent'), {
+    wrapper: ({ children }) => (
+      <Providers>
+        <AccountContext.Provider value={creatorSession}>{children}</AccountContext.Provider>
+      </Providers>
+    ),
+  });
+}
 
 describe('Account memory preferences', () => {
   describe('when the server has memory disabled', () => {
     it('restores the account choice in another browser without local storage', async () => {
       installPreferenceFixture({ 'memory:creator-agent': { enabled: false } });
-      const first = renderHookWithProviders(() => useAgentMemoryPreferences('creator-agent'));
+      const first = renderAccountMemory();
       await waitFor(() => expect(first.result.current[0].enabled).toBe(false));
       first.unmount();
       localStorage.clear();
-      const second = renderHookWithProviders(() => useAgentMemoryPreferences('creator-agent'));
+      const second = renderAccountMemory();
       await waitFor(() => expect(second.result.current[0].enabled).toBe(false));
       act(() => second.result.current[1]({ enabled: true }));
       await waitFor(() => expect(second.result.current[0].enabled).toBe(true));
@@ -73,7 +79,7 @@ describe('Account chat settings', () => {
   describe('when the server rejects a save', () => {
     it('keeps the saved memory setting and allows retry without writing a local substitute', async () => {
       const fixture = installPreferenceFixture({ 'memory:creator-agent': { enabled: false } });
-      const view = renderHookWithProviders(() => useAgentMemoryPreferences('creator-agent'));
+      const view = renderAccountMemory();
       await waitFor(() => expect(view.result.current[0].enabled).toBe(false));
       fixture.fail(true);
       act(() => view.result.current[1]({ enabled: true }));

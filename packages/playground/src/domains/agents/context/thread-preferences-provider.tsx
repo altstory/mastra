@@ -7,7 +7,7 @@ import { useLLMProviders } from '@mastra/react/hooks/llm';
 import type { ReactNode } from 'react';
 import { AgentSettingsContext } from './agent-context';
 import { PlaygroundModelContext } from './playground-model-context';
-import { threadPreferencesSchema } from './thread-preferences';
+import { serializeThreadPreferences, threadPreferencesSchema } from './thread-preferences';
 import { useAccount, useIsManagedAccount } from '@/domains/account/account-context';
 import { useAgentBuilderAllowedModels } from '@/domains/agent-builder/hooks/use-agent-builder-allowed-models';
 import { useBuilderSettings } from '@/domains/agent-builder/hooks/use-builder-settings';
@@ -24,8 +24,11 @@ export interface ThreadPreferencesProviderProps {
 }
 
 export function ThreadPreferencesProvider(props: ThreadPreferencesProviderProps) {
+  const account = useAccount();
   const storageKey = `mastra-thread-preferences-${JSON.stringify([props.agentId, props.threadId])}`;
-  return <ThreadPreferencesState key={storageKey} {...props} storageKey={storageKey} />;
+  return (
+    <ThreadPreferencesState key={JSON.stringify([account?.user.id, storageKey])} {...props} storageKey={storageKey} />
+  );
 }
 
 function ThreadPreferencesState({
@@ -46,6 +49,7 @@ function ThreadPreferencesState({
     legacyKey: storageKey,
     defaultValue: {},
     schema: threadPreferencesSchema,
+    serialize: serializeThreadPreferences,
   });
   const preferences = saved.value;
   const setPreferences = saved.setValue;
@@ -75,7 +79,12 @@ function ThreadPreferencesState({
     );
   const locked = policy?.active && policy.pickerVisible === false;
   // Never send a restored override before policy resolution, or when it is no longer allowed.
-  const selection = policyResolved && !locked && allowed ? savedSelection : undefined;
+  const managedSelection =
+    savedSelection?.provider === 'altflow' &&
+    providers?.providers.find(entry => entry.id === 'altflow')?.models.includes(savedSelection.model)
+      ? savedSelection
+      : undefined;
+  const selection = managed ? managedSelection : policyResolved && !locked && allowed ? savedSelection : undefined;
   // A locked default comes from the policy itself, not the available-model catalog.
   const usePolicyDefault = !policyError && policy?.active && (locked || (policyResolved && savedSelection && !allowed));
   const policyDefault = usePolicyDefault ? policy?.default : undefined;
@@ -115,10 +124,9 @@ function ThreadPreferencesState({
         modelOverride,
         modelWarning,
         agentModel: defaultProvider && defaultModel ? { provider: defaultProvider, model: defaultModel } : undefined,
-        resetModel:
-          !managed && savedSelection
-            ? () => setPreferences(previous => ({ ...previous, selection: undefined }))
-            : undefined,
+        resetModel: savedSelection
+          ? () => setPreferences(previous => ({ ...previous, selection: undefined }))
+          : undefined,
         setProvider: provider => setPreferences(previous => ({ ...previous, selection: { provider, model: '' } })),
         setModel: (provider, model) => setPreferences(previous => ({ ...previous, selection: { provider, model } })),
       }}

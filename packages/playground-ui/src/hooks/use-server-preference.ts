@@ -1,24 +1,21 @@
 import { useMastraClient } from '@mastra/react';
-import { isAuthenticated, useAuthCapabilities } from '@mastra/react/hooks/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SetStateAction } from 'react';
 import { z } from 'zod/v4';
+import { useLocalStorageState } from './use-local-storage-state';
 import { t } from '@/lib/i18n';
 import { toast } from '@/utils/toast';
 
 const responseSchema = z.object({ value: z.record(z.string(), z.unknown()), revision: z.number().int().nonnegative() });
 type Entry = z.infer<typeof responseSchema>;
-type Decoder<T> = {
-  parse: (value: unknown) => T;
-  safeParse: (value: unknown) => { success: true; data: T } | { success: false };
-};
 interface PreferenceOptions<T> {
   kind: 'memory' | 'thread' | 'agent' | 'chat';
   id: string;
   accountId?: string;
-  schema: Decoder<T>;
+  schema: z.ZodType<T>;
   defaultValue: T;
   legacyKey?: string;
+  serialize?: (value: T) => string;
 }
 const record = z.record(z.string(), z.unknown());
 function difference(previous: unknown, next: unknown): Record<string, unknown> {
@@ -35,7 +32,6 @@ function difference(previous: unknown, next: unknown): Record<string, unknown> {
   return patch;
 }
 
-/** Authenticated storage is authoritative; local storage is read only for a bounded one-time import. */
 export function useServerPreference<T extends object>({
   kind,
   id,
@@ -43,12 +39,19 @@ export function useServerPreference<T extends object>({
   schema,
   defaultValue,
   legacyKey,
+  serialize,
 }: PreferenceOptions<T>) {
   const client = useMastraClient();
   const queries = useQueryClient();
-  const auth = useAuthCapabilities({ queryOptions: { retryOnMount: false } });
-  const userId = accountId ?? (auth.data && isAuthenticated(auth.data) ? auth.data.user.id : 'native');
-  const queryKey = ['account-preference', client.options.baseUrl, client.options.apiPrefix, userId, kind, id];
+  const [localValue, setLocalValue] = useLocalStorageState({
+    initialKey: accountId
+      ? undefined
+      : (legacyKey ?? `mastra-preferences-${JSON.stringify([client.options.baseUrl, kind, id])}`),
+    defaultValue,
+    schema,
+    serialize,
+  });
+  const queryKey = ['account-preference', client.options.baseUrl, client.options.apiPrefix, accountId, kind, id];
   const request = async (patch?: Record<string, unknown>, importing = false): Promise<Entry> => {
     const params = new URLSearchParams({ kind, id });
     const response = await fetch(`${client.options.baseUrl.replace(/\/$/, '')}/account-preferences?${params}`, {
@@ -74,7 +77,7 @@ export function useServerPreference<T extends object>({
   };
   const query = useQuery({
     queryKey,
-    enabled: Boolean(accountId || auth.data),
+    enabled: Boolean(accountId),
     retry: false,
     queryFn: async () => {
       const entry = await request();
@@ -127,6 +130,16 @@ export function useServerPreference<T extends object>({
     },
     onSettled: () => queries.invalidateQueries({ queryKey }),
   });
+  if (!accountId) {
+    return {
+      value: localValue,
+      setValue: setLocalValue,
+      isLoading: false,
+      isSaving: false,
+      error: null,
+      retry: () => {},
+    };
+  }
   return {
     value: query.data ? schema.parse(query.data.value) : defaultValue,
     setValue: mutation.mutate,

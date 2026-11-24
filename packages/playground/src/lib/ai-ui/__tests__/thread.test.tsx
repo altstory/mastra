@@ -2341,19 +2341,12 @@ describe('Conversation process and accounting', () => {
       await waitFor(() => expect(screen.queryByRole('meter')).toBeNull());
     });
     it('uses the selected reasoning route limit and keeps unknown route readings available', async () => {
-      let saved = {
-        value: { modelSettings: { providerOptions: { altflow: { reasoningLevel: 'high' } } } },
-        revision: 1,
-      };
-      server.use(
-        http.get(`${BASE_URL}/api/agents/providers`, () => HttpResponse.json(measuredProviders)),
-        http.get(`${BASE_URL}/account-preferences`, () => HttpResponse.json(saved)),
-        http.post(`${BASE_URL}/account-preferences`, async ({ request }) => {
-          const { patch } = (await request.json()) as { patch: Partial<typeof saved.value> };
-          saved = { value: { ...saved.value, ...patch }, revision: saved.revision + 1 };
-          return HttpResponse.json(saved);
-        }),
+      const preferenceKey = 'mastra-thread-preferences-["display-agent","display-thread"]';
+      localStorage.setItem(
+        preferenceKey,
+        JSON.stringify({ modelSettings: { providerOptions: { altflow: { reasoningLevel: 'high' } } } }),
       );
+      server.use(http.get(`${BASE_URL}/api/agents/providers`, () => HttpResponse.json(measuredProviders)));
       render(
         <Wrapper>
           <ThreadPreferencesProvider
@@ -2377,6 +2370,7 @@ describe('Conversation process and accounting', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Context usage' }));
       expect(await screen.findByText('39.4K / —')).toBeDefined();
       expect(screen.getByRole('progressbar').hasAttribute('aria-valuenow')).toBe(false);
+      localStorage.removeItem(preferenceKey);
     });
     it('includes older trace pages even when their messages are not loaded', async () => {
       server.use(

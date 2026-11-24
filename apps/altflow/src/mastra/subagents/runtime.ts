@@ -17,6 +17,7 @@ export const CHILD_ROOT = 'mastra__altflowSubagentRoot';
 const userSchema = z.object({
   id: z.string().min(1),
   username: z.string().optional(),
+  role: z.enum(['admin', 'creator', 'user']).optional(),
 });
 export interface Actor {
   owner: string;
@@ -38,12 +39,15 @@ export function childResource(actor: Actor) {
 }
 export function childContext(actor: Actor) {
   const context = new RequestContext();
-  context.setRaw(MASTRA_NORMALIZED_USER_KEY, userSchema.parse(actor.context.getRaw(MASTRA_NORMALIZED_USER_KEY)));
+  const user = userSchema.parse(actor.context.getRaw(MASTRA_NORMALIZED_USER_KEY));
+  context.setRaw(MASTRA_NORMALIZED_USER_KEY, user);
   context.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, actor.resourceId);
   context.setRaw(CHILD_ROOT, actor.root);
   context.set(MASTRA_RESOURCE_ID_KEY, childResource(actor));
-  // Children inherit only the verified private resource and read-only public library access.
-  context.set(MASTRA_SCOPES_KEY, [`resource:${childResource(actor)}`, 'audience:creators']);
+  context.set(MASTRA_SCOPES_KEY, [
+    `resource:${childResource(actor)}`,
+    ...(user.role === 'admin' ? ['library:creator'] : []),
+  ]);
   return context;
 }
 export class SubagentRuntime {
