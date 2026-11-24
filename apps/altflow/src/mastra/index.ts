@@ -17,6 +17,7 @@ import { Observability, MastraStorageExporter } from '@mastra/observability';
 import { KNOWLEDGE_ROUTES } from '@mastra/server/server-adapter';
 import OSS from 'ali-oss';
 import { z } from 'zod';
+import { createScriptReviewer } from './agents/script-reviewer';
 import { DisabledRecallMemory } from './agents/disabled-recall-memory';
 import { executionPolicy } from './agents/execution-policy';
 import { HistoryMemory } from './agents/history-memory';
@@ -44,6 +45,7 @@ import { turnFileChangesProcessor } from './services/turn-file-changes';
 import { createAgentTree } from './subagents/agents';
 import { SubagentStore } from './subagents/store';
 import { createCreatorTools } from './tools';
+import { createScriptQaWorkflow } from './workflows/script-qa';
 import { conversationToolPolicy } from './tools/conversation-policy';
 import { createDocumentTools } from './tools/read-document';
 import { UserStorage } from './user-storage';
@@ -223,7 +225,10 @@ const creatorToolBundle = createCreatorTools({
   countText,
   sessionSearch: new LibSQLSessionSearch(sessionClient),
   delivery: new UserDeliveryService(userFiles),
+  projectFiles: userFiles,
 });
+const scriptReviewer = createScriptReviewer(model);
+const scriptQa = createScriptQaWorkflow(scriptReviewer.review);
 const privateWorkspace = createPrivateWorkspace(userFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
 await subagentStore.init();
@@ -325,7 +330,7 @@ ${internalReferencePolicy}
   outputProcessors: [contextCompaction],
   errorProcessors: [contextCompaction],
   tools: creatorTools,
-  workflows: { textReview },
+  workflows: { textReview, scriptQa },
 });
 const creatorMcp = new MCPServer({ id: 'creator-mcp', name: '创作工具服务', version: '1.0.0', tools: { countText } });
 export const mastra = new Mastra({
@@ -346,8 +351,8 @@ export const mastra = new Mastra({
     ],
   },
   gateways: { altflow: modelHub },
-  agents: { creatorAgent },
-  workflows: { textReview },
+  agents: { creatorAgent, scriptReviewer: scriptReviewer.agent },
+  workflows: { textReview, scriptQa },
   tools: creatorTools,
   processors: { contextCompaction },
   workspace,

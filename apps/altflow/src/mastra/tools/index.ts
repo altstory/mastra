@@ -16,12 +16,15 @@ import {
   taskCheckTool,
 } from '@mastra/core/tools';
 import type { ToolAction } from '@mastra/core/tools';
+import { createProjectStatusTool } from './project-status';
+import type { ProjectFiles } from './project-status';
 import { createValidateScriptFormatTool } from './validate-script-format';
 
 export function createCreatorTools(options: {
   countText: ToolAction<any, any>;
   sessionSearch: SessionSearchService;
   delivery: DeliveryService;
+  projectFiles: ProjectFiles;
   env?: Record<string, string | undefined>;
 }) {
   const env = options.env ?? process.env;
@@ -44,6 +47,7 @@ export function createCreatorTools(options: {
     session_search: createSessionSearchTool({ service: options.sessionSearch }),
     present: createPresentTool({ service: options.delivery }),
     validate_script_format: createValidateScriptFormatTool(),
+    project_status: createProjectStatusTool({ files: options.projectFiles }),
     ...(provider ? { web_search: createWebSearchTool({ provider }) } : {}),
   };
   return { tools, providerConfigured: Boolean(provider), providerName };

@@ -157,6 +157,7 @@ export async function fixture(t) {
     }),
     sessionSearch: new LibSQLSessionSearch(client),
     delivery: { present: async () => [] },
+    projectFiles: { list: async () => [] },
   });
   const memoryStore = await storage.getStore('memory');
   const treeStore = new SubagentStore(`file:${join(dir, 'subagents.db')}`);

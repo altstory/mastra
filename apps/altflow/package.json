@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "seed:shared-skills": "node --import tsx scripts/seed-shared-skills.mjs",
     "test": "node --import tsx --test scripts/modelhub-gateway.test.mjs scripts/context-compaction.test.mjs scripts/conversation-preferences.test.mjs scripts/user-storage.test.mjs scripts/conversation-projects.test.mjs scripts/account-preferences.test.mjs",
-    "test:tools": "node --import tsx --test scripts/tool-runtime.test.mjs scripts/conversation-tools.test.mjs scripts/subagents.test.mjs scripts/subagents-http.test.mjs scripts/office.test.mjs scripts/user-storage.test.mjs scripts/validate-script-format.test.mjs",
+    "test:tools": "node --import tsx --test scripts/tool-runtime.test.mjs scripts/conversation-tools.test.mjs scripts/subagents.test.mjs scripts/subagents-http.test.mjs scripts/office.test.mjs scripts/user-storage.test.mjs scripts/validate-script-format.test.mjs scripts/script-graph.test.mjs scripts/script-qa.test.mjs scripts/project-status.test.mjs",
     "build": "node start-built.mjs --build-only"
   },
   "dependencies": {
