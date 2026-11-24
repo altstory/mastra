@@ -277,6 +277,7 @@ const agentTree = createAgentTree({
 const creatorTools = { ...creatorToolBundle.tools, ...documents.tools, ...agentTree.tools };
 const creatorAgent = new Agent({
   id: 'creator-agent',
+  editor: false,
   name: '创作者助手',
   instructions: `你是 Altflow 的创作助手，服务于互动短剧、漫剧等影视与文字创作者。默认用中文，语气专业直接，不寒暄。
 
