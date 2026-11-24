@@ -227,7 +227,7 @@ const creatorToolBundle = createCreatorTools({
   delivery: new UserDeliveryService(userFiles),
   projectFiles: userFiles,
 });
-const scriptReviewer = createScriptReviewer(model);
+const scriptReviewer = createScriptReviewer(() => modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }));
 const scriptQa = createScriptQaWorkflow(scriptReviewer.review);
 const privateWorkspace = createPrivateWorkspace(userFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
@@ -351,7 +351,7 @@ export const mastra = new Mastra({
     ],
   },
   gateways: { altflow: modelHub },
-  agents: { creatorAgent, scriptReviewer: scriptReviewer.agent },
+  agents: { creatorAgent },
   workflows: { textReview, scriptQa },
   tools: creatorTools,
   processors: { contextCompaction },

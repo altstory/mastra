@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createScriptReviewer } from '../src/mastra/agents/script-reviewer.ts';
 import { createScriptQaWorkflow, REVIEW_DIMENSIONS } from '../src/mastra/workflows/script-qa.ts';
+import { modelServer } from './tool-fixture.mjs';
 
 const valid = `第1集 雨夜来客
 1-1 老宅门口（夜）
@@ -54,4 +56,22 @@ test('model findings and structural findings both land in the report', async () 
   assert.match(output.report, /\[死路\]/);
   assert.match(output.report, /1-2-A：林川提前知道来人身份 建议：删掉这句台词/);
   assert.match(output.report, /结论：未通过/);
+});
+
+test('the reviewer is a standalone agent that resolves its model lazily', async t => {
+  const edge = await modelServer(t);
+  edge.responses.push({
+    text: JSON.stringify({ issues: [{ severity: 'warn', location: '1-3', problem: '收束偏弱', suggestion: '补一个动作' }] }),
+  });
+  let resolved = 0;
+  const { review } = createScriptReviewer(async () => {
+    resolved += 1;
+    return edge.model;
+  });
+  const issues = await review({ dimension: REVIEW_DIMENSIONS[3], script: valid });
+  assert.ok(resolved >= 1);
+  assert.deepEqual(
+    issues.map(issue => issue.location),
+    ['1-3'],
+  );
 });
