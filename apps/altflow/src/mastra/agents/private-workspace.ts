@@ -10,7 +10,8 @@ export function createPrivateWorkspace(files: WorkspaceFiles, storage: MastraCom
       id: `files-${user.id}`,
       name: '我的文件',
       filesystem: new UserFilesystem(files, user.id),
-      ...(user.role === 'admin' && { skills: ['.'], skillSource: await resolvePublishedSkills(storage) }),
+      skills: ['.'],
+      skillSource: await resolvePublishedSkills(storage),
     });
     await workspace.init();
     return workspace;

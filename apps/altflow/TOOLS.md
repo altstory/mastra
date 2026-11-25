@@ -4,7 +4,7 @@
 
 ## 能力
 
-显式工具：count-text、web_fetch、ask_user、submit_plan、task_write、task_update、task_complete、task_check、session_search、present、validate_script_format、project_status、analyze_script_graph、show_branch_graph、story_ledger_read、story_ledger_save。配置搜索凭据后再注册 web_search，共 16 个。另有动态子智能体与团队工具 10 个：subagent、subagent_fork、list_agents、send_message、wait_agent、interrupt_agent、team_task_create/get/list/update；总计 26 个，配置搜索后为 27 个。
+显式工具：count-text、web_fetch、ask_user、submit_plan、task_write、task_update、task_complete、task_check、session_search、present、validate_script_format、project_status、analyze_script_graph、show_branch_graph、show_creative_brief、story_ledger_read、story_ledger_save。配置搜索凭据后再注册 web_search，共 17 个。另有动态子智能体与团队工具 10 个：subagent、subagent_fork、list_agents、send_message、wait_agent、interrupt_agent、team_task_create/get/list/update；总计 27 个，配置搜索后为 28 个。
 
 工作区文件、知识库、技能、recall、工作流仍使用 Mastra 原生工具。动态子智能体基于原生 Agent/Memory/Signal 运行，调度与持久化由 `subagents/` 管理。`/altflow/tools/catalog` 是鉴权只读目录，显示来源及未配置原因，不提供运行时工具的无会话执行旁路。
 
@@ -53,3 +53,9 @@ present 只引用现有用户文件，不重复计入 512MB 配额。下载重�
 同一轮连续使用同一工具和参数达到 3、5 或 8 次时，给模型一条提示。大文本工具结果在模型请求中缩成预览，模型可以通过 read_tool_result 分页读取原文。原始结果保留在会话记录中。
 
 按会话轮次记录文件新增、修改和删除。UTF-8 的 TXT 和 Markdown 文件在每个版本不超过 64 KiB 时提供逐行对比，其他文件显示变更类型。变更历史随文件索引保存。
+
+## 自主澄清与提问卡片
+
+Agent 根据任务读取并组合已发布技能，不提供斜杠入口，也不强制完整走一遍流程。ask_user 复用 Mastra 原生暂停/恢复，在应用层增加 title、context、选项说明和单个 recommended；成功回答会保留 question、title、answer，供前端回显。一次只问当前最重要的一题，用户可以自由回答或要求跳过。
+
+show_creative_brief 展示 confirmed、assumptions、undecided 三类创作要求。它不写文件，也不表示用户批准；Agent 用现有文件工具同步保存 00-需求确认.md，后续创作和质检读取同一份要求。

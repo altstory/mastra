@@ -23,10 +23,13 @@ import { executionPolicy } from '../src/mastra/agents/execution-policy.ts';
 import { HistoryMemory } from '../src/mastra/agents/history-memory.ts';
 import { createPrivateWorkspace } from '../src/mastra/agents/private-workspace.ts';
 import {
+  creatorReferenceScopes,
   isolateConversationReferences,
+  projectConversation,
   protectConversationResponses,
 } from '../src/mastra/agents/reference-visibility.ts';
 import { createAltFlowAuth } from '../src/mastra/altflow-auth.ts';
+import { creatorGatewayContextKey } from '../src/mastra/creator-gateway-auth.ts';
 import { conversationMetricsRoute } from '../src/mastra/routes/conversation-metrics.ts';
 import { SharedSkillSource } from '../src/mastra/services/shared-skills.ts';
 import { createCreatorTools } from '../src/mastra/tools/index.ts';
@@ -34,7 +37,7 @@ import { UserStorage } from '../src/mastra/user-storage.ts';
 
 import { fixture, context, modelServer, runOptions, toolResults } from './tool-fixture.mjs';
 
-test('ordinary conversations cannot read internal references and return only owned trace metrics', async t => {
+test('ordinary agents apply published references while public responses and history hide their source', async t => {
   const { Knowledge, knowledgeMemoryScopes } = await import('@mastra/core/knowledge');
   const { KNOWLEDGE_ROUTES } = await import('@mastra/server/server-adapter');
   const duck = new DuckDBStore({ path: ':memory:', threads: 1 });
@@ -110,7 +113,7 @@ test('ordinary conversations cannot read internal references and return only own
     instructions: 'Use the requested tool.',
     model: edge.model,
     memory: new HistoryMemory({ storage, options: { lastMessages: 10, generateTitle: false } }),
-    scopes: ({ scopes }) => scopes,
+    scopes: creatorReferenceScopes,
     knowledge,
     workspace: ({ user }) => (user?.id ? workspace(user) : undefined),
     inputProcessors: [isolateConversationReferences],
@@ -175,7 +178,7 @@ test('ordinary conversations cannot read internal references and return only own
   for (const method of ['stream', 'generate']) {
     const thread = `private-reference-${method}`;
     const requestIndex = edge.requests.length;
-    edge.responses.push({ text: 'Original work.' });
+    edge.responses.push(privateCalls, { text: 'Original work.' });
     const response = await request(`/agents/creator-agent/${method}`, 'creator', {
       messages: 'Help with my draft.',
       memory: { thread },
@@ -183,7 +186,9 @@ test('ordinary conversations cannot read internal references and return only own
     assert.equal(response.status, 200);
     const wire = await response.text();
     assert.ok(edge.requests.length > requestIndex);
-    assert.doesNotMatch(JSON.stringify(edge.requests.slice(requestIndex)), protectedContent);
+    const modelContext = JSON.stringify(edge.requests.at(-1).messages);
+    assert.match(modelContext, new RegExp(skillSecret));
+    assert.match(modelContext, new RegExp(secret));
     assert.match(wire, /Original work/);
     assert.doesNotMatch(wire, protectedContent);
     const history = await request(`/memory/threads/${thread}/messages?agentId=creator-agent`, 'creator');
@@ -204,7 +209,7 @@ test('ordinary conversations cannot read internal references and return only own
   const measured = JSON.parse(payload);
   assert.equal(measured.incomplete, false);
   assert.equal(measured.metrics.length, 1);
-  assert.equal(measured.metrics[0].steps, 1);
+  assert.equal(measured.metrics[0].steps, 2);
   assert.ok(measured.metrics[0].models.some(usage => usage.input === 10 && usage.output === 5));
   assert.equal((await request('/observability/traces', 'creator')).status, 403);
   const memory = await storage.getStore('memory');
@@ -240,7 +245,7 @@ test('ordinary conversations cannot read internal references and return only own
   assert.match(await resumed.text(), /Past draft checked/);
   assert.equal(edge.requests.length, requestIndex + 2);
   const recalled = JSON.stringify(edge.requests.slice(requestIndex).map(call => call.messages));
-  assert.doesNotMatch(recalled, protectedContent);
+  assert.match(recalled, new RegExp(skillSecret));
   const recallResults = edge.requests.at(-1).messages.filter(message => message.role === 'tool');
   assert.match(JSON.stringify(recallResults), /Original work/);
   const subscription = await request('/agents/creator-agent/threads/subscribe', 'creator', {
@@ -262,11 +267,29 @@ test('ordinary conversations cannot read internal references and return only own
   } finally {
     await reader.cancel();
   }
+  const gatewayContext = context('gateway-author');
+  gatewayContext.setRaw(creatorGatewayContextKey, { userId: 'gateway-author', conversationId: 'fc_test' });
+  edge.responses.push(privateCalls, { text: 'Gateway original work.' });
+  const gatewayResult = await agent.generate('Apply references to this conversation.', {
+    requestContext: gatewayContext,
+    memory: { thread: 'gateway-reference' },
+  });
+  assert.equal(gatewayResult.text, 'Gateway original work.');
+  const gatewayInput = edge.requests.at(-1);
+  assert.match(JSON.stringify(gatewayInput.messages), new RegExp(skillSecret));
+  assert.match(JSON.stringify(gatewayInput.messages), new RegExp(secret));
+  const gatewayTools = gatewayInput.tools.map(tool => tool.function.name);
+  assert.ok(gatewayTools.includes('skill') && gatewayTools.includes('knowledge_read'));
+  assert.ok(
+    !gatewayTools.includes('knowledge_upsert') &&
+      !gatewayTools.includes('recall') &&
+      !gatewayTools.includes('session_search'),
+  );
+  assert.doesNotMatch(JSON.stringify(projectConversation(gatewayResult)), protectedContent);
 });
 
 test('native task tools persist through a real Agent run and a reopened LibSQL store', async t => {
   const f = await fixture(t);
-  assert.equal(Object.keys(f.bundle.tools).length, 16);
   assert.ok('validate_script_format' in f.bundle.tools);
   assert.ok('project_status' in f.bundle.tools);
   assert.ok('analyze_script_graph' in f.bundle.tools);
@@ -329,8 +352,10 @@ for (const choice of [
   {
     name: 'ask_user',
     args: {
+      title: 'Story direction',
+      context: 'The choice changes the central conflict.',
       question: 'Which topic?',
-      options: [{ label: 'A' }, { label: 'B' }],
+      options: [{ label: 'A', description: 'Focus on identity', recommended: true }, { label: 'B' }],
     },
     answer: 'A',
     expected: /User answered: A/,
@@ -351,6 +376,11 @@ for (const choice of [
     assert.equal(stream.status, 'suspended');
     const suspended = events.find(event => event.type === 'tool-call-suspended');
     assert.ok(suspended, 'native suspended event is emitted');
+    if (choice.name === 'ask_user') {
+      assert.equal(suspended.payload.suspendPayload.title, choice.args.title);
+      assert.equal(suspended.payload.suspendPayload.context, choice.args.context);
+      assert.equal(suspended.payload.suspendPayload.options[0].recommended, true);
+    }
     f.responses.push({ text: 'Continued after user confirmation.' });
     const resumed = await f.agent.resumeGenerate(choice.answer, {
       ...runOptions(),
@@ -359,6 +389,13 @@ for (const choice of [
     });
     assert.equal(resumed.text, 'Continued after user confirmation.');
     assert.match(JSON.stringify(f.requests.at(-1).messages), choice.expected);
+    if (choice.name === 'ask_user') {
+      const output = resumed.steps
+        .flatMap(step => step.toolResults ?? [])
+        .find(result => result.payload.toolName === 'ask_user')?.payload.result;
+      assert.equal(output.question, choice.args.question);
+      assert.equal(output.answer, choice.answer);
+    }
   });
 
 test('shared skill sources cannot read host paths or escaping symlinks', async t => {
@@ -413,7 +450,11 @@ test('private workspaces load the active public skill snapshot from LibSQL', asy
   assert.match((await alice.skills.get('style-guide')).instructions, /First published instruction/);
   await skills.update({ id: 'style-guide', activeVersionId: latest.id });
   const ordinary = await resolveWorkspace({ id: 'bob', role: 'creator' });
-  assert.equal((await ordinary.skills?.list())?.length ?? 0, 0);
+  assert.deepEqual(
+    (await ordinary.skills.list()).map(skill => skill.name),
+    ['style-guide'],
+  );
+  assert.match((await ordinary.skills.get('style-guide')).instructions, /Unpublished instruction/);
   const bob = await resolveWorkspace({ id: 'bob', role: 'admin' });
   assert.match((await bob.skills.get('style-guide')).instructions, /Unpublished instruction/);
   assert.match((await alice.skills.get('style-guide')).instructions, /First published instruction/);

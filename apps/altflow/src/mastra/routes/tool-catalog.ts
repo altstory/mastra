@@ -91,7 +91,7 @@ export function toolCatalogRoute(options: {
       collect(await createWorkspaceTools(workspace, { workspace, requestContext }), '工作区', true);
       collect(options.memory.listTools(), '记忆', true);
       if (user.role === 'admin') collect(options.knowledge.createTools(), '知识库', true);
-      if (workspace.skills) collect(createSkillTools(workspace.skills), '技能', true);
+      if (user.role === 'admin' && workspace.skills) collect(createSkillTools(workspace.skills), '技能', true);
       entries.set('workflow-textReview', {
         id: 'workflow-textReview',
         name: 'workflow-textReview',

@@ -6,9 +6,12 @@ import type { AltFlowUser } from '../altflow-auth';
 import { creatorGatewayContextKey } from '../creator-gateway-auth';
 
 const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
-const privatePin = /^<pinned-knowledge(?:-update)?(?:[\s/>])/;
 const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory|remember|forget_memory)$/;
 const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
+
+export function creatorReferenceScopes({ scopes, user }: { scopes: string[]; user?: { id?: string } }) {
+  return user?.id ? [...new Set([...scopes, 'library:creator'])] : scopes;
+}
 
 export function mayReadReferences(requestContext?: RequestContext) {
   if (requestContext?.getRaw(creatorGatewayContextKey)) return false;
@@ -21,34 +24,11 @@ export const isolateConversationReferences = {
     if (mayReadReferences(requestContext)) return;
     const product = Boolean(requestContext?.getRaw(creatorGatewayContextKey));
     const allowed = (name: string) =>
-      !privateReferenceTool.test(name) && (!product || !/^(?:recall|session_search)$/.test(name));
+      (!name.startsWith('knowledge_') || /^(?:knowledge_list|knowledge_search|knowledge_read)$/.test(name)) &&
+      (!product || !/^(?:recall|session_search)$/.test(name));
     return {
       tools: Object.fromEntries(Object.entries(tools ?? {}).filter(([name]) => allowed(name))),
       activeTools: activeTools?.filter(allowed),
-    };
-  },
-  processLLMRequest({ prompt, requestContext }) {
-    if (mayReadReferences(requestContext)) return;
-    const allowed = (part: { type: string; toolName?: string; text?: string }) =>
-      !(part.toolName && privateReferenceTool.test(part.toolName)) &&
-      !(part.type === 'text' && part.text && privatePin.test(part.text.trimStart()));
-    return {
-      prompt: prompt.flatMap<(typeof prompt)[number]>(message => {
-        if (message.role === 'system') return privatePin.test(message.content.trimStart()) ? [] : [message];
-        if (message.role === 'user') {
-          const content = message.content.filter(allowed);
-          return content.length ? [{ ...message, content }] : [];
-        }
-        if (message.role === 'assistant') {
-          const content = message.content.filter(allowed);
-          return content.length ? [{ ...message, content }] : [];
-        }
-        if (message.role === 'tool') {
-          const content = message.content.filter(allowed);
-          return content.length ? [{ ...message, content }] : [];
-        }
-        return [message];
-      }),
     };
   },
 } satisfies Processor;

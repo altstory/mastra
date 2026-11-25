@@ -55,7 +55,7 @@ ModelHub 适配器显式启用 `includeUsage`，流式请求携带 `stream_optio
 
 ## 能力和持久化
 
-默认开启工作记忆、中文标题和 DSH 检查点压缩。Agent 默认无需审批即可执行已提供的工具。字符统计工具、篇幅检查工作流、知识库管理、编辑器、MCP 及全局可观测性保留给管理员。所有已登录用户均可通过 Agent 使用自己的私有文件工作区。
+默认开启工作记忆、中文标题和 DSH 检查点压缩。Agent 默认无需审批即可执行已提供的工具。共享 Skill 与创作知识由普通用户对话中的 Agent 内部使用，原文和内部调用记录不对用户展示。知识库管理、编辑器、MCP 及全局可观测性保留给管理员。所有已登录用户均可通过 Agent 使用自己的私有文件工作区。
 
 Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、任务与交互工具。用户明确自述的姓名、常用称呼和长期偏好可在同一账号的新会话中使用，创作内容、待答问题和文件访问仍按会话隔离。Web 只展示可公开的任务与工具状态。
 
@@ -178,3 +178,11 @@ Legacy thread imports require a pre-existing owned thread and never replace an
 existing server entry, including an explicit reset. The creator Agent resolves
 its memory policy from this ledger; a persisted opt-out blocks history, semantic
 and working-memory recall even when a client sends stale enabled options.
+
+## 自主创作引导
+
+用户正常描述需求，Agent 按当前问题组合已发布的创作技能，用 ask_user 展示一次一题的问答卡片。title/context 提供问题背景，选项支持说明和推荐标记，仍沿用原生暂停与恢复；回答结果保留 question/answer 供聊天历史展示。
+
+需求够用时通过 show_creative_brief 展示已确认、假设和待定事项，并将同一份要求写入当前项目的 00-需求确认.md。质检读取已确认原则传入 script-qa，不机械地要求用户完成全部环节。
+
+代码维护的技能发布：pnpm --filter @internal/altflow publish:creator-skills。运行代码和已发布技能是两个更新步骤；发布技能保留历史版本，当前对话下一次创建工作区时读取活跃版本。

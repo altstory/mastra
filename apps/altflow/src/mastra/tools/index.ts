@@ -7,7 +7,6 @@ import {
 } from '@mastra/altflow-tools';
 import type { DeliveryService, SessionSearchService } from '@mastra/altflow-tools';
 import {
-  askUserTool,
   webFetchTool,
   submitPlanTool,
   taskWriteTool,
@@ -17,6 +16,8 @@ import {
 } from '@mastra/core/tools';
 import type { ToolAction } from '@mastra/core/tools';
 import type { StoryLedgerStore } from '../services/story-ledger';
+import { creatorQuestionTool } from './creator-question';
+import { creativeBriefTool } from './creative-brief';
 import { createBranchGraphTool } from './branch-graph';
 import { createProjectStatusTool } from './project-status';
 import type { ProjectFiles } from './project-status';
@@ -43,7 +44,8 @@ export function createCreatorTools(options: {
   const tools = {
     countText: options.countText,
     web_fetch: webFetchTool,
-    ask_user: askUserTool,
+    ask_user: creatorQuestionTool,
+    show_creative_brief: creativeBriefTool,
     submit_plan: submitPlanTool,
     task_write: taskWriteTool,
     task_update: taskUpdateTool,

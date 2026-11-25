@@ -25,7 +25,11 @@ import { CreatorMemory } from './agents/creator-memory';
 import { creativeMemoryProcessor } from './agents/creative-memory-processor';
 import { internalReferencePolicy } from './agents/internal-reference-policy';
 import { createPrivateWorkspace } from './agents/private-workspace';
-import { isolateConversationReferences, protectConversationResponses } from './agents/reference-visibility';
+import {
+  creatorReferenceScopes,
+  isolateConversationReferences,
+  protectConversationResponses,
+} from './agents/reference-visibility';
 import { createAltFlowAuth } from './altflow-auth';
 import { ContextCompaction } from './context-compaction';
 import { CONTEXT_MEMORY_OPTIONS, CREATOR_MEMORY_OPTIONS } from './context-memory';
@@ -298,7 +302,7 @@ const agentTree = createAgentTree({
     errorProcessors: [contextCompaction],
     workspace: ({ user }) => (user?.id ? privateWorkspace(user) : undefined),
     knowledge,
-    scopes: ({ scopes }) => scopes,
+    scopes: creatorReferenceScopes,
   },
 });
 const creatorTools = { ...creatorToolBundle.tools, ...documents.tools, ...agentTree.tools };
@@ -309,12 +313,13 @@ const creatorAgent = new Agent({
   instructions: `你是 Altflow 的创作助手，服务于互动短剧、漫剧等影视与文字创作者。默认用中文，语气专业直接，不寒暄。
 
 ## 工作方式
-- 先弄清用户要做什么、手上有什么。小任务信息不足时，只追问最关键的 1 到 3 个问题，其余按合理假设推进，并说明假设。新项目、较大的任务或需求模糊时，先读取 grilling 技能做需求澄清，用户确认后再动手；用户想跳过时，直接开始并说明关键假设。
+- 先弄清用户要做什么、手上有什么。需求不清楚时自主读取 grilling，按当前任务选择并组合创作技能。用户正常聊天即可，不要求输入斜杠命令或选择流程。复用已知事实，一次只调用一个 ask_user；收到回答后再决定下一题，信息够用就开始。用户想跳过时，直接开始并说明关键假设。
 - 你提供方案和取舍理由，由用户做决定。不替用户拍板，不一次交出整部作品，按一集、一个环节往前推。
-- 复杂任务先列任务清单，推进时及时更新。需要用户选择时用 ask_user 给出选项。较大的改动，先把方案写入 .mastracode/plans/ 下的 Markdown 文件，再用 submit_plan 提交审批。
+- 复杂任务先列任务清单，推进时及时更新。需要用户决定时用 ask_user 的 title、context 和 options 展示问题、原因和取舍；推荐不等于用户同意。已明确授权的工作不逐步重复确认。较大的改动，先把方案写入 .mastracode/plans/ 下的 Markdown 文件，再用 submit_plan 提交审批。
 - 并行或耗时的子任务可以交给子智能体，结果由你汇总后再告诉用户。
 
 ## 创作
+- 用户回答后更新当前项目的 00-需求确认.md；需求足够或关键要求变化时用 show_creative_brief 展示已确认、暂定假设和待定事项。后续创作复用这些决定，质检时读取并传入已确认的创作原则。
 - 做互动剧项目时，先读取 interactive-drama-workflow 技能，它说明各环节该读哪个技能；先确认改编方向和核心体验，再梳理角色、世界观、选择与后果，最后编写分集大纲和剧本。已获授权访问内部资料时，按创作阶段参考相应方法。
 - 项目产出保存在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。开始写剧本前，用 project_status 查看缺哪些环节（进度会以卡片展示，不用逐项复述）；缺少的先告诉用户并建议补齐，用户要跳过时列出假设再写。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
@@ -345,8 +350,8 @@ ${internalReferencePolicy}
   },
   workspace: ({ user }) => (user?.id ? privateWorkspace(user) : undefined),
   knowledge,
-  // Server auth supplies library access; do not grant every caller ownership.
-  scopes: ({ scopes }) => scopes,
+  // Library access belongs to Agent execution; account endpoints retain their own permissions.
+  scopes: creatorReferenceScopes,
   memory: accountMemory(accountPreferences, creatorMemory, disabledRecallMemory),
   inputProcessors: [
     new TaskStateProcessor(),
