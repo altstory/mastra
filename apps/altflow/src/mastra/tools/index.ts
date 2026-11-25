@@ -18,6 +18,7 @@ import type { ToolAction } from '@mastra/core/tools';
 import type { StoryLedgerStore } from '../services/story-ledger';
 import { creatorQuestionTool } from './creator-question';
 import { creativeBriefTool } from './creative-brief';
+import { creativeWorkTool } from './creative-work';
 import type { WorkspaceFiles } from '../services/conversation-files';
 import { createDeliverInteractiveScriptTool } from './deliver-interactive-script';
 import { createBranchGraphTool } from './branch-graph';
@@ -48,6 +49,7 @@ export function createCreatorTools(options: {
     web_fetch: webFetchTool,
     ask_user: creatorQuestionTool,
     show_creative_brief: creativeBriefTool,
+    show_creative_work: creativeWorkTool,
     submit_plan: submitPlanTool,
     task_write: taskWriteTool,
     task_update: taskUpdateTool,

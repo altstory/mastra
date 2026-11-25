@@ -352,6 +352,19 @@ for (const choice of [
   {
     name: 'ask_user',
     args: {
+      preview: {
+        kind: 'characters',
+        title: 'Two hunters',
+        characters: [
+          {
+            name: 'Yamada',
+            role: 'Companion',
+            desire: 'Survive together',
+            obstacle: 'Fear of breaking rules',
+            change: 'Takes the first risk',
+          },
+        ],
+      },
       title: 'Story direction',
       context: 'The choice changes the central conflict.',
       question: 'Which topic?',
@@ -377,6 +390,7 @@ for (const choice of [
     const suspended = events.find(event => event.type === 'tool-call-suspended');
     assert.ok(suspended, 'native suspended event is emitted');
     if (choice.name === 'ask_user') {
+      assert.deepEqual(suspended.payload.suspendPayload.preview, choice.args.preview);
       assert.equal(suspended.payload.suspendPayload.title, choice.args.title);
       assert.equal(suspended.payload.suspendPayload.context, choice.args.context);
       assert.equal(suspended.payload.suspendPayload.options[0].recommended, true);
@@ -393,6 +407,9 @@ for (const choice of [
       const output = resumed.steps
         .flatMap(step => step.toolResults ?? [])
         .find(result => result.payload.toolName === 'ask_user')?.payload.result;
+      assert.deepEqual(output.preview, choice.args.preview);
+      assert.deepEqual(output.options, choice.args.options);
+      assert.equal(output.context, choice.args.context);
       assert.equal(output.question, choice.args.question);
       assert.equal(output.answer, choice.answer);
     }
