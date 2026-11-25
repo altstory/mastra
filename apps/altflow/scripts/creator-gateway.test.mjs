@@ -323,12 +323,22 @@ test('signed creator admission, native thread delivery and billed model usage sh
   await assertStatus(await request('/creator-gateway/file?id=' + id, { conversation: other }), 404);
 
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a19sAAAAASUVORK5CYII=';
-  const image = await request('/creator-gateway/file?id=' + randomUUID() + '&name=reference.png', {
+  const imageUploadId = randomUUID();
+  const image = await request('/creator-gateway/file?id=' + imageUploadId + '&name=reference.png', {
     method: 'POST',
     body: Buffer.from(png, 'base64'),
   });
   await assertStatus(image, 200);
   const imageId = (await image.json()).id;
+  const listed = await (await request('/creator-gateway/files')).json();
+  assert.ok(
+    listed.some(file => file.id === imageId && file.uploadId === imageUploadId && file.name === 'reference.png'),
+  );
+  const otherFiles = await (await request('/creator-gateway/files', { conversation: other })).json();
+  assert.ok(!otherFiles.some(file => file.uploadId === imageUploadId));
+  const preview = await request('/creator-gateway/file?id=' + imageId);
+  await assertStatus(preview, 200);
+  assert.equal(Buffer.from(await preview.arrayBuffer()).toString('base64'), png);
   const withAttachments = { ...body, message: { contents: '' }, attachments: [id, imageId] };
   await assertStatus(
     await request('/creator-gateway/send', {

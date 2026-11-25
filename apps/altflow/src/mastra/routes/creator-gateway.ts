@@ -19,6 +19,7 @@ import type { ConversationFiles } from '../services/conversation-files';
 import { FileStorageError } from '../user-storage';
 
 const attachmentId = z.string().regex(/^[a-f0-9]{64}$/);
+const uploadIdSchema = z.uuid();
 const nativeImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const messageSchema = z
   .strictObject({
@@ -209,11 +210,16 @@ export async function creatorGatewayRoutes({
     route('files', 'GET', async ({ claims, thread }) => {
       const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
       return Response.json(
-        entries.map(file => ({
-          id: fileId(file.path, String(file.updatedAt)),
-          name: file.path.split('/').at(-1),
-          size: file.size,
-        })),
+        entries.map(file => {
+          const name = file.path.split('/').at(-1);
+          const uploadId = /^\/uploads\/([^/]+)\/[^/]+$/.exec(file.path)?.[1];
+          return {
+            id: fileId(file.path, String(file.updatedAt)),
+            name,
+            size: file.size,
+            ...(uploadIdSchema.safeParse(uploadId).success ? { uploadId } : {}),
+          };
+        }),
       );
     }),
     route('file', 'GET', async ({ request, claims, thread }) => {
@@ -240,7 +246,7 @@ export async function creatorGatewayRoutes({
             .min(1)
             .max(240)
             .regex(/^[^/\\\u0000-\u001f]+$/),
-          id: z.uuid(),
+          id: uploadIdSchema,
         })
         .safeParse(Object.fromEntries(new URL(request.url).searchParams));
       if (!upload.success) return new Response(null, { status: 400 });
