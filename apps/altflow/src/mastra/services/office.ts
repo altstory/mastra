@@ -43,6 +43,13 @@ export class OfficeReader {
   constructor(private readonly storage: Pick<UserStorage, 'info' | 'read' | 'write' | 'remove'>) {}
 
   async read(owner: string, path: string, signal?: AbortSignal): Promise<string> {
+    signal?.throwIfAborted();
+    if (/\.(txt|md|markdown|csv|tsv|json|yaml|yml|xml|html?|log)$/i.test(path)) {
+      const bytes = await this.storage.read(owner, path);
+      signal?.throwIfAborted();
+      if (bytes.length > 50 * 1024 * 1024) throw new FileStorageError('文档超过 50 MB 读取上限', 413);
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/\r\n?/g, '\n');
+    }
     return this.withSnapshot(owner, path, signal, async ({ inputPath, extension, directory, bytes }) => {
       // Writer's text export preserves full flowing text without PDF pagination loss.
       const writer = /\.(docx?|odt)$/.test(extension);

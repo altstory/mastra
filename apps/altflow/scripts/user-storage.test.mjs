@@ -15,7 +15,7 @@ test('an uploaded document survives reopening and is readable through the agent 
   const b = new UserFilesystem(store, 'bob');
   assert.equal(await a.readFile('/uploads/book.txt', { encoding: 'utf8' }), '小说正文');
   assert.equal(await b.exists('/uploads/book.txt'), false);
-  await assert.rejects(b.readFile('/uploads/book.txt'), /不存在/);
+  await assert.rejects(b.readFile('/uploads/book.txt'), { code: 'ENOENT' });
   await a.writeFile('/drafts/大纲.md', '# 大纲');
   assert.deepEqual((await store.list('alice')).map(f => f.source).sort(), ['generated', 'upload']);
   assert.equal((await store.summary('alice')).usedBytes, Buffer.byteLength('小说正文# 大纲'));
@@ -455,4 +455,12 @@ test('legacy file recovery requires a unique recorded conversation and concurren
     );
   }
   assert.equal((await f.store.read('alice', '/unassigned.md')).toString(), 'no provenance');
+});
+
+test('missing optional gitignore has the filesystem ENOENT contract', async t => {
+  const { store } = await setup(t);
+  const fs = new UserFilesystem(store, 'alice');
+  await fs.writeFile('/novel.txt', '雨夜来客');
+  await assert.rejects(fs.readFile('/.gitignore'), { code: 'ENOENT' });
+  assert.equal(await fs.readFile('/novel.txt', { encoding: 'utf8' }), '雨夜来客');
 });

@@ -1,13 +1,37 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { Client } from '@libsql/client';
 import { conversationModels } from './model-policy';
 
-const maxCalls = 40;
 export const creatorProductModels: ReadonlySet<string> = new Set(conversationModels);
 type Usage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
 
-export const creatorMeterContext = new AsyncLocalStorage<{ db: Client; operationId: string; tokenBudget: number }>();
+export interface CreatorMeter {
+  db: Client;
+  operationId: string;
+  tokenBudget: number;
+  background?: Set<Promise<unknown>>;
+  onRootWake?: (runId: string) => Promise<void>;
+  rootFinishReason?: string;
+  controller?: AbortController;
+}
+export const creatorMeterContext = new AsyncLocalStorage<CreatorMeter>();
+
+export function trackCreatorBackground(work: Promise<unknown>, controller?: AbortController) {
+  const meter = creatorMeterContext.getStore();
+  if (!meter?.background) return;
+  meter.background.add(work);
+  const abort = () => controller?.abort(meter.controller?.signal.reason);
+  if (meter.controller?.signal.aborted) abort();
+  else meter.controller?.signal.addEventListener('abort', abort, { once: true });
+  void work
+    .finally(() => {
+      meter.background?.delete(work);
+      meter.controller?.signal.removeEventListener('abort', abort);
+    })
+    .catch(() => {});
+}
 
 export async function createCreatorMeter(db: Client) {
   await db.execute(`CREATE TABLE IF NOT EXISTS creator_gateway_calls (
@@ -20,25 +44,70 @@ export async function createCreatorMeter(db: Client) {
     ended_ms INTEGER,
     usage TEXT
   )`);
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS creator_gateway_allowances (operation_id TEXT PRIMARY KEY, allowed INTEGER NOT NULL, requested INTEGER NOT NULL DEFAULT 0, denied INTEGER NOT NULL DEFAULT 0)`,
+  );
   await db.execute('CREATE INDEX IF NOT EXISTS creator_gateway_calls_operation ON creator_gateway_calls(operation_id)');
 }
 
 class CreatorBudgetError extends Error {}
+
+export async function creatorAllowance(db: Client, operationId: string) {
+  const { rows } = await db.execute({
+    sql: 'SELECT allowed, requested, denied FROM creator_gateway_allowances WHERE operation_id=?',
+    args: [operationId],
+  });
+  return rows[0];
+}
+
+export async function grantCreatorAllowance(db: Client, operationId: string, allowed: number, denied = false) {
+  await db.execute({
+    sql: `UPDATE creator_gateway_allowances SET allowed=?, requested=CASE WHEN requested<=? THEN 0 ELSE requested END,
+      denied=CASE WHEN requested>? THEN ? ELSE 0 END WHERE operation_id=? AND allowed<=?`,
+    args: [allowed, allowed, allowed, denied ? 1 : 0, operationId, allowed],
+  });
+}
+
+async function renewCreatorAllowance(ceiling: number, signal?: AbortSignal) {
+  const { db, operationId } = creatorMeterContext.getStore()!;
+  await db.execute({
+    sql: `UPDATE creator_gateway_allowances SET requested=MAX(requested,
+      (SELECT COALESCE(sum(CASE WHEN usage IS NULL THEN ceiling ELSE json_extract(usage, '$.inputTokens') + json_extract(usage, '$.outputTokens') END),0) FROM creator_gateway_calls WHERE operation_id=?) + ?)
+      WHERE operation_id=?`,
+    args: [operationId, ceiling, operationId],
+  });
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    signal?.throwIfAborted();
+    const allowance = await creatorAllowance(db, operationId);
+    if (allowance?.denied) {
+      const error = new Error('余额不足，任务已暂停。充值后可从已有进度继续。');
+      error.name = 'CreatorInsufficientCreditsError';
+      throw error;
+    }
+    if (allowance && Number(allowance.allowed) >= Number(allowance.requested)) return;
+    if (Date.now() >= deadline) throw new Error('费用预留服务暂不可用，任务已暂停，请稍后继续。');
+    await delay(250, undefined, { signal });
+  }
+}
 
 export async function claimCreatorCall(modelId: string, summary: boolean, ceiling: number) {
   const context = creatorMeterContext.getStore();
   if (!context) return undefined;
   if (!creatorProductModels.has(modelId)) throw new Error('Creator model is outside billing policy');
   const { db, operationId, tokenBudget } = context;
+  await db.execute({
+    sql: 'INSERT OR IGNORE INTO creator_gateway_allowances (operation_id,allowed) VALUES (?,?)',
+    args: [operationId, tokenBudget],
+  });
   const id = randomUUID();
   const admitted = await db.execute({
     sql: `INSERT INTO creator_gateway_calls (id,operation_id,model_id,purpose,ceiling,started_ms)
       SELECT ?,?,?,?,?,?
       WHERE EXISTS (SELECT 1 FROM creator_gateway_receipts WHERE id=? AND state IN ('dispatching','accepted'))
-      AND (SELECT count(*) FROM creator_gateway_calls WHERE operation_id=?) < ?
       AND (SELECT COALESCE(sum(CASE WHEN usage IS NULL THEN ceiling
         ELSE json_extract(usage, '$.inputTokens') + json_extract(usage, '$.outputTokens') END), 0)
-        FROM creator_gateway_calls WHERE operation_id=?) + ? <= ?`,
+        FROM creator_gateway_calls WHERE operation_id=?) + ? <= (SELECT allowed FROM creator_gateway_allowances WHERE operation_id=?)`,
     args: [
       id,
       operationId,
@@ -48,13 +117,19 @@ export async function claimCreatorCall(modelId: string, summary: boolean, ceilin
       Date.now(),
       operationId,
       operationId,
-      maxCalls,
-      operationId,
       ceiling,
-      tokenBudget,
+      operationId,
     ],
   });
-  if (admitted.rowsAffected !== 1) throw new CreatorBudgetError('Creator operation has no remaining model budget');
+  if (admitted.rowsAffected !== 1) {
+    const receipt = await db.execute({
+      sql: 'SELECT state FROM creator_gateway_receipts WHERE id=?',
+      args: [operationId],
+    });
+    if (!['accepted', 'dispatching'].includes(String(receipt.rows[0]?.state)))
+      throw new Error('Creator operation is no longer active');
+    throw new CreatorBudgetError('Creator operation requires an additional reservation');
+  }
   return {
     async finish(usage: Usage | null) {
       await db.execute({
@@ -105,13 +180,26 @@ export async function fetchMeteredCreatorModel(
   const pending = settlingSteers.get(context) ?? new Set<Promise<void>>();
   settlingSteers.set(context, pending);
 
-  const call = await claimCreatorCall(modelId, summary, ceiling).catch(async error => {
-    if (!(error instanceof CreatorBudgetError) || !pending.size) throw error;
-    await Promise.allSettled(pending);
+  let call;
+  for (;;) {
     init.signal?.throwIfAborted();
-    return claimCreatorCall(modelId, summary, ceiling);
-  });
+    try {
+      call = await claimCreatorCall(modelId, summary, ceiling);
+      break;
+    } catch (error) {
+      if (!(error instanceof CreatorBudgetError)) throw error;
+      if (pending.size) {
+        await Promise.race([Promise.allSettled(pending), delay(250, undefined, { signal: init.signal ?? undefined })]);
+        continue;
+      }
+      await renewCreatorAllowance(ceiling, init.signal ?? undefined);
+    }
+  }
   if (!call) throw new Error('Creator model request has no meter');
+  if (init.signal?.aborted) {
+    await call.finish({ inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
+    init.signal.throwIfAborted();
+  }
 
   const upstream = new AbortController();
   let steered = false;

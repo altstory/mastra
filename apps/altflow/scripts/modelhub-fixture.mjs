@@ -68,7 +68,7 @@ export async function modelHubFixture() {
       for await (const chunk of request) raw += chunk;
       state.requests.push({ body: JSON.parse(raw), authorization: request.headers.authorization });
       const body = JSON.parse(raw);
-      state.onRequest?.(body);
+      await state.onRequest?.(body);
       while (state.blocked) await new Promise(resolve => setTimeout(resolve, 20));
       const summarizing = body.messages.at(-1)?.content?.includes('You are now acting as a compaction engine');
       if (state.rejectContextOnce && !summarizing) {

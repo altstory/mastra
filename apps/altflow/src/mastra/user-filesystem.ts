@@ -1,5 +1,5 @@
 import { posix } from 'node:path';
-import { MastraFilesystem } from '@mastra/core/workspace';
+import { FileNotFoundError, MastraFilesystem } from '@mastra/core/workspace';
 import type {
   FileContent,
   ReadOptions,
@@ -29,8 +29,13 @@ export class UserFilesystem extends MastraFilesystem {
     this.id = `user-files-${owner}`;
   }
   async readFile(path: string, options?: ReadOptions) {
-    const data = await this.store.read(this.owner, path);
-    return options?.encoding ? data.toString(options.encoding) : data;
+    try {
+      const data = await this.store.read(this.owner, path);
+      return options?.encoding ? data.toString(options.encoding) : data;
+    } catch (error) {
+      if (error instanceof FileStorageError && error.status === 404) throw new FileNotFoundError(path);
+      throw error;
+    }
   }
   async writeFile(path: string, content: FileContent, options?: WriteOptions) {
     await this.store.write(this.owner, path, Buffer.from(content), options);

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { createClient } from '@libsql/client';
 import { Agent } from '@mastra/core/agent';
-import { askUserTool } from '@mastra/core/tools';
+import { MASTRA_RESOURCE_ID_KEY } from '@mastra/core/request-context';
+import { creatorQuestionTool } from '../src/mastra/tools/creator-question.ts';
 import { Mastra } from '@mastra/core/mastra';
 import { Hono } from 'hono';
 import { MastraServer } from '@mastra/hono';
@@ -17,6 +19,9 @@ import {
   createCreatorMeter,
   creatorMeterContext,
   creatorUsage,
+  creatorAllowance,
+  grantCreatorAllowance,
+  fetchMeteredCreatorModel,
 } from '../src/mastra/creator-meter.ts';
 import { creatorGatewayRoutes } from '../src/mastra/routes/creator-gateway.ts';
 import {
@@ -26,7 +31,8 @@ import {
 import { ConversationFiles } from '../src/mastra/services/conversation-files.ts';
 import { modelHubFixture } from './modelhub-fixture.mjs';
 import { setup } from './storage-fixture.mjs';
-import { fixture } from './tool-fixture.mjs';
+import { fixture, context } from './tool-fixture.mjs';
+import { createAgentTree } from '../src/mastra/subagents/agents.ts';
 
 const secret = 'test-only-creator-gateway-secret';
 const account = 'alice';
@@ -68,14 +74,29 @@ test('signed creator admission, native thread delivery and billed model usage sh
       generateTitle: { model: () => catalog.resolveTitleModel('qwen3.8-max'), emitEvent: true },
     },
   });
+  const tree = createAgentTree({
+    store: f.treeStore,
+    memory: f.memoryStore,
+    childMemory: f.memory,
+    model: 'altflow/qwen3.8-max',
+    tools: f.bundle.tools,
+    teamEnabled: async () => false,
+    getMastra: () => mastra,
+    getRootAgent: () => agent,
+  });
+  t.after(() => tree.runtime.close());
   const agent = new Agent({
     id: 'creator-agent',
     name: 'Creator',
     instructions: 'Write a short response.',
     model: await catalog.resolveLanguageModel({ modelId: 'qwen3.8-max' }),
     memory,
-    tools: { ask_user: askUserTool, deliver_interactive_script: createDeliverInteractiveScriptTool(files) },
-    inputProcessors: [files.processor(async (_context, root) => ({ owner: account, root }))],
+    tools: {
+      ...tree.tools,
+      ask_user: creatorQuestionTool,
+      deliver_interactive_script: createDeliverInteractiveScriptTool(files),
+    },
+    inputProcessors: [tree.processor, files.processor(async (_context, root) => ({ owner: account, root }))],
   });
   const accounts = createAltFlowAuth({
     backendUrl: 'http://127.0.0.1:1',
@@ -85,7 +106,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   });
   const db = createClient({ url: `file:${f.dir}/creator.db` });
   t.after(() => db.close());
-  const routes = await creatorGatewayRoutes({ accounts, agent, db, catalog, files });
+  const routes = await creatorGatewayRoutes({ accounts, agent, db, catalog, files, subagents: f.tree.runtime });
   const app = new Hono();
   const mastra = new Mastra({
     agents: { 'creator-agent': agent },
@@ -264,7 +285,12 @@ test('signed creator admission, native thread delivery and billed model usage sh
     422,
   );
   const rejection = await request('/creator-gateway/operation', { operation: rejected });
-  assert.deepEqual(await rejection.json(), { state: 'rejected', receipt: null, usages: null });
+  assert.deepEqual(await rejection.json(), {
+    state: 'rejected',
+    requiredTokenAllowance: 0,
+    receipt: null,
+    usages: null,
+  });
   await assertStatus(await request('/creator-gateway/send', { method: 'POST', body, operation: rejected }), 409);
   assert.equal(chatRequests().length, 1);
 
@@ -298,6 +324,30 @@ test('signed creator admission, native thread delivery and billed model usage sh
       (await agent.listSuspendedRuns({ threadId, resourceId })).runs.find(run => run.runId === runId)?.toolCalls[0],
   );
   assert.equal(tool.suspendPayload.question, 'Secret choice for A');
+  const renewal = { allowed: 2097152 };
+  await assertStatus(
+    await request('/creator-gateway/allowance', { method: 'POST', body: renewal, operation: pause, signed: false }),
+    401,
+  );
+  await assertStatus(
+    await request('/creator-gateway/allowance', { method: 'POST', body: renewal, operation: pause, user: 'bob' }),
+    409,
+  );
+  await assertStatus(
+    await request('/creator-gateway/allowance', {
+      method: 'POST',
+      body: renewal,
+      operation: pause,
+      conversation: other,
+    }),
+    409,
+  );
+  await assertStatus(
+    await request('/creator-gateway/allowance', { method: 'POST', body: renewal, operation: pause }),
+    204,
+  );
+  assert.equal(Number((await creatorAllowance(db, pause)).allowed), 2097152);
+
   const secondary = randomUUID();
   const distinct = await request('/creator-gateway/send', {
     method: 'POST',
@@ -494,6 +544,120 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.equal(await downloaded.text(), interactiveScriptFormat + '\n');
   const updated = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');
   assert.match(await updated.text(), /"delivered":true.*"pathCount":2/);
+  const actorContext = context(account);
+  actorContext.set(MASTRA_RESOURCE_ID_KEY, resourceId);
+  const actor = await f.tree.runtime.actor(actorContext, threadId);
+  f.setHandler(() => ({ text: 'ACTUAL-CREATOR-CHILD-RESULT' }));
+  await f.tree.runtime.spawn(actor, { name: 'researcher', description: '整理原著', prompt: 'Read the source.' });
+  const child = await until(async () =>
+    (await f.treeStore.read(account, threadId)).children.find(child => child.state === 'completed'),
+  );
+  const childRoute = '/creator-gateway/subagents?child=' + child.id;
+  await assertStatus(await request(childRoute, { user: 'bob' }), 404);
+  await assertStatus(await request(childRoute, { conversation: other }), 404);
+  await assertStatus(await request('/creator-gateway/subagents?page=-1'), 400);
+  const beforeReads = f.requests.length;
+  for (let index = 0; index < 2; index++) {
+    const snapshot = await request(childRoute);
+    await assertStatus(snapshot, 200);
+    const visible = await snapshot.json();
+    assert.equal(visible.children[0].state, 'completed');
+    assert.ok(visible.messages.some(message => message.text === 'ACTUAL-CREATOR-CHILD-RESULT'));
+    assert.doesNotMatch(JSON.stringify(visible), /totalTokens|elapsedMs|"error"|"prompt"|"role":"user"/);
+  }
+  assert.equal(f.requests.length, beforeReads, 'reading child status must not start model execution');
+
+  const backgroundConversation = 'fc_' + randomUUID();
+  await request('/creator-gateway/thread', { method: 'POST', conversation: backgroundConversation });
+  const backgroundOperation = randomUUID();
+  let rootSteps = 0,
+    childSteps = 0,
+    releaseChild;
+  const childGate = new Promise(resolve => {
+    releaseChild = resolve;
+  });
+  t.after(() => releaseChild());
+  const isChild = body => JSON.stringify(body.messages).includes('Your name is background_worker.');
+  hub.state.onRequest = async body => {
+    if (isChild(body) && ++childSteps === 1) await childGate;
+  };
+  hub.state.nextToolCall = body => {
+    if (!body.tools?.length) return undefined;
+    if (isChild(body)) return childSteps === 1 ? { name: 'countText', args: { text: 'background task' } } : undefined;
+    if (++rootSteps === 1)
+      return {
+        name: 'subagent',
+        args: { name: 'background_worker', description: '整理材料', prompt: 'Count then report.' },
+      };
+    if (rootSteps === 3)
+      return {
+        name: 'ask_user',
+        id: 'background-question',
+        args: { title: '下一步', question: '接下来先写哪一段？', options: [{ label: '开场' }, { label: '结尾' }] },
+      };
+    return undefined;
+  };
+  const backgroundBody = {
+    ...body,
+    threadId: 'free:' + backgroundConversation,
+    message: { contents: 'Delegate background work.' },
+  };
+  const backgroundAdmission = await request('/creator-gateway/send', {
+    method: 'POST',
+    body: backgroundBody,
+    operation: backgroundOperation,
+    conversation: backgroundConversation,
+  });
+  await assertStatus(backgroundAdmission, 200);
+  const originalRun = (await backgroundAdmission.json()).runId;
+  await until(
+    () =>
+      childSteps === 1 &&
+      rootSteps >= 2 &&
+      !agent.getActiveThreadRunId({ threadId: backgroundBody.threadId, resourceId }),
+  );
+  const backgroundReceipt = async () =>
+    (
+      await request('/creator-gateway/operation', {
+        operation: backgroundOperation,
+        conversation: backgroundConversation,
+      })
+    ).json();
+  assert.equal(
+    (await backgroundReceipt()).state,
+    'accepted',
+    'background work must retain its reservation after the lead replies',
+  );
+  releaseChild();
+  await until(
+    async () => (await agent.listSuspendedRuns({ threadId: backgroundBody.threadId, resourceId })).runs.length > 0,
+  );
+  const resumed = await until(async () => {
+    const value = await backgroundReceipt();
+    return value.receipt.runId !== originalRun && value;
+  });
+  assert.equal(resumed.state, 'accepted');
+  await assertStatus(
+    await request('/creator-gateway/approval', {
+      method: 'POST',
+      operation: backgroundOperation,
+      conversation: backgroundConversation,
+      body: {
+        threadId: backgroundBody.threadId,
+        resourceId,
+        toolCallId: 'background-question',
+        approved: true,
+        resumeData: '开场',
+      },
+    }),
+    200,
+  );
+  const finished = await until(async () => {
+    const value = await backgroundReceipt();
+    return value.state === 'completed' && value;
+  });
+  assert.ok(finished.usages.length >= 6, 'child steps and the awakened lead must all be billed');
+  assert.equal(childSteps, 2);
 });
 
 test('creator budget reuses verified surplus and reserves the full amount for in-flight calls', async t => {
@@ -506,11 +670,116 @@ test('creator budget reuses verified surplus and reserves the full amount for in
   await createCreatorMeter(db);
   await creatorMeterContext.run({ db, operationId: 'turn', tokenBudget: 262144 }, async () => {
     const first = await claimCreatorCall('qwen3.8-max', false, 150000);
-    await assert.rejects(claimCreatorCall('qwen3.8-max', true, 150000), /no remaining model budget/);
+    await assert.rejects(claimCreatorCall('qwen3.8-max', true, 150000), /requires an additional reservation/);
     await first.finish({ inputTokens: 9000, outputTokens: 1000, cacheReadTokens: 0 });
     const second = await claimCreatorCall('qwen3.8-max', true, 150000);
     await second.finish(null);
-    await assert.rejects(claimCreatorCall('qwen3.8-max', false, 110000), /no remaining model budget/);
+    await assert.rejects(claimCreatorCall('qwen3.8-max', false, 110000), /requires an additional reservation/);
     assert.equal(await creatorUsage(db, 'turn'), null);
   });
+});
+
+test('long free chat renews its reservation and continues past forty model calls', async t => {
+  const db = createClient({ url: ':memory:' });
+  t.after(() => db.close());
+  await db.batch([
+    'CREATE TABLE creator_gateway_receipts (id TEXT PRIMARY KEY, state TEXT NOT NULL)',
+    "INSERT INTO creator_gateway_receipts VALUES ('long', 'accepted')",
+  ]);
+  await createCreatorMeter(db);
+  let requests = 0;
+  const server = createServer(async (req, res) => {
+    for await (const _ of req) {
+    }
+    requests++;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ usage: { prompt_tokens: 5000, completion_tokens: 1000 } }));
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const completion = creatorMeterContext.run({ db, operationId: 'long', tokenBudget: 262144 }, async () => {
+    for (let index = 0; index < 45; index++) {
+      const response = await fetchMeteredCreatorModel(
+        `http://127.0.0.1:${server.address().port}/completion`,
+        { method: 'POST', body: '{}' },
+        'qwen3.8-max',
+        index === 2,
+        8000,
+      );
+      await response.json();
+    }
+  });
+  completion.catch(() => {});
+  const required = await until(async () => {
+    const allowance = await creatorAllowance(db, 'long');
+    return Number(allowance?.requested) > 262144 && allowance;
+  });
+  assert.equal(requests, 43);
+  await grantCreatorAllowance(db, 'long', 524288);
+  await grantCreatorAllowance(db, 'long', 262144, true);
+  await completion;
+  assert.equal(requests, 45);
+  const usages = await creatorUsage(db, 'long');
+  assert.equal(usages.length, 45);
+  assert.equal(
+    usages.reduce((sum, usage) => sum + usage.promptTokens + usage.completionTokens, 0),
+    270000,
+  );
+  assert.equal(Number((await creatorAllowance(db, 'long')).requested), 0);
+  assert.ok(Number(required.requested) > 262144);
+  await db.execute("UPDATE creator_gateway_receipts SET state='completed' WHERE id='long'");
+  await creatorMeterContext.run({ db, operationId: 'long', tokenBudget: 262144 }, () =>
+    assert.rejects(claimCreatorCall('qwen3.8-max', false, 1), /no longer active/),
+  );
+});
+
+test('a request cancelled before dispatch leaves no unknown billable call', async t => {
+  const db = createClient({ url: ':memory:' });
+  t.after(() => db.close());
+  await db.batch([
+    'CREATE TABLE creator_gateway_receipts (id TEXT PRIMARY KEY, state TEXT NOT NULL)',
+    "INSERT INTO creator_gateway_receipts VALUES ('cancelled','accepted')",
+  ]);
+  await createCreatorMeter(db);
+  await creatorMeterContext.run({ db, operationId: 'cancelled', tokenBudget: 262144 }, () =>
+    assert.rejects(
+      fetchMeteredCreatorModel(
+        'http://127.0.0.1:1/must-not-dispatch',
+        { signal: AbortSignal.abort() },
+        'qwen3.8-max',
+        false,
+        8000,
+      ),
+      /abort/i,
+    ),
+  );
+  assert.deepEqual(await creatorUsage(db, 'cancelled'), []);
+});
+
+test('reservation refusal and cancellation do not dispatch an unreserved model request', async t => {
+  const db = createClient({ url: ':memory:' });
+  t.after(() => db.close());
+  await db.batch([
+    'CREATE TABLE creator_gateway_receipts (id TEXT PRIMARY KEY, state TEXT NOT NULL)',
+    "INSERT INTO creator_gateway_receipts VALUES ('denied','accepted'),('aborted','accepted')",
+  ]);
+  await createCreatorMeter(db);
+  for (const operationId of ['denied', 'aborted']) {
+    const controller = new AbortController();
+    const pending = creatorMeterContext.run({ db, operationId, tokenBudget: 262144 }, () =>
+      fetchMeteredCreatorModel(
+        'http://127.0.0.1:1/must-not-dispatch',
+        { signal: controller.signal },
+        'qwen3.8-max',
+        false,
+        300000,
+      ),
+    );
+    const result = assert.rejects(pending, operationId === 'denied' ? /余额不足/ : /abort/i);
+    await until(async () => Number((await creatorAllowance(db, operationId))?.requested) > 0);
+    if (operationId === 'denied') await grantCreatorAllowance(db, operationId, 262144, true);
+    else controller.abort();
+    await result;
+    assert.deepEqual(await creatorUsage(db, operationId), []);
+  }
 });

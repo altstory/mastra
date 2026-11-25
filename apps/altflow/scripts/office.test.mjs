@@ -100,3 +100,21 @@ test('DSH converts real Office files, renders a page to PNG and recalculates a w
   assert.deepEqual(await store.read('alice', '/body.xlsx'), workbook);
   await assert.rejects(reader.produce('bob', '/body.docx', 'convert', { format: 'pdf' }), /不存在/);
 });
+
+test('read_document reads uploaded plain text in pages without invoking Office or crossing accounts', async t => {
+  const { store } = await setup(t);
+  const path = '/uploads/novel.txt';
+  const text = '第一章\n雨夜来客\n本集结束';
+  await store.write('alice', path, Buffer.from(text));
+  const reader = new OfficeReader(store);
+  const tool = createDocumentTools(reader).tools.read_document;
+  const result = await tool.execute(
+    { path, offset: 2, limit: 1 },
+    { requestContext: context('alice'), agent: { agentId: 'reader', threadId: 'test-reader' } },
+  );
+  assert.equal(result.text, '雨夜来客');
+  assert.equal(result.nextOffset, 3);
+  assert.equal(result.totalLines, 3);
+  await assert.rejects(reader.read('bob', path), /不存在/);
+  assert.equal((await store.read('alice', path)).toString(), text);
+});

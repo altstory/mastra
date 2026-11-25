@@ -1,5 +1,6 @@
 import { askUserTool, createTool } from '@mastra/core/tools';
 import { z } from 'zod/v4';
+import { creatorLanguagePolicy, internalCreativeIdentifier } from '../agents/creator-language';
 
 import { creativeWorkSchema } from './creative-work';
 
@@ -29,6 +30,14 @@ export const creatorQuestionTool = createTool({
   description:
     '向用户提出当前最重要的一个创作问题并等待回答。创作过程中需要反馈时，用 preview 展示刚生成的具体成果，再问影响后续创作的取舍；不要只在开头提问。先复用已有答案，只问影响当前任务的决定。用 title 和 context 说明主题和取舍。提供 2 到 4 个选项，description 说明各自影响，有依据时标一个 recommended；界面自带自由输入，不添加「其他」选项。每次只调用一次，收到回答再决定下一题；用户要跳过就继续，不问满固定题数。',
   inputSchema: questionSchema.superRefine((input, ctx) => {
+    const fields = [
+      input.question,
+      input.title,
+      input.context,
+      ...(input.options ?? []).flatMap(option => [option.label, option.description]),
+    ];
+    if (fields.some(value => value && internalCreativeIdentifier.test(value)))
+      ctx.addIssue({ code: 'custom', message: creatorLanguagePolicy });
     if (input.selectionMode && !input.options)
       ctx.addIssue({ code: 'custom', path: ['selectionMode'], message: 'Selection mode requires options' });
     if ((input.options?.filter(option => option.recommended).length ?? 0) > 1)

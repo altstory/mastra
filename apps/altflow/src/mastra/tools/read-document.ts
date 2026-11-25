@@ -46,7 +46,7 @@ export function createDocumentTools(reader: OfficeReader) {
   const read = createTool({
     id: 'read_document',
     description:
-      'Read body text from DOC/DOCX/ODT, XLS/XLSX/ODS, PPT/PPTX/ODP or PDF in the authenticated private workspace. Uses DSH LibreOffice Kit. Originals stay intact. offset/limit select lines; scanned images require OCR.',
+      'Read UTF-8 text (TXT, Markdown, CSV, JSON, XML, HTML), DOC/DOCX/ODT, XLS/XLSX/ODS, PPT/PPTX/ODP or PDF in the authenticated private workspace. Office documents use DSH LibreOffice Kit; plain text is read directly. Originals stay intact. offset/limit select lines; scanned images require OCR.',
     inputSchema,
     execute: async (input, context) => readBody(input, toolIdentity(context).userId, context?.abortSignal),
   });

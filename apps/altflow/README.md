@@ -186,3 +186,13 @@ and working-memory recall even when a client sends stale enabled options.
 需求够用时通过 show_creative_brief 展示已确认、假设和待定事项，并将同一份要求写入当前项目的 00-需求确认.md。质检读取已确认原则传入 script-qa，不机械地要求用户完成全部环节。
 
 代码维护的技能发布：pnpm --filter @internal/altflow publish:creator-skills。运行代码和已发布技能是两个更新步骤；发布技能保留历史版本，当前对话下一次创建工作区时读取活跃版本。
+
+## 自由创作长任务与协作状态
+
+自由创作不按累计 token 或固定调用次数终止任务。主 Agent、子 Agent、压缩和重试共用计费记录；上下文长度仍由现有 checkpoint 压缩管理。
+
+`ALTFLOW_CREATOR_TOKEN_BUDGET` 是首次费用预留的 token 估算量，不是任务总上限。预留即将不足时，Agent 暂候 Go 按原价格与折扣快照追加费用预留，再继续同一 operation。追加请求重放不重复扣款；结束时按真实用量结算并退还未用预留。余额不足或预留服务故障会明确中断，保留已保存进度供用户继续。单次请求仍受模型自身上下文与输出窗口约束。
+
+主代理的单次回复结束不代表整个 operation 完成：后台子代理及其唤醒的主代理共享原费用预留，全部结束后才结算。唤醒产生的新 runId 会更新回执，等待用户回答时保留原 operation；Go 在引导或回答遇到尚未同步的 runId 时先回读回执。续额确认按额度单调更新，迟到的旧拒绝不能覆盖新批准。
+
+产品页的协作任务侧栏读取现有子 Agent runtime 的状态、最近回复和工具进度。读取不启动或恢复模型执行，不返回内部错误、提示词或 token 统计。创作问题使用已有剧本规范，只询问内容取舍；重复的待回答事件按工具调用 ID 合并。

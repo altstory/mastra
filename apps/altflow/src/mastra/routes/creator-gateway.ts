@@ -13,11 +13,21 @@ import { z } from 'zod';
 import type { createAltFlowAuth } from '../altflow-auth';
 import { creatorGatewayContextKey, creatorResourceId, creatorThreadId } from '../creator-gateway-auth';
 import type { ModelHubGateway } from '../modelhub-gateway';
-import { createCreatorMeter, creatorMeterContext, creatorProductModels, creatorUsage } from '../creator-meter';
+import {
+  createCreatorMeter,
+  creatorMeterContext,
+  creatorProductModels,
+  creatorUsage,
+  creatorAllowance,
+  grantCreatorAllowance,
+  type CreatorMeter,
+} from '../creator-meter';
 import { creatorFileId as fileId } from '../creator-file-id';
 import { defaultConversationModel } from '../model-policy';
 import type { ConversationFiles } from '../services/conversation-files';
 import { FileStorageError } from '../user-storage';
+import { SubagentError, type SubagentRuntime } from '../subagents/runtime';
+import { projectConversation } from '../agents/reference-visibility';
 
 const attachmentId = z.string().regex(/^[a-f0-9]{64}$/);
 const uploadIdSchema = z.uuid();
@@ -59,12 +69,14 @@ export async function creatorGatewayRoutes({
   db,
   catalog,
   files,
+  subagents,
 }: {
   accounts: ReturnType<typeof createAltFlowAuth>;
   agent: Agent;
   db: Client;
   catalog: ModelHubGateway;
   files: ConversationFiles;
+  subagents?: SubagentRuntime;
 }) {
   await db.execute(`CREATE TABLE IF NOT EXISTS creator_gateway_receipts (
     id TEXT PRIMARY KEY, thread TEXT NOT NULL, resource TEXT NOT NULL,
@@ -137,6 +149,28 @@ export async function creatorGatewayRoutes({
       args: [state, Date.now(), id],
     });
 
+  const meters = new Map<string, CreatorMeter>();
+  const operationMeter = (operationId: string, tokenBudget: number) => {
+    let meter = meters.get(operationId);
+    if (!meter) {
+      meter = {
+        db,
+        operationId,
+        tokenBudget,
+        background: new Set(),
+        controller: new AbortController(),
+        onRootWake: async runId => {
+          await db.execute({
+            sql: `UPDATE creator_gateway_receipts SET run_id=?, receipt=json_set(receipt,'$.runId',?), updated_ms=? WHERE id=? AND state='accepted'`,
+            args: [runId, runId, Date.now(), operationId],
+          });
+        },
+      };
+      meters.set(operationId, meter);
+    }
+    meter.rootFinishReason = undefined;
+    return meter;
+  };
   const watchOutput = (
     id: string,
     output: {
@@ -149,9 +183,13 @@ export async function creatorGatewayRoutes({
     void output
       .consumeStream()
       .then(() => output.finishReason)
-      .then(reason => {
+      .then(async reason => {
+        const meter = meters.get(id);
+        if (reason === 'aborted') meter?.controller?.abort();
+        while (meter?.background?.size) await Promise.allSettled([...meter.background]);
+        if (reason !== 'aborted') reason = meter?.rootFinishReason ?? reason;
         if (reason === 'suspended' || outputWatchers.get(id) !== watcher) return;
-        return setState(
+        await setState(
           id,
           reason === 'aborted'
             ? 'cancelled'
@@ -159,9 +197,16 @@ export async function creatorGatewayRoutes({
               ? 'interrupted'
               : 'completed',
         );
+        meters.delete(id);
       })
-      .catch(() => {
-        if (outputWatchers.get(id) === watcher) return setState(id, 'interrupted');
+      .catch(async () => {
+        if (outputWatchers.get(id) !== watcher) return;
+        const meter = meters.get(id);
+        meter?.controller?.abort();
+        while (meter?.background?.size) await Promise.allSettled([...meter.background]);
+        if (outputWatchers.get(id) !== watcher) return;
+        await setState(id, 'interrupted');
+        meters.delete(id);
       })
       .catch(() => {})
       .finally(() => {
@@ -305,6 +350,41 @@ export async function creatorGatewayRoutes({
       });
       return Response.json({ threadId: destination, title: cloned.title });
     }),
+    route('subagents', 'GET', async ({ request, claims, thread, resource }) => {
+      if (!subagents) return Response.json({ children: [], messages: [], hasMore: false, page: 0 });
+      const url = new URL(request.url);
+      const address = z
+        .object({ child: z.string().min(1).max(500).optional(), page: z.coerce.number().int().min(0).max(10000) })
+        .safeParse({
+          child: url.searchParams.get('child') ?? undefined,
+          page: url.searchParams.get('page') ?? 0,
+        });
+      if (!address.success) return new Response(null, { status: 400 });
+      try {
+        const actor = await subagents.actor(scopedContext(claims, resource), thread);
+        const snapshot = await subagents.snapshot(actor, address.data.child, address.data.page);
+        return Response.json(
+          projectConversation({
+            children: snapshot.children.map(({ id, name, description, state, startedAt, finishedAt }) => ({
+              id,
+              name,
+              description,
+              state,
+              startedAt,
+              finishedAt,
+            })),
+            messages: snapshot.messages
+              .filter(message => message.role === 'assistant')
+              .map(({ id, text, tools, createdAt }) => ({ id, text, tools, createdAt })),
+            hasMore: snapshot.hasMore,
+            page: snapshot.page,
+          }),
+        );
+      } catch (error) {
+        if (error instanceof SubagentError && error.code === 'UNAUTHORIZED') return new Response(null, { status: 404 });
+        throw error;
+      }
+    }),
     route('files', 'GET', async ({ claims, thread }) => {
       const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
       return Response.json(
@@ -366,6 +446,17 @@ export async function creatorGatewayRoutes({
         return Response.json({ id: fileId(stored.path, String(stored.updatedAt)), name });
       });
     }),
+    route('allowance', 'POST', async ({ request, claims, thread, resource }) => {
+      if (!claims.operationId) return new Response(null, { status: 400 });
+      const row = await lookup(claims.operationId, thread, resource);
+      if (!row || !['accepted', 'dispatching'].includes(String(row.state))) return new Response(null, { status: 409 });
+      const body = z
+        .strictObject({ allowed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), denied: z.boolean().optional() })
+        .safeParse(await request.json());
+      if (!body.success) return new Response(null, { status: 400 });
+      await grantCreatorAllowance(db, claims.operationId, body.data.allowed, body.data.denied);
+      return new Response(null, { status: 204 });
+    }),
     route('operation', 'GET', async ({ claims, thread, resource }) => {
       if (!claims.operationId) return new Response(null, { status: 400 });
       const row = await lookup(claims.operationId, thread, resource);
@@ -400,6 +491,7 @@ export async function creatorGatewayRoutes({
       return Response.json({
         state,
         title,
+        requiredTokenAllowance: Number((await creatorAllowance(db, claims.operationId))?.requested ?? 0),
         receipt: row.receipt ? JSON.parse(String(row.receipt)) : null,
         usages: ['completed', 'cancelled', 'interrupted'].includes(state)
           ? await creatorUsage(db, claims.operationId)
@@ -468,7 +560,7 @@ export async function creatorGatewayRoutes({
       if (claim.rowsAffected !== 1) return new Response(null, { status: 409 });
       const requestContext = scopedContext(claims, resource);
       const output = await creatorMeterContext
-        .run({ db, operationId, tokenBudget }, () =>
+        .run(operationMeter(operationId, tokenBudget), () =>
           agent.resumeStream(answer, {
             runId,
             toolCallId,
@@ -672,7 +764,7 @@ export async function creatorGatewayRoutes({
       }
       const admission = await creatorMeterContext
         .run(
-          { db, operationId, tokenBudget },
+          operationMeter(operationId, tokenBudget),
           async () =>
             agent.sendSignal(signal, {
               resourceId: resource,

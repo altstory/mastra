@@ -588,3 +588,36 @@ test('authenticated tool catalog exposes real runtime capabilities, not schedule
     assert.ok(!entries.some(entry => /^(knowledge_|skill(?:_|$))/.test(entry.id)));
   }
 });
+
+test('internal identifiers in a creative question are repaired before the Agent suspends for the user', async t => {
+  const f = await fixture(t);
+  f.responses.push(
+    {
+      calls: [
+        {
+          name: 'ask_user',
+          args: {
+            question: '采用 NODE ID 还是 SV_Trust？',
+            options: [{ label: '保留 FLAG_Open' }, { label: '重写编号' }],
+          },
+        },
+      ],
+    },
+    {
+      calls: [
+        {
+          name: 'ask_user',
+          args: { question: '希望两位主角如何建立信任？', options: [{ label: '共同面对危险' }, { label: '互相试探' }] },
+        },
+      ],
+    },
+  );
+  const output = await f.agent.stream('请询问信任关系的创作方向。', runOptions('creator-question-language'));
+  const events = [];
+  for await (const event of output.fullStream) events.push(event);
+  const suspended = events.filter(event => event.type === 'tool-call-suspended');
+  assert.equal(suspended.length, 1);
+  assert.equal(suspended[0].payload.suspendPayload.question, '希望两位主角如何建立信任？');
+  assert.ok(f.requests.length >= 2);
+  assert.match(JSON.stringify(f.requests[1].messages), /内部变量名/);
+});

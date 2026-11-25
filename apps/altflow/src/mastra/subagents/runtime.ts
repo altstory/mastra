@@ -12,6 +12,7 @@ import {
 import type { MemoryStorage } from '@mastra/core/storage';
 import { z } from 'zod';
 import type { SubagentStore, Child, Mail, Tree } from './store';
+import { creatorMeterContext, trackCreatorBackground } from '../creator-meter';
 
 export const CHILD_ROOT = 'mastra__altflowSubagentRoot';
 const userSchema = z.object({
@@ -324,11 +325,13 @@ export class SubagentRuntime {
   private notifyRoot(actor: Actor, mail: Mail) {
     const promise = this.wakeRoot(actor, mail);
     this.wakes.add(promise);
+    trackCreatorBackground(promise);
     void promise.finally(() => this.wakes.delete(promise));
   }
   private async wakeRoot(actor: Actor, mail: Mail) {
     const root = this.roots.get(this.key(actor));
-    if (!root || this.closed) return; // Persisted inbox is delivered on the next authenticated root turn.
+    const meter = creatorMeterContext.getStore();
+    if (!root || this.closed || meter?.controller?.signal.aborted) return; // Persisted inbox is delivered on the next authenticated root turn.
     const controller = new AbortController();
     this.wakeControllers.add(controller);
     try {
@@ -365,7 +368,9 @@ export class SubagentRuntime {
       );
       const accepted = await delivery.accepted;
       if (accepted.action === 'wake') {
+        await meter?.onRootWake?.(accepted.runId);
         await accepted.output.consumeStream();
+        if (meter) meter.rootFinishReason = await accepted.output.finishReason;
       }
       // The step processor acknowledges the outbox after admitting its signal, not before.
     } catch {
@@ -391,6 +396,7 @@ export class SubagentRuntime {
           void this.launch(actor, id);
       });
     this.running.set(key, { controller, done });
+    trackCreatorBackground(done, controller);
   }
   private async run(actor: Actor, id: string, controller: AbortController) {
     const child = await this.store.edit(actor.owner, actor.root, tree => {
