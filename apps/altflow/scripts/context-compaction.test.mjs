@@ -424,7 +424,11 @@ for (const failure of ['empty', 'truncated'])
     await seed();
     if (failure === 'empty') hub.state.summaryText = '';
     else hub.state.summaryFinish = 'length';
-    await assert.rejects((await agent()).generate('Keep working', options), /Context could not be compacted safely/);
+    const result = await (await agent()).generate('Keep working', options);
+    assert.equal(result.text, 'verified');
+    const request = JSON.stringify(hub.state.requests.at(-1).body.messages);
+    assert.match(request, /Keep working/);
+    assert.doesNotMatch(request, /<compacted-summary>/);
     assert.equal(hub.state.requests.filter(isSummary).length, 2);
     const saved = await store.getThreadById({
       threadId: 'thread',
@@ -438,6 +442,19 @@ for (const failure of ['empty', 'truncated'])
     });
     assert.ok(history.messages.some(message => message.id === 'old-0'));
   });
+
+test('confirmed upstream overflow does not resend the same request when checkpoint generation fails', async t => {
+  const { hub, agent, seed } = await setup(t);
+  await seed(6, 8000);
+  hub.state.rejectContextOnce = true;
+  hub.state.summaryText = '';
+  await assert.rejects(
+    (await agent()).generate('Continue after overflow', options),
+    /Context could not be compacted safely/,
+  );
+  assert.equal(hub.state.requests.filter(isSummary).length, 2);
+  assert.equal(hub.state.requests.filter(request => !isSummary(request)).length, 1);
+});
 
 test('confirmed upstream overflow gets one compaction retry with a changed request', async t => {
   const { hub, agent, seed } = await setup(t);

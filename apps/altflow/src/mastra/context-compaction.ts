@@ -327,6 +327,7 @@ export class ContextCompaction implements Processor {
       : [];
     let messages = applied ? [...synthetic, ...original.slice(previous.covered)] : original;
     let prompt = [...system, ...messages];
+    const inputLimit = route.policy.window - route.policy.output;
     const counter = new TokenCounter({ model: { provider: args.apiProviderId, modelId: route.modelId } });
     const estimate = () => pricePrompt(prompt, counter) + overhead;
     const measurement = saved.measurement;
@@ -479,11 +480,13 @@ export class ContextCompaction implements Processor {
                 message: '已压缩早期上下文',
               },
             });
-          } else throw new Error('Context could not be compacted safely below the pressure threshold');
+          } else if (force || pressure() >= inputLimit) {
+            throw new Error('Context could not be compacted safely below the pressure threshold');
+          }
         } else if (force) throw new Error('Context overflow has no balanced history to compact');
       }
     }
-    if (pricePrompt(prompt, counter) + overhead >= route.policy.window - route.policy.output) {
+    if (estimate() >= inputLimit) {
       throw new Error('Current request exceeds the context budget; shorten the current message or attachments');
     }
     args.state.contextEstimate = pricePrompt(prompt, counter) + overhead;

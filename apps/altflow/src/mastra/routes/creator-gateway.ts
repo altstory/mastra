@@ -395,6 +395,7 @@ export async function creatorGatewayRoutes({
             id: fileId(file.path, String(file.updatedAt)),
             name,
             size: file.size,
+            path: file.path,
             ...(uploadIdSchema.safeParse(uploadId).success ? { uploadId } : {}),
           };
         }),

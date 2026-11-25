@@ -416,7 +416,13 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const imageId = (await image.json()).id;
   const listed = await (await request('/creator-gateway/files')).json();
   assert.ok(
-    listed.some(file => file.id === imageId && file.uploadId === imageUploadId && file.name === 'reference.png'),
+    listed.some(
+      file =>
+        file.id === imageId &&
+        file.uploadId === imageUploadId &&
+        file.name === 'reference.png' &&
+        file.path === '/uploads/' + imageUploadId + '/reference.png',
+    ),
   );
   const otherFiles = await (await request('/creator-gateway/files', { conversation: other })).json();
   assert.ok(!otherFiles.some(file => file.uploadId === imageUploadId));
@@ -540,6 +546,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.deepEqual(await listScripts(), []);
   await deliverDraft('Deliver verified draft');
   const [script] = await listScripts();
+  assert.equal(script.path, '/projects/测试/剧本.md');
   const downloaded = await request('/creator-gateway/file?id=' + script.id);
   assert.equal(await downloaded.text(), interactiveScriptFormat + '\n');
   const updated = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');
