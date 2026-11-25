@@ -3,7 +3,7 @@ import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
 import type { LedgerEntry } from '../services/story-ledger';
 import { checkAgainstLedger } from '../tools/ledger-check';
-import { analyzeScriptGraph } from '../tools/script-graph';
+import { analyzeScript, stateVariableSchema } from '../tools/script-analysis';
 import { validateScriptFormat } from '../tools/validate-script-format';
 
 export const REVIEW_DIMENSIONS = [
@@ -29,6 +29,12 @@ export const REVIEW_DIMENSIONS = [
     title: '文笔与核心体验',
     focus: '是否出现「不是A，而是B」「眼中闪过一丝」之类的套话；台词是否有潜台词和人物辨识度；核心体验是否被传达。',
   },
+  {
+    id: 'principles',
+    title: '创作原则对照',
+    focus:
+      '逐条核对给出的创作原则：每条原则判断剧本是否遵守，违反的指出场景编号和原文，并说明违反了哪一条。只依据给出的原则判断，不自己补充原则。',
+  },
 ] as const;
 
 export const reviewIssueSchema = z.object({
@@ -43,12 +49,23 @@ export type ReviewFunction = (input: {
   dimension: (typeof REVIEW_DIMENSIONS)[number];
   script: string;
   coreExperience?: string;
+  principles?: string[];
 }) => Promise<ReviewIssue[]>;
 
 const inputSchema = z.object({
   script: z.string().min(1).describe('剧本全文，使用 X-Y 场景编号格式'),
   coreExperience: z.string().optional().describe('项目的核心体验，用于判断体验是否被传达'),
   project: z.string().optional().describe('项目名；提供后会对照该项目的设定与伏笔台账做检查'),
+  variables: z
+    .array(stateVariableSchema)
+    .max(100)
+    .optional()
+    .describe('状态变量清单，来自《互动设计文档》；提供后会检查剧本里的变量是否已定义'),
+  principles: z
+    .array(z.string().trim().min(1).max(300))
+    .max(10)
+    .optional()
+    .describe('创作原则，来自《需求确认》；提供后会逐条对照剧本'),
 });
 
 const structureSchema = inputSchema.extend({
@@ -76,7 +93,12 @@ const structureSchema = inputSchema.extend({
   }),
 });
 
-const reviewSchema = z.object({ dimension: z.string(), title: z.string(), issues: z.array(reviewIssueSchema) });
+const reviewSchema = z.object({
+  dimension: z.string(),
+  title: z.string(),
+  issues: z.array(reviewIssueSchema),
+  skipped: z.boolean().optional(),
+});
 
 const reportSchema = z.object({
   passed: z.boolean(),
@@ -97,7 +119,7 @@ const createStructureStep = (ledger?: LedgerReader) =>
     outputSchema: structureSchema,
     execute: async ({ inputData, requestContext }) => {
       const format = validateScriptFormat(inputData.script);
-      const graph = analyzeScriptGraph(inputData.script);
+      const graph = analyzeScript(inputData.script, inputData.variables);
       const user = requestContext?.getRaw(MASTRA_NORMALIZED_USER_KEY);
       const userId =
         user && typeof user === 'object' && 'id' in user && typeof user.id === 'string' ? user.id : undefined;
@@ -130,11 +152,21 @@ export function createScriptQaWorkflow(review: ReviewFunction, ledger?: LedgerRe
       description: `模型审查：${dimension.title}。`,
       inputSchema: structureSchema,
       outputSchema: reviewSchema,
-      execute: async ({ inputData }) => ({
-        dimension: dimension.id,
-        title: dimension.title,
-        issues: await review({ dimension, script: inputData.script, coreExperience: inputData.coreExperience }),
-      }),
+      execute: async ({ inputData }) => {
+        const principles = inputData.principles?.filter(Boolean);
+        if (dimension.id === 'principles' && !principles?.length)
+          return { dimension: dimension.id, title: dimension.title, issues: [], skipped: true };
+        return {
+          dimension: dimension.id,
+          title: dimension.title,
+          issues: await review({
+            dimension,
+            script: inputData.script,
+            coreExperience: inputData.coreExperience,
+            principles,
+          }),
+        };
+      },
     }),
   );
 
@@ -182,7 +214,7 @@ export function createScriptQaWorkflow(review: ReviewFunction, ledger?: LedgerRe
                 issue =>
                   `- ${issue.severity === 'error' ? '错误' : '提醒'} ${issue.location}：${issue.problem} 建议：${issue.suggestion}`,
               )
-            : ['- 未发现问题。']),
+            : [item.skipped ? '- 未提供创作原则，已跳过。' : '- 未发现问题。']),
         );
       }
       return { passed: errors === 0, errors, warnings, report: lines.join('\n') };

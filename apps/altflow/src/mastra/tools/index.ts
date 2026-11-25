@@ -19,7 +19,7 @@ import type { ToolAction } from '@mastra/core/tools';
 import type { StoryLedgerStore } from '../services/story-ledger';
 import { createProjectStatusTool } from './project-status';
 import type { ProjectFiles } from './project-status';
-import { createScriptGraphTool } from './script-graph';
+import { createScriptGraphTool } from './script-analysis';
 import { createStoryLedgerTools } from './story-ledger';
 import { createValidateScriptFormatTool } from './validate-script-format';
 

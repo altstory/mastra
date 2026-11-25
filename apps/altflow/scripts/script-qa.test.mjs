@@ -35,7 +35,12 @@ test('every review dimension runs once with the script and core experience', asy
     seen.push(input);
     return [];
   });
-  assert.deepEqual(seen.map(item => item.dimension.id).sort(), REVIEW_DIMENSIONS.map(item => item.id).sort());
+  assert.deepEqual(
+    seen.map(item => item.dimension.id).sort(),
+    REVIEW_DIMENSIONS.filter(item => item.id !== 'principles')
+      .map(item => item.id)
+      .sort(),
+  );
   assert.ok(seen.every(item => item.script === valid && item.coreExperience === '信任与试探'));
   assert.equal(output.passed, true);
   assert.equal(output.errors, 0);
@@ -129,4 +134,36 @@ test('an empty ledger is reported, and no project means no ledger lookup', async
   );
   assert.equal(reads, 0);
   assert.doesNotMatch(skipped.report, /台账/);
+});
+
+test('creative principles are reviewed only when given, and the reviewer sees them', async () => {
+  const principles = ['每个互动选择必须带来可见后果', '禁止现代用语出现在古代角色口中'];
+  const seen = [];
+  const workflow = createScriptQaWorkflow(async input => {
+    seen.push(input);
+    return input.dimension.id === 'principles'
+      ? [{ severity: 'error', location: '1-2-A', problem: '违反第 2 条', suggestion: '改用古语' }]
+      : [];
+  });
+  const given = await (await workflow.createRun()).start({ inputData: { script: valid, principles } });
+  assert.equal(given.status, 'success');
+  assert.deepEqual(seen.find(item => item.dimension.id === 'principles').principles, principles);
+  assert.match(given.result.report, /## 模型审查：创作原则对照\n- 错误 1-2-A：违反第 2 条/);
+
+  seen.length = 0;
+  const without = await (await workflow.createRun()).start({ inputData: { script: valid } });
+  assert.equal(
+    seen.some(item => item.dimension.id === 'principles'),
+    false,
+  );
+  assert.match(without.result.report, /未提供创作原则，已跳过/);
+});
+
+test('state problems in the script reach the report when variables are given', async () => {
+  const withState = valid.replace('林川：你先说名字。', '（状态：SV_trust+10；FLAG_secret=真）\n林川：你先说名字。');
+  const workflow = createScriptQaWorkflow(async () => []);
+  const result = await (await workflow.createRun()).start({
+    inputData: { script: withState, variables: [{ name: 'SV_trust', initial: 50 }] },
+  });
+  assert.match(result.result.report, /\[状态未定义\] FLAG_secret/);
 });

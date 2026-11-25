@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { ledgerSaveEntrySchema, StoryLedgerStore } from '../src/mastra/services/story-ledger.ts';
-import { createScriptGraphTool } from '../src/mastra/tools/script-graph.ts';
+import { createScriptGraphTool } from '../src/mastra/tools/script-analysis.ts';
 import { createStoryLedgerTools } from '../src/mastra/tools/story-ledger.ts';
 import { context } from './tool-fixture.mjs';
 
