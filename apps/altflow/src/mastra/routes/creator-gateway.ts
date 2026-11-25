@@ -18,26 +18,31 @@ import { defaultConversationModel } from '../model-policy';
 import type { ConversationFiles } from '../services/conversation-files';
 import { FileStorageError } from '../user-storage';
 
-const messageSchema = z.strictObject({
-  resourceId: z.string(),
-  threadId: z.string(),
-  message: z.strictObject({
-    contents: z.string().trim().min(1).max(20_000),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  }),
-  ifIdle: z.strictObject({
-    streamOptions: z.strictObject({
-      model: z.string(),
-      providerOptions: z.strictObject({
-        altflow: z.strictObject({ reasoningLevel: z.string(), catalogVersion: z.string() }),
+const attachmentId = z.string().regex(/^[a-f0-9]{64}$/);
+const nativeImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const messageSchema = z
+  .strictObject({
+    resourceId: z.string(),
+    threadId: z.string(),
+    message: z.strictObject({
+      contents: z.string().trim().max(20_000),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    }),
+    ifIdle: z.strictObject({
+      streamOptions: z.strictObject({
+        model: z.string(),
+        providerOptions: z.strictObject({
+          altflow: z.strictObject({ reasoningLevel: z.string(), catalogVersion: z.string() }),
+        }),
       }),
     }),
-  }),
-  attachment: z
-    .string()
-    .regex(/^[a-f0-9]{64}$/)
-    .optional(),
-});
+    attachment: attachmentId.optional(),
+    attachments: z.array(attachmentId).max(8).optional(),
+  })
+  .refine(({ message, attachment, attachments }) => {
+    const ids = [...(attachment ? [attachment] : []), ...(attachments ?? [])];
+    return ids.length <= 8 && new Set(ids).size === ids.length && Boolean(message.contents || ids.length);
+  });
 
 export async function creatorGatewayRoutes({
   accounts,
@@ -231,7 +236,7 @@ export async function creatorGatewayRoutes({
       return files.run({ owner: claims.userId, root: thread }, async () => {
         let stored;
         try {
-          stored = await files.write(claims.userId, path, data, { overwrite: false });
+          stored = await files.write(claims.userId, path, data, { source: 'upload', overwrite: false });
         } catch (error) {
           if (!(error instanceof FileStorageError) || error.status !== 409) throw error;
           const previous = await files.read(claims.userId, path);
@@ -393,7 +398,8 @@ export async function creatorGatewayRoutes({
       };
       const existing = await lookup(operationId, thread, resource);
       if (existing) return existingResponse(existing);
-      const { message, ifIdle, attachment } = parsed.data;
+      const { message, ifIdle, attachment, attachments } = parsed.data;
+      const ids = [...(attachment ? [attachment] : []), ...(attachments ?? [])];
       const model = ifIdle.streamOptions.model;
       const reasoningLevel = ifIdle.streamOptions.providerOptions.altflow.reasoningLevel;
       const saved = await db.execute({
@@ -407,7 +413,10 @@ export async function creatorGatewayRoutes({
         await setState(operationId, 'rejected');
         return Response.json({ error }, { status });
       };
-      let attachmentPath: string | undefined;
+      const parts: Array<
+        { type: 'text'; text: string } | { type: 'file'; data: string; mediaType: string; filename: string }
+      > = [];
+      if (message.contents) parts.push({ type: 'text', text: message.contents });
       try {
         const snapshot = await catalog.catalog();
         if (String(snapshot.config_version) !== ifIdle.streamOptions.providerOptions.altflow.catalogVersion) {
@@ -421,10 +430,32 @@ export async function creatorGatewayRoutes({
         ) {
           return reject(422, 'Unsupported model or reasoning level');
         }
-        if (attachment) {
-          const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
-          attachmentPath = entries.find(file => fileId(file.path, String(file.updatedAt)) === attachment)?.path;
-          if (!attachmentPath) return reject(404, 'Attachment unavailable');
+        if (ids.length) {
+          const attachmentError = await files.run({ owner: claims.userId, root: thread }, async () => {
+            const entries = new Map(
+              (await files.list(claims.userId))
+                .filter(file => file.path.startsWith('/uploads/'))
+                .map(file => [fileId(file.path, String(file.updatedAt)), file]),
+            );
+            const attached = ids.map(id => entries.get(id));
+            if (attached.some(file => !file)) return reject(404, 'Attachment unavailable');
+            let imageBytes = 0;
+            for (const file of attached) {
+              if (!file) continue;
+              parts.push({ type: 'text', text: '<attachment>\n' + file.path + '\n</attachment>' });
+              if (!nativeImageTypes.has(file.mimeType)) continue;
+              imageBytes += file.size;
+              if (imageBytes > 10 * 1024 * 1024) return reject(400, 'Images exceed size limit');
+              const data = await files.read(claims.userId, file.path);
+              parts.push({
+                type: 'file',
+                data: data.toString('base64'),
+                mediaType: file.mimeType,
+                filename: file.name,
+              });
+            }
+          });
+          if (attachmentError) return attachmentError;
         }
       } catch (error) {
         await db.execute({
@@ -433,19 +464,13 @@ export async function creatorGatewayRoutes({
         });
         throw error;
       }
-      const text = message.contents;
       const context = scopedContext(claims, resource);
       const scopes = [`resource:${resource}`];
       const signal = createSignal({
         id: operationId,
         type: 'user-message',
         tagName: 'user',
-        contents: attachmentPath
-          ? [
-              { type: 'text', text },
-              { type: 'text', text: '<attachment>\n' + attachmentPath + '\n</attachment>' },
-            ]
-          : text,
+        contents: ids.length ? parts : message.contents,
         metadata: Object.fromEntries(
           Object.entries(message.metadata ?? {}).filter(
             ([key, value]) => key === 'clientMessageId' && typeof value === 'string' && value.length <= 100,

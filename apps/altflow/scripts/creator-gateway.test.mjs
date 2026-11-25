@@ -93,7 +93,8 @@ test('signed creator admission, native thread delivery and billed model usage sh
     { method = 'GET', body, operation, conversation = conversationId, user = account, signed = true, signal } = {},
   ) => {
     const target = path.startsWith('/creator-gateway/') ? path : '/api' + path;
-    const raw = typeof body === 'string' ? body : body && JSON.stringify(body);
+    const binary = Buffer.isBuffer(body) || typeof body === 'string';
+    const raw = binary ? body : body && JSON.stringify(body);
     const claims = {
       aud: 'altflow-creator-v1',
       userId: user,
@@ -119,7 +120,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
       body: raw,
       signal,
       headers: {
-        ...(typeof body === 'string'
+        ...(binary
           ? { 'content-type': 'application/octet-stream' }
           : body
             ? { 'content-type': 'application/json' }
@@ -303,6 +304,42 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const { id } = await upload.json();
   assert.equal(await (await request('/creator-gateway/file?id=' + id)).text(), 'Private notes');
   await assertStatus(await request('/creator-gateway/file?id=' + id, { conversation: other }), 404);
+
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a19sAAAAASUVORK5CYII=';
+  const image = await request('/creator-gateway/file?id=' + randomUUID() + '&name=reference.png', {
+    method: 'POST',
+    body: Buffer.from(png, 'base64'),
+  });
+  await assertStatus(image, 200);
+  const imageId = (await image.json()).id;
+  const withAttachments = { ...body, message: { contents: '' }, attachments: [id, imageId] };
+  await assertStatus(
+    await request('/creator-gateway/send', {
+      method: 'POST',
+      operation: randomUUID(),
+      conversation: other,
+      body: { ...withAttachments, threadId: 'free:' + other },
+    }),
+    404,
+  );
+  const attachmentTurn = randomUUID();
+  await assertStatus(
+    await request('/creator-gateway/send', { method: 'POST', operation: attachmentTurn, body: withAttachments }),
+    200,
+  );
+  const attached = await until(async () => {
+    const data = await (await request('/creator-gateway/operation', { operation: attachmentTurn })).json();
+    return ['completed', 'interrupted'].includes(data.state) ? data : undefined;
+  });
+  assert.equal(attached.state, 'completed');
+  const attachedParts = hub.state.requests
+    .at(-1)
+    .body.messages.filter(item => item.role === 'user')
+    .at(-1).content;
+  assert.ok(attachedParts.some(part => part.type === 'text' && part.text.includes('/notes.txt')));
+  assert.ok(
+    attachedParts.some(part => part.type === 'image_url' && part.image_url.url === 'data:image/png;base64,' + png),
+  );
 });
 
 test('creator budget reuses verified surplus and reserves the full amount for in-flight calls', async t => {
