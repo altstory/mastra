@@ -1,5 +1,6 @@
 import { ALTFLOW_ACCOUNT_RESOURCE_KEY, toolIdentity } from '@mastra/altflow-tools';
 import type { ToolIdentity } from '@mastra/altflow-tools';
+import { isUserAuthoredMessage } from '@mastra/core/agent';
 import type { Processor } from '@mastra/core/processors';
 import { MASTRA_NORMALIZED_USER_KEY, MASTRA_RESOURCE_ID_KEY } from '@mastra/core/request-context';
 import type { MemoryStorage } from '@mastra/core/storage';
@@ -74,10 +75,7 @@ export function creativeMemoryProcessor(options: {
         return base();
       const project = gateway ? undefined : await projectFor(actor);
       if (gateway) await ownedThread(actor);
-      const latestUser = args.messageList.get.input
-        .db()
-        .filter(message => message.role === 'user')
-        .at(-1);
+      const latestUser = args.messageList.get.input.db().filter(isUserAuthoredMessage).at(-1);
       const userText =
         latestUser?.content.parts
           .flatMap(part =>

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { ALTFLOW_ACCOUNT_RESOURCE_KEY } from '@mastra/altflow-tools';
 import { MASTRA_RESOURCE_ID_KEY } from '@mastra/core/request-context';
-import { Agent } from '@mastra/core/agent';
+import { Agent, createSignal } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { CreatorMemory } from '../src/mastra/agents/creator-memory.ts';
@@ -300,7 +300,7 @@ for (const mode of ['stream', 'generate']) {
       requestContext.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, resource);
       requestContext.setRaw('altflow.creatorGateway', { userId: owner, conversationId: thread.slice(5) });
       if (calls.length) edge.responses.push({ calls }, { text: 'Done.' });
-      const result = await agent[mode](text, {
+      const result = await agent[mode](createSignal({ type: 'user-message', contents: text }), {
         memory: { thread, resource },
         requestContext,
         maxSteps: 3,
@@ -312,6 +312,7 @@ for (const mode of ['stream', 'generate']) {
     await webRun('alice', 'free:one', declaredName, [
       remember({ kind: 'author_preference', key: 'user-name', content: '青榆', evidence: declaredName }),
     ]);
+    assert.equal((await store.read('alice')).find(entry => entry.key === 'user-name')?.content, '青榆');
     assert.match(await webRun('alice', 'free:two', '你记得我的姓名吗？'), /青榆/);
     assert.doesNotMatch(await webRun('bob', 'free:other', '你记得我的姓名吗？'), /青榆/);
     await webRun('alice', 'free:one', '这个项目暂定叫松岚。', [
