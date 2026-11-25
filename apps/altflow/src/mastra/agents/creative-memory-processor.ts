@@ -9,6 +9,7 @@ import type { AccountPreferences } from '../services/account-preferences';
 import type { ConversationProjects } from '../services/conversation-projects';
 import { CreativeMemoryStore, forgetMemorySchema, rememberSchema } from '../services/creative-memory';
 import type { UserStorage } from '../user-storage';
+import { creatorGatewayContextKey } from '../creator-gateway-auth';
 import { CREATIVE_MEMORY_POLICY } from './creative-memory-policy';
 
 const tag = 'altflow-creative-memory';
@@ -44,6 +45,7 @@ export function creativeMemoryProcessor(options: {
       const tools = Object.fromEntries(Object.entries(args.tools ?? {}).filter(([name]) => !toolNames.has(name)));
       const activeTools = args.activeTools?.filter(name => !toolNames.has(name));
       const base = () => ({ tools, ...(activeTools ? { activeTools } : {}) });
+      if (args.requestContext?.getRaw(creatorGatewayContextKey)) return base();
       const info = args.messageList.serialize().memoryInfo;
       const user = args.requestContext?.getRaw(MASTRA_NORMALIZED_USER_KEY);
       const resourceId =

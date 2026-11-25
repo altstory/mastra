@@ -3,6 +3,14 @@ import { encodeKnowledgeScopeId } from '@mastra/core/knowledge';
 import { MASTRA_RESOURCE_ID_KEY, MASTRA_SCOPES_KEY } from '@mastra/core/request-context';
 import { defineAuth, registerApiRoute } from '@mastra/core/server';
 import { z } from 'zod';
+import {
+  createCreatorGatewayVerifier,
+  creatorGatewayAllows,
+  creatorGatewayContextKey,
+  creatorThreadId,
+  creatorResourceId,
+  isCreatorGatewayBearer,
+} from './creator-gateway-auth';
 import { conversationModelRoutes } from './model-policy';
 
 const userSchema = z.object({
@@ -11,7 +19,7 @@ const userSchema = z.object({
   email: z.string().nullable().optional(),
   role: z.enum(['admin', 'creator', 'user']),
 });
-export type AltFlowUser = z.infer<typeof userSchema>;
+export type AltFlowUser = z.infer<typeof userSchema> & { creatorGateway?: true };
 const envelope = z.object({ code: z.number(), message: z.unknown(), data: z.unknown() });
 const loginResult = z.object({ token: z.string().min(16), expiresIn: z.number().positive(), user: userSchema });
 const loginInput = z.object({ email: z.string().email(), password: z.string().min(1).max(1024) });
@@ -144,12 +152,14 @@ export function createAltFlowAuth(options: {
   origins: string[];
   secureCookies: boolean;
   legacyOwnerId?: string;
+  creatorGatewaySecret?: string;
 }) {
   const backend = new URL(options.backendUrl);
   if (!['http:', 'https:'].includes(backend.protocol) || backend.username || backend.password)
     throw new Error('Invalid AltFlow backend URL');
   if (backend.protocol !== 'https:' && !['127.0.0.1', 'localhost', '[::1]'].includes(backend.hostname))
     throw new Error('Remote AltFlow authentication requires HTTPS');
+  const verifyCreatorGateway = createCreatorGatewayVerifier(options.creatorGatewaySecret);
   const resourceFor = (user: AltFlowUser) =>
     user.id === options.legacyOwnerId ? 'creator-agent' : `altflow:${user.id}`;
   async function upstream(path: string, request: Request, body?: unknown) {
@@ -194,6 +204,14 @@ export function createAltFlowAuth(options: {
     return { data: result.data.data, headers: response.headers };
   }
   async function authenticate(request: Request): Promise<AltFlowUser | null> {
+    if (isCreatorGatewayBearer(request)) {
+      const path = new URL(request.url).pathname;
+      if (!path.startsWith('/api/')) return null;
+      const claims = await verifyCreatorGateway(request);
+      if (!claims || !creatorGatewayAllows(new URL(request.url).pathname.replace(/^\/api(?=\/)/, ''), claims))
+        return null;
+      return { id: claims.userId, username: claims.username, role: claims.role, creatorGateway: true };
+    }
     if (!tokenFrom(request)) return null;
     try {
       const endpoint = options.identityEndpoint ?? 'validate';
@@ -222,15 +240,43 @@ export function createAltFlowAuth(options: {
       const raw = request instanceof Request ? request : request.raw;
       return raw ? authenticate(raw) : null;
     },
-    mapUserToResourceId: user => (user ? resourceFor(user) : undefined),
+    mapUserToResourceId: user =>
+      user?.creatorGateway ? creatorResourceId(user.id) : user ? resourceFor(user) : undefined,
     authorize: async (path, method, user, context) => {
-      if (!user || !permitted(user, path, method)) return false;
+      if (!user) return false;
       const request = context.req.raw;
+      const gateway = await verifyCreatorGateway(request);
+      const route = path.replace(/^\/api(?=\/)/, '');
+      const resource = gateway ? creatorResourceId(user.id) : resourceFor(user);
+      if (gateway) {
+        if (!creatorGatewayAllows(route, gateway)) return false;
+        const url = new URL(request.url);
+        if (url.searchParams.has('requestContext')) return false;
+        if (method === 'POST') {
+          const body = await request
+            .clone()
+            .json()
+            .catch(() => null);
+          if (!body || body.threadId !== creatorThreadId(gateway.conversationId) || body.resourceId !== resource)
+            return false;
+          if (hasOverride(body, route.endsWith('/send-message') ? 'message' : undefined)) return false;
+        }
+      } else {
+        if (!permitted(user, path, method)) return false;
+        if (/free(?::|%3a)fc_/i.test(request.url)) return false;
+        if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+          const body = await request
+            .clone()
+            .json()
+            .catch(() => undefined);
+          if (body && /free:fc_|altflow-creator:/.test(JSON.stringify(body))) return false;
+        }
+      }
       const origin = request.headers.get('origin');
       if (origin && !options.origins.includes(origin)) return false;
       if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !request.headers.has('authorization') && !origin)
         return false;
-      if (user.role !== 'admin' && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      if (!gateway && user.role !== 'admin' && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
         const body = await request
           .clone()
           .json()
@@ -242,19 +288,20 @@ export function createAltFlowAuth(options: {
         if (admittingMessage && (!body || typeof body.threadId !== 'string' || body.runId !== undefined)) return false;
       }
       const requestContext = context.get('requestContext');
-      requestContext.set(MASTRA_RESOURCE_ID_KEY, resourceFor(user));
-      requestContext.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, resourceFor(user));
+      if (gateway) requestContext.setRaw(creatorGatewayContextKey, gateway);
+      requestContext.set(MASTRA_RESOURCE_ID_KEY, resource);
+      requestContext.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, resource);
       requestContext.set(MASTRA_SCOPES_KEY, [
-        `resource:${resourceFor(user)}`,
-        ...(user.role === 'admin' ? ['library:creator'] : []),
+        `resource:${resource}`,
+        ...(!gateway && user.role === 'admin' ? ['library:creator'] : []),
       ]);
-      if (user.role === 'admin') {
+      if (!gateway && user.role === 'admin') {
         requestContext.set('mastra__knowledgePrincipals', [
           `resource:${encodeKnowledgeScopeId(resourceFor(user))}`,
           'library:creator',
         ]);
       }
-      requestContext.set('mastra__userPermissions', userPermissions(user));
+      requestContext.set('mastra__userPermissions', gateway ? creatorPermissions : userPermissions(user));
       return true;
     },
   });
@@ -331,5 +378,5 @@ export function createAltFlowAuth(options: {
       },
     }),
   ];
-  return { auth, apiRoutes, authenticate, session };
+  return { auth, apiRoutes, authenticate, session, verifyCreatorGateway };
 }

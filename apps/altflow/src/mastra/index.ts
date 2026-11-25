@@ -52,6 +52,7 @@ import { createCreatorTools } from './tools';
 import { createScriptQaWorkflow } from './workflows/script-qa';
 import { conversationToolPolicy } from './tools/conversation-policy';
 import { createDocumentTools } from './tools/read-document';
+import { creatorGatewayRoutes } from './routes/creator-gateway';
 import { UserStorage } from './user-storage';
 import { userStorageRoutes } from './user-storage-routes';
 
@@ -72,6 +73,7 @@ const accounts = createAltFlowAuth({
   origins: accountsOrigins,
   secureCookies: process.env.NODE_ENV === 'production',
   legacyOwnerId: process.env.ALTFLOW_LEGACY_OWNER_ID,
+  creatorGatewaySecret: process.env.ALTFLOW_CREATOR_SHARED_SECRET,
 });
 const apiKey = process.env.ALTFLOW_MODELHUB_API_KEY;
 if (!apiKey) throw new Error('AltFlow gateway credential is not configured');
@@ -226,6 +228,9 @@ const creativeMemory = creativeMemoryProcessor({
   files: userFiles,
   currentFiles: conversationFiles,
 });
+const creatorGatewayClient = process.env.ALTFLOW_CREATOR_SHARED_SECRET
+  ? createClient({ url: `file:${previewPath('data/creator-gateway.db')}` })
+  : undefined;
 const sessionClient = createClient({ url: `file:${previewPath('src/mastra/public/preview.db')}` });
 const fileScope = conversationFiles.processor((context, thread) => agentTree.runtime.actor(context, thread));
 const documents = createDocumentTools(new OfficeReader(conversationFiles));
@@ -262,6 +267,7 @@ const agentTree = createAgentTree({
   getMastra: () => mastra,
   getRootAgent: () => creatorAgent,
   teamEnabled: async actor => {
+    if (actor.root.startsWith('free:fc_')) return false;
     const preferences = await accountPreferences.read(actor.owner, actor.resourceId, {
       kind: 'thread',
       id: JSON.stringify(['creator-agent', actor.root]),
@@ -386,11 +392,21 @@ export const mastra = new Mastra({
   }),
   server: {
     host: '127.0.0.1',
+    bodySizeLimit: process.env.ALTFLOW_CREATOR_SHARED_SECRET ? 20 * 1024 * 1024 : undefined,
     port: Number(process.env.STUDIO_PORT ?? 4111),
     auth: accounts.auth,
     middleware: protectConversationResponses,
     apiRoutes: [
       ...accounts.apiRoutes,
+      ...(creatorGatewayClient
+        ? await creatorGatewayRoutes({
+            accounts,
+            agent: creatorAgent,
+            db: creatorGatewayClient,
+            catalog: modelHub,
+            files: conversationFiles,
+          })
+        : []),
       conversationMetricsRoute(storage, accounts, accountsOrigins),
       conversationStatusRoute(() => creatorAgent, accounts, accountsOrigins),
       ...subagentRoutes(

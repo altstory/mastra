@@ -2,6 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { MastraModelGateway } from '@mastra/core/llm';
 import type { ProviderConfig } from '@mastra/core/llm';
 import { z } from 'zod';
+import { claimCreatorCall, creatorMeterContext, meterCreatorResponse } from './creator-meter';
 import { contextPolicy } from './context-policy.ts';
 
 type ChatModel = ReturnType<ReturnType<typeof createOpenAICompatible>['chatModel']>;
@@ -301,7 +302,29 @@ export class ModelHubGateway extends MastraModelGateway {
           modelhub_catalog_version: String(catalog.config_version),
           modelhub_thinking_level: option.level,
         };
-        return fetch(url, { ...init, body: JSON.stringify(body), redirect: 'error' });
+        const meter = creatorMeterContext.getStore();
+        if (body.creatorMeterRequired && !meter) throw new Error('Creator model request has no metering context');
+        delete body.creatorMeterRequired;
+        const serialized = JSON.stringify(body);
+        if (meter) {
+          const hasImage = body.messages?.some(
+            (message: { content?: unknown }) =>
+              Array.isArray(message.content) && message.content.some(part => part?.type === 'image_url'),
+          );
+          if (hasImage && !capacity) throw new Error('ModelHub context capacity is unavailable for image input');
+          const inputBound = hasImage ? capacity : Buffer.byteLength(serialized) + 1024;
+          const upperBound = Math.min(inputBound, capacity ?? inputBound) + body.max_tokens;
+          const call = await claimCreatorCall(product.id, summary, upperBound);
+          if (!call) throw new Error('Creator model request has no meter');
+          try {
+            const response = await fetch(url, { ...init, body: serialized, redirect: 'error' });
+            return await meterCreatorResponse(response, call);
+          } catch (error) {
+            await call.finish(null);
+            throw error;
+          }
+        }
+        return fetch(url, { ...init, body: serialized, redirect: 'error' });
       },
     });
     const model = provider.chatModel(modelId);

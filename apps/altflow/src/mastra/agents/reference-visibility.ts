@@ -3,6 +3,7 @@ import { MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
 import type { RequestContext } from '@mastra/core/request-context';
 import type { Middleware } from '@mastra/core/server';
 import type { AltFlowUser } from '../altflow-auth';
+import { creatorGatewayContextKey } from '../creator-gateway-auth';
 
 const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
 const privatePin = /^<pinned-knowledge(?:-update)?(?:[\s/>])/;
@@ -10,6 +11,7 @@ const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMe
 const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
 
 export function mayReadReferences(requestContext?: RequestContext) {
+  if (requestContext?.getRaw(creatorGatewayContextKey)) return false;
   return (requestContext?.getRaw(MASTRA_NORMALIZED_USER_KEY) as AltFlowUser | undefined)?.role === 'admin';
 }
 
@@ -17,7 +19,10 @@ export const isolateConversationReferences = {
   id: 'altflow-reference-read-policy',
   processInputStep({ tools, activeTools, requestContext }) {
     if (mayReadReferences(requestContext)) return;
-    const allowed = (name: string) => !privateReferenceTool.test(name);
+    const product = Boolean(requestContext?.getRaw(creatorGatewayContextKey));
+    const allowed = (name: string) =>
+      !privateReferenceTool.test(name) &&
+      (!product || !/^(?:recall|session_search|remember|forget_memory)$/.test(name));
     return {
       tools: Object.fromEntries(Object.entries(tools ?? {}).filter(([name]) => allowed(name))),
       activeTools: activeTools?.filter(allowed),
@@ -57,6 +62,7 @@ const internalFields = new Set([
   'providerMetadata',
   'responseHeaders',
   'dshContext',
+  'creatorOperationId',
 ]);
 
 export function projectConversation(value: unknown): unknown {
@@ -129,7 +135,13 @@ function projectEventStream(body: ReadableStream<Uint8Array>) {
 export const protectConversationResponses: Middleware = async (c, next) => {
   await next();
   const user = c.get('requestContext')?.get('mastra__user') as AltFlowUser | undefined;
-  if (!user || user.role === 'admin' || !c.res.ok || !c.res.body) return;
+  if (
+    !user ||
+    (user.role === 'admin' && !c.get('requestContext')?.getRaw(creatorGatewayContextKey)) ||
+    !c.res.ok ||
+    !c.res.body
+  )
+    return;
   const path = c.req.path.replace(/^\/api(?=\/)/, '');
   const isAgentMetadata = c.req.method === 'GET' && /^\/agents(?:\/(?:creator-agent|creatorAgent))?$/.test(path);
   const isConversation =
