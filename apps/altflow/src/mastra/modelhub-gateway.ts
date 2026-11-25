@@ -2,7 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { MastraModelGateway } from '@mastra/core/llm';
 import type { ProviderConfig } from '@mastra/core/llm';
 import { z } from 'zod';
-import { claimCreatorCall, creatorMeterContext, meterCreatorResponse } from './creator-meter';
+import { creatorMeterContext, fetchMeteredCreatorModel } from './creator-meter';
 import { contextPolicy } from './context-policy.ts';
 
 type ChatModel = ReturnType<ReturnType<typeof createOpenAICompatible>['chatModel']>;
@@ -314,15 +314,13 @@ export class ModelHubGateway extends MastraModelGateway {
           if (hasImage && !capacity) throw new Error('ModelHub context capacity is unavailable for image input');
           const inputBound = hasImage ? capacity : Buffer.byteLength(serialized) + 1024;
           const upperBound = Math.min(inputBound, capacity ?? inputBound) + body.max_tokens;
-          const call = await claimCreatorCall(product.id, summary, upperBound);
-          if (!call) throw new Error('Creator model request has no meter');
-          try {
-            const response = await fetch(url, { ...init, body: serialized, redirect: 'error' });
-            return await meterCreatorResponse(response, call);
-          } catch (error) {
-            await call.finish(null);
-            throw error;
-          }
+          return fetchMeteredCreatorModel(
+            url,
+            { ...init, body: serialized, redirect: 'error' },
+            product.id,
+            summary,
+            upperBound,
+          );
         }
         return fetch(url, { ...init, body: serialized, redirect: 'error' });
       },

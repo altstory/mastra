@@ -23,6 +23,8 @@ export async function createCreatorMeter(db: Client) {
   await db.execute('CREATE INDEX IF NOT EXISTS creator_gateway_calls_operation ON creator_gateway_calls(operation_id)');
 }
 
+class CreatorBudgetError extends Error {}
+
 export async function claimCreatorCall(modelId: string, summary: boolean, ceiling: number) {
   const context = creatorMeterContext.getStore();
   if (!context) return undefined;
@@ -52,7 +54,7 @@ export async function claimCreatorCall(modelId: string, summary: boolean, ceilin
       tokenBudget,
     ],
   });
-  if (admitted.rowsAffected !== 1) throw new Error('Creator operation has no remaining model budget');
+  if (admitted.rowsAffected !== 1) throw new CreatorBudgetError('Creator operation has no remaining model budget');
   return {
     async finish(usage: Usage | null) {
       await db.execute({
@@ -89,9 +91,73 @@ export async function creatorUsage(db: Client, operationId: string) {
   });
 }
 
+const settlingSteers = new WeakMap<NonNullable<ReturnType<typeof creatorMeterContext.getStore>>, Set<Promise<void>>>();
+
+export async function fetchMeteredCreatorModel(
+  url: Parameters<typeof fetch>[0],
+  init: RequestInit,
+  modelId: string,
+  summary: boolean,
+  ceiling: number,
+) {
+  const context = creatorMeterContext.getStore();
+  if (!context) throw new Error('Creator model request has no meter');
+  const pending = settlingSteers.get(context) ?? new Set<Promise<void>>();
+  settlingSteers.set(context, pending);
+
+  const call = await claimCreatorCall(modelId, summary, ceiling).catch(async error => {
+    if (!(error instanceof CreatorBudgetError) || !pending.size) throw error;
+    await Promise.allSettled(pending);
+    init.signal?.throwIfAborted();
+    return claimCreatorCall(modelId, summary, ceiling);
+  });
+  if (!call) throw new Error('Creator model request has no meter');
+
+  const upstream = new AbortController();
+  let steered = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let markSettled: () => void = () => {};
+  const settled = new Promise<void>(resolve => (markSettled = resolve));
+  const signal = init.signal;
+  const abort = () => {
+    const reason: unknown = signal?.reason;
+    if (!(reason instanceof Error) || reason.message !== 'Interrupted by a queued signal') {
+      upstream.abort(reason);
+      return;
+    }
+    // Mastra drops the interrupted step. Keep its upstream stream only long enough to read its usage.
+    steered = true;
+    pending.add(settled);
+    timeout = setTimeout(() => upstream.abort(), 120_000);
+    timeout.unref?.();
+  };
+  if (signal?.aborted) abort();
+  else signal?.addEventListener('abort', abort, { once: true });
+  const meteredCall = {
+    async finish(usage: Usage | null) {
+      try {
+        await call.finish(usage);
+      } finally {
+        signal?.removeEventListener('abort', abort);
+        clearTimeout(timeout);
+        pending.delete(settled);
+        markSettled();
+      }
+    },
+  };
+  try {
+    const response = await fetch(url, { ...init, signal: upstream.signal });
+    return await meterCreatorResponse(response, meteredCall, () => steered);
+  } catch (error) {
+    await meteredCall.finish(null);
+    throw error;
+  }
+}
+
 export async function meterCreatorResponse(
   response: Response,
   call: NonNullable<Awaited<ReturnType<typeof claimCreatorCall>>>,
+  keepReading = () => false,
 ) {
   function decodeUsage(value: unknown): Usage | null {
     if (!value || typeof value !== 'object' || !('usage' in value) || !value.usage || typeof value.usage !== 'object')
@@ -134,23 +200,29 @@ export async function meterCreatorResponse(
   const decoder = new TextDecoder();
   let buffer = '';
   let usage: Usage | null = null;
+  let cancelled = false;
+  const read = async () => {
+    const next = await reader.read();
+    buffer += next.done ? decoder.decode() + '\n' : decoder.decode(next.value, { stream: true });
+    let end: number;
+    while ((end = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, end).trimEnd();
+      buffer = buffer.slice(end + 1);
+      if (line.startsWith('data:') && !line.endsWith('[DONE]')) {
+        try {
+          usage = decodeUsage(JSON.parse(line.slice(5))) ?? usage;
+        } catch {}
+      }
+    }
+    if (buffer.length > 2_000_000) throw new Error('ModelHub event exceeds limit');
+    return next;
+  };
   return new Response(
     new ReadableStream<Uint8Array>({
       async pull(controller) {
         try {
-          const next = await reader.read();
-          buffer += next.done ? decoder.decode() + '\n' : decoder.decode(next.value, { stream: true });
-          let end: number;
-          while ((end = buffer.indexOf('\n')) !== -1) {
-            const line = buffer.slice(0, end).trimEnd();
-            buffer = buffer.slice(end + 1);
-            if (line.startsWith('data:') && !line.endsWith('[DONE]')) {
-              try {
-                usage = decodeUsage(JSON.parse(line.slice(5))) ?? usage;
-              } catch {}
-            }
-          }
-          if (buffer.length > 2_000_000) throw new Error('ModelHub event exceeds limit');
+          const next = await read();
+          if (cancelled) return;
           if (next.done) {
             await call.finish(usage);
             controller.close();
@@ -159,10 +231,21 @@ export async function meterCreatorResponse(
           }
         } catch (error) {
           await call.finish(usage);
-          controller.error(error);
+          if (!cancelled) controller.error(error);
         }
       },
       async cancel(reason) {
+        cancelled = true;
+        if (keepReading()) {
+          void (async () => {
+            try {
+              while (!(await read()).done) {}
+            } finally {
+              await call.finish(usage);
+            }
+          })().catch(() => {});
+          return;
+        }
         try {
           await reader.cancel(reason);
         } finally {

@@ -36,12 +36,19 @@ const messageSchema = z
         }),
       }),
     }),
+    expectedRunId: z.string().min(1).max(256).optional(),
+    steerId: z.uuid().optional(),
     attachment: attachmentId.optional(),
     attachments: z.array(attachmentId).max(8).optional(),
   })
-  .refine(({ message, attachment, attachments }) => {
+  .refine(({ message, attachment, attachments, expectedRunId, steerId }) => {
     const ids = [...(attachment ? [attachment] : []), ...(attachments ?? [])];
-    return ids.length <= 8 && new Set(ids).size === ids.length && Boolean(message.contents || ids.length);
+    return (
+      Boolean(expectedRunId) === Boolean(steerId) &&
+      ids.length <= 8 &&
+      new Set(ids).size === ids.length &&
+      Boolean(message.contents || ids.length)
+    );
   });
 
 export async function creatorGatewayRoutes({
@@ -66,6 +73,10 @@ export async function creatorGatewayRoutes({
   await db.execute(`CREATE TABLE IF NOT EXISTS creator_gateway_approvals (
     operation_id TEXT NOT NULL, tool_call_id TEXT NOT NULL, answer_hash TEXT NOT NULL,
     receipt TEXT, PRIMARY KEY(operation_id, tool_call_id)
+  )`);
+  await db.execute(`CREATE TABLE IF NOT EXISTS creator_gateway_steers (
+    operation_id TEXT NOT NULL, id TEXT NOT NULL, request_hash TEXT NOT NULL,
+    receipt TEXT, PRIMARY KEY(operation_id, id)
   )`);
   const bootId = randomUUID();
   const outputWatchers = new Map<string, symbol>();
@@ -410,20 +421,39 @@ export async function creatorGatewayRoutes({
         return Response.json({ error: 'Operation pending' }, { status: 503 });
       };
       const existing = await lookup(operationId, thread, resource);
-      if (existing) return existingResponse(existing);
-      const { message, ifIdle, attachment, attachments } = parsed.data;
+      const { message, ifIdle, attachment, attachments, expectedRunId, steerId } = parsed.data;
       const ids = [...(attachment ? [attachment] : []), ...(attachments ?? [])];
       const model = ifIdle.streamOptions.model;
       const reasoningLevel = ifIdle.streamOptions.providerOptions.altflow.reasoningLevel;
-      const saved = await db.execute({
-        sql: "INSERT OR IGNORE INTO creator_gateway_receipts (id,thread,resource,state,boot_id,model,reasoning,request_hash,updated_ms) VALUES (?,?,?,'dispatching',?,?,?,?,?)",
-        args: [operationId, thread, resource, bootId, model, reasoningLevel, claims.sha256, Date.now()],
-      });
-      if (saved.rowsAffected === 0) {
-        return existingResponse(await lookup(operationId, thread, resource));
+      const lookupSteer = async (id: string) =>
+        (
+          await db.execute({
+            sql: 'SELECT request_hash,receipt FROM creator_gateway_steers WHERE operation_id=? AND id=?',
+            args: [operationId, id],
+          })
+        ).rows[0];
+      const steerResponse = (row: Awaited<ReturnType<typeof lookupSteer>>) => {
+        if (row?.request_hash !== claims.sha256) return Response.json({ error: 'Steer conflict' }, { status: 409 });
+        if (!row?.receipt) return Response.json({ error: 'Steer outcome pending' }, { status: 503 });
+        const receipt = JSON.parse(String(row.receipt));
+        return Response.json(receipt, { status: receipt.accepted ? 200 : 409 });
+      };
+      if (steerId && expectedRunId) {
+        if (existing?.run_id !== expectedRunId)
+          return Response.json({ error: 'No matching creator run' }, { status: 409 });
+        const prior = await lookupSteer(steerId);
+        if (prior) return steerResponse(prior);
+        if (existing.state !== 'accepted') return Response.json({ error: 'Creator run ended' }, { status: 409 });
+      } else {
+        if (existing) return existingResponse(existing);
+        const saved = await db.execute({
+          sql: "INSERT OR IGNORE INTO creator_gateway_receipts (id,thread,resource,state,boot_id,model,reasoning,request_hash,updated_ms) VALUES (?,?,?,'dispatching',?,?,?,?,?)",
+          args: [operationId, thread, resource, bootId, model, reasoningLevel, claims.sha256, Date.now()],
+        });
+        if (saved.rowsAffected === 0) return existingResponse(await lookup(operationId, thread, resource));
       }
       const reject = async (status: number, error: string) => {
-        await setState(operationId, 'rejected');
+        if (!steerId) await setState(operationId, 'rejected');
         return Response.json({ error }, { status });
       };
       const parts: Array<
@@ -433,17 +463,19 @@ export async function creatorGatewayRoutes({
       const context = scopedContext(claims, resource);
       if (message.contents) parts.push({ type: 'text', text: message.contents });
       try {
-        const snapshot = await catalog.catalog();
-        if (String(snapshot.config_version) !== ifIdle.streamOptions.providerOptions.altflow.catalogVersion) {
-          return reject(422, 'Model catalog version changed');
-        }
-        const option = snapshot.free_chat_models.find(item => 'altflow/' + item.id === model);
-        if (
-          !option ||
-          !creatorProductModels.has(option.id) ||
-          !option.thinking_options.some(option => option.level === reasoningLevel)
-        ) {
-          return reject(422, 'Unsupported model or reasoning level');
+        if (!steerId) {
+          const snapshot = await catalog.catalog();
+          if (String(snapshot.config_version) !== ifIdle.streamOptions.providerOptions.altflow.catalogVersion) {
+            return reject(422, 'Model catalog version changed');
+          }
+          const option = snapshot.free_chat_models.find(item => 'altflow/' + item.id === model);
+          if (
+            !option ||
+            !creatorProductModels.has(option.id) ||
+            !option.thinking_options.some(option => option.level === reasoningLevel)
+          ) {
+            return reject(422, 'Unsupported model or reasoning level');
+          }
         }
         if (ids.length) {
           const attachmentError = await files.run({ owner: claims.userId, root: thread }, async () => {
@@ -473,21 +505,25 @@ export async function creatorGatewayRoutes({
           });
           if (attachmentError) return attachmentError;
         }
-        const memory = await agent.getMemory({ requestContext: context });
-        const stored = await memory?.getThreadById({ threadId: thread });
-        if (stored?.resourceId === resource && stored.title === '新会话') {
-          await memory?.updateThread({ id: thread, title: '' });
+        if (!steerId) {
+          const memory = await agent.getMemory({ requestContext: context });
+          const stored = await memory?.getThreadById({ threadId: thread });
+          if (stored?.resourceId === resource && stored.title === '新会话') {
+            await memory?.updateThread({ id: thread, title: '' });
+          }
         }
       } catch (error) {
-        await db.execute({
-          sql: "DELETE FROM creator_gateway_receipts WHERE id=? AND state='dispatching'",
-          args: [operationId],
-        });
+        if (!steerId) {
+          await db.execute({
+            sql: "DELETE FROM creator_gateway_receipts WHERE id=? AND state='dispatching'",
+            args: [operationId],
+          });
+        }
         throw error;
       }
       const scopes = [`resource:${resource}`];
       const signal = createSignal({
-        id: operationId,
+        id: steerId ?? operationId,
         type: 'user-message',
         tagName: 'user',
         contents: ids.length ? parts : message.contents,
@@ -500,6 +536,34 @@ export async function creatorGatewayRoutes({
           ...(displayAttachments.length ? { creatorAttachments: displayAttachments } : {}),
         },
       });
+      if (steerId && expectedRunId) {
+        const claim = await db.execute({
+          sql: 'INSERT OR IGNORE INTO creator_gateway_steers (operation_id,id,request_hash) VALUES (?,?,?)',
+          args: [operationId, steerId, claims.sha256],
+        });
+        if (!claim.rowsAffected) return steerResponse(await lookupSteer(steerId));
+
+        const receipt = await (async () => {
+          if (agent.getActiveThreadRunId({ resourceId: resource, threadId: thread }) !== expectedRunId)
+            return { accepted: false, error: 'Creator run ended' };
+          const admission = await agent.sendSignal(signal, {
+            runId: expectedRunId,
+            resourceId: resource,
+            threadId: thread,
+            scopes,
+            ifActive: { behavior: 'deliver' },
+            ifIdle: { behavior: 'discard' },
+          }).accepted;
+          return admission.action === 'deliver' && admission.runId === expectedRunId
+            ? { accepted: true, runId: expectedRunId, signal: { id: steerId } }
+            : { accepted: false, error: 'Creator run ended' };
+        })();
+        await db.execute({
+          sql: 'UPDATE creator_gateway_steers SET receipt=? WHERE operation_id=? AND id=?',
+          args: [JSON.stringify(receipt), operationId, steerId],
+        });
+        return Response.json(receipt, { status: receipt.accepted ? 200 : 409 });
+      }
       const admission = await creatorMeterContext
         .run(
           { db, operationId, tokenBudget },

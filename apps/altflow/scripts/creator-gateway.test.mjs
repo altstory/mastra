@@ -370,6 +370,48 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.ok(
     attachedParts.some(part => part.type === 'image_url' && part.image_url.url === 'data:image/png;base64,' + png),
   );
+
+  hub.state.nextToolCall = undefined;
+  const steeringOperation = randomUUID();
+  const startIndex = hub.state.requests.length;
+  let steering;
+  const steer = body => request('/creator-gateway/send', { method: 'POST', body, operation: steeringOperation });
+  hub.state.blocked = true;
+  try {
+    const start = await steer({ ...body, message: { contents: 'Start the original task' } });
+    await assertStatus(start, 200);
+    const running = await start.json();
+    await until(() => hub.state.requests.length > startIndex);
+    steering = {
+      ...body,
+      expectedRunId: running.runId,
+      steerId: randomUUID(),
+      message: { contents: 'Switch to a first-person narrator' },
+    };
+    await assertStatus(await steer({ ...steering, expectedRunId: 'different-run' }), 409);
+    const delivered = await steer(steering);
+    await assertStatus(delivered, 200);
+    const original = await delivered.json();
+    assert.equal(original.runId, running.runId);
+    assert.deepEqual(await (await steer(steering)).json(), original);
+    await assertStatus(await steer({ ...steering, message: { contents: 'Changed payload' } }), 409);
+  } finally {
+    hub.state.blocked = false;
+  }
+  const steeringUsage = await until(async () => {
+    const data = await (await request('/creator-gateway/operation', { operation: steeringOperation })).json();
+    return data.state === 'completed' ? data.usages : undefined;
+  });
+  assert.equal(steeringUsage.length, 2);
+  assert.match(JSON.stringify(hub.state.requests[startIndex + 1].body.messages), /Switch to a first-person narrator/);
+  const steeredMessages = await until(async () => {
+    const history = await (await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent')).json();
+    const matches = history.messages.filter(message => message.id === steering.steerId);
+    return matches.length ? matches : undefined;
+  });
+  assert.equal(steeredMessages.length, 1);
+  await assertStatus(await steer(steering), 200);
+  await assertStatus(await steer({ ...steering, steerId: randomUUID() }), 409);
 });
 
 test('creator budget reuses verified surplus and reserves the full amount for in-flight calls', async t => {
