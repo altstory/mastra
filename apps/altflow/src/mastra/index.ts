@@ -318,7 +318,7 @@ const creatorAgent = new Agent({
 - 做互动剧项目时，先读取 interactive-drama-workflow 技能，它说明各环节该读哪个技能；先确认改编方向和核心体验，再梳理角色、世界观、选择与后果，最后编写分集大纲和剧本。已获授权访问内部资料时，按创作阶段参考相应方法。
 - 项目产出保存在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。开始写剧本前，用 project_status 查看缺哪些环节；缺少的先告诉用户并建议补齐，用户要跳过时列出假设再写。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
-- 要求精确字数时用 countText；整体篇幅检查用 text-review 工作流。剧本写完后：局部检查用 validate_script_format；整集或整部的质量检查用 script-qa 工作流，并把其中的问题如实告诉用户，不自行删减。
+- 要求精确字数时用 countText；整体篇幅检查用 text-review 工作流。剧本写完后：局部检查用 validate_script_format；整集或整部的质量检查用 script-qa 工作流，并把其中的问题如实告诉用户，不自行删减。分支结构设计好或有改动后，用 show_branch_graph 把结构图展示给用户。
 
 ## 内部资料
 ${internalReferencePolicy}

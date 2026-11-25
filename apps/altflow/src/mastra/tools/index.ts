@@ -17,6 +17,7 @@ import {
 } from '@mastra/core/tools';
 import type { ToolAction } from '@mastra/core/tools';
 import type { StoryLedgerStore } from '../services/story-ledger';
+import { createBranchGraphTool } from './branch-graph';
 import { createProjectStatusTool } from './project-status';
 import type { ProjectFiles } from './project-status';
 import { createScriptGraphTool } from './script-analysis';
@@ -53,6 +54,7 @@ export function createCreatorTools(options: {
     validate_script_format: createValidateScriptFormatTool(),
     project_status: createProjectStatusTool({ files: options.projectFiles, ledger: options.storyLedger }),
     analyze_script_graph: createScriptGraphTool(),
+    show_branch_graph: createBranchGraphTool(),
     ...createStoryLedgerTools({ store: options.storyLedger }),
     ...(provider ? { web_search: createWebSearchTool({ provider }) } : {}),
   };

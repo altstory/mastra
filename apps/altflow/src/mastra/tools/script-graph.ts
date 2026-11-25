@@ -31,8 +31,10 @@ export interface SceneNode {
   branch: boolean;
   body: string[];
   closed: boolean;
+  title: string;
+  ending?: string;
   merge?: string;
-  options: { id: string; target?: string }[];
+  options: { id: string; label: string; target?: string }[];
 }
 
 function bigrams(text: string) {
@@ -77,7 +79,11 @@ export function parseScenes(script: string) {
     }
     const option = line.match(OPTION);
     if (option) {
-      interaction?.options.push({ id: `${option[1]}-${option[2]}-${option[3]}`, target: option[4].match(JUMP)?.[1] });
+      interaction?.options.push({
+        id: `${option[1]}-${option[2]}-${option[3]}`,
+        label: option[4].replace(JUMP, '').trim(),
+        target: option[4].match(JUMP)?.[1],
+      });
       continue;
     }
     const scene = line.match(SCENE);
@@ -89,6 +95,7 @@ export function parseScenes(script: string) {
         branch: Boolean(scene[3]),
         body: [],
         closed: false,
+        title: line.replace(/^\d+-\d+(?:-[A-F])?\s+/, '').trim(),
         options: [],
       };
       interaction = undefined;
@@ -102,6 +109,7 @@ export function parseScenes(script: string) {
     }
     if (CLOSING.test(line) && current) {
       current.closed = true;
+      current.ending = line.match(/结局\s*[：:]\s*(.+?)\s*[）)]$/)?.[1];
       continue;
     }
     current?.body.push(line);
@@ -109,9 +117,7 @@ export function parseScenes(script: string) {
   return scenes;
 }
 
-export function analyzeScriptGraph(script: string): GraphReport {
-  const scenes = parseScenes(script);
-  const issues: GraphIssue[] = [];
+export function sceneEdges(scenes: SceneNode[]) {
   const byKey = new Map(scenes.map(scene => [scene.key, scene]));
   const edges = new Map<string, string[]>();
   scenes.forEach((scene, i) => {
@@ -126,6 +132,14 @@ export function analyzeScriptGraph(script: string): GraphReport {
     }
     edges.set(scene.key, out);
   });
+  return edges;
+}
+
+export function analyzeScriptGraph(script: string): GraphReport {
+  const scenes = parseScenes(script);
+  const issues: GraphIssue[] = [];
+  const byKey = new Map(scenes.map(scene => [scene.key, scene]));
+  const edges = sceneEdges(scenes);
 
   const reachable = new Set<string>();
   const stack = scenes.length ? [scenes[0].key] : [];
