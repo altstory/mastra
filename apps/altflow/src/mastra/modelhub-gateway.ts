@@ -246,13 +246,17 @@ export class ModelHubGateway extends MastraModelGateway {
     return this.#apiKey;
   }
   async resolveLanguageModel({ modelId }: { modelId: string }) {
-    return this.#languageModel(modelId, false);
+    return this.#languageModel(modelId, 'chat');
   }
   /** Only the server's checkpoint processor uses the auxiliary completion reservation. */
   async resolveSummaryModel(modelId: string) {
-    return this.#languageModel(modelId, true);
+    return this.#languageModel(modelId, 'summary');
   }
-  async #languageModel(modelId: string, summary: boolean) {
+  async resolveTitleModel(modelId: string) {
+    return this.#languageModel(modelId, 'title');
+  }
+  async #languageModel(modelId: string, purpose: 'chat' | 'summary' | 'title') {
+    const summary = purpose === 'summary';
     if (!(await this.catalog()).free_chat_models.some(model => model.id === modelId))
       throw new Error('Model is not in the ModelHub product catalog');
     const provider = createOpenAICompatible({
@@ -271,7 +275,8 @@ export class ModelHubGateway extends MastraModelGateway {
         const product = catalog.free_chat_models.find(model => model.id === modelId);
         const body = JSON.parse(init.body);
         if (!product) throw new Error('Model is not in the ModelHub product catalog');
-        const level = body.reasoningLevel ?? product.default_thinking_level;
+        const titleLevel = purpose === 'title' && product.thinking_options.find(option => option.level === 'off');
+        const level = body.reasoningLevel ?? (titleLevel ? titleLevel.level : product.default_thinking_level);
         const option = product.thinking_options.find(option => option.level === level);
         if (!option) throw new Error('Unsupported ModelHub reasoning level; select a level from the current catalog');
         for (const key of [
@@ -287,7 +292,7 @@ export class ModelHubGateway extends MastraModelGateway {
           delete body[key];
         const capacity = (await this.modelInfo())[option.target];
         const policy = contextPolicy(capacity);
-        const outputLimit = summary ? 65536 : policy.output;
+        const outputLimit = purpose === 'title' ? 256 : summary ? 65536 : policy.output;
         body.max_tokens = Math.min(
           typeof body.max_tokens === 'number' && body.max_tokens > 0 ? body.max_tokens : outputLimit,
           outputLimit,

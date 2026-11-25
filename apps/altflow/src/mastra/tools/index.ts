@@ -18,6 +18,8 @@ import type { ToolAction } from '@mastra/core/tools';
 import type { StoryLedgerStore } from '../services/story-ledger';
 import { creatorQuestionTool } from './creator-question';
 import { creativeBriefTool } from './creative-brief';
+import type { WorkspaceFiles } from '../services/conversation-files';
+import { createDeliverInteractiveScriptTool } from './deliver-interactive-script';
 import { createBranchGraphTool } from './branch-graph';
 import { createProjectStatusTool } from './project-status';
 import type { ProjectFiles } from './project-status';
@@ -29,7 +31,7 @@ export function createCreatorTools(options: {
   countText: ToolAction<any, any>;
   sessionSearch: SessionSearchService;
   delivery: DeliveryService;
-  projectFiles: ProjectFiles;
+  projectFiles: ProjectFiles & Pick<WorkspaceFiles, 'write'>;
   storyLedger: StoryLedgerStore;
   env?: Record<string, string | undefined>;
 }) {
@@ -57,6 +59,7 @@ export function createCreatorTools(options: {
     project_status: createProjectStatusTool({ files: options.projectFiles, ledger: options.storyLedger }),
     analyze_script_graph: createScriptGraphTool(),
     show_branch_graph: createBranchGraphTool(),
+    deliver_interactive_script: createDeliverInteractiveScriptTool(options.projectFiles),
     ...createStoryLedgerTools({ store: options.storyLedger }),
     ...(provider ? { web_search: createWebSearchTool({ provider }) } : {}),
   };

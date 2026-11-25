@@ -19,10 +19,14 @@ import {
   creatorUsage,
 } from '../src/mastra/creator-meter.ts';
 import { creatorGatewayRoutes } from '../src/mastra/routes/creator-gateway.ts';
+import {
+  createDeliverInteractiveScriptTool,
+  interactiveScriptFormat,
+} from '../src/mastra/tools/deliver-interactive-script.ts';
 import { ConversationFiles } from '../src/mastra/services/conversation-files.ts';
 import { modelHubFixture } from './modelhub-fixture.mjs';
 import { setup } from './storage-fixture.mjs';
-import { fixture, modelServer } from './tool-fixture.mjs';
+import { fixture } from './tool-fixture.mjs';
 
 const secret = 'test-only-creator-gateway-secret';
 const account = 'alice';
@@ -43,8 +47,8 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const f = await fixture(t);
   const hub = await modelHubFixture();
   t.after(hub.close);
-  const { store } = await setup(t, 128);
-  const titles = await modelServer(t);
+  const { store } = await setup(t, 4096);
+  const files = new ConversationFiles(store);
   const catalog = new ModelHubGateway({ apiKey: 'fixture', baseURL: hub.baseURL });
   hub.state.catalog.free_chat_models.push({
     id: 'qwen3.8-flash',
@@ -61,7 +65,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
     options: {
       ...CREATOR_MEMORY_OPTIONS,
       semanticRecall: false,
-      generateTitle: { model: titles.model, emitEvent: true },
+      generateTitle: { model: () => catalog.resolveTitleModel('qwen3.8-max'), emitEvent: true },
     },
   });
   const agent = new Agent({
@@ -70,7 +74,8 @@ test('signed creator admission, native thread delivery and billed model usage sh
     instructions: 'Write a short response.',
     model: await catalog.resolveLanguageModel({ modelId: 'qwen3.8-max' }),
     memory,
-    tools: { ask_user: askUserTool },
+    tools: { ask_user: askUserTool, deliver_interactive_script: createDeliverInteractiveScriptTool(files) },
+    inputProcessors: [files.processor(async (_context, root) => ({ owner: account, root }))],
   });
   const accounts = createAltFlowAuth({
     backendUrl: 'http://127.0.0.1:1',
@@ -80,7 +85,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   });
   const db = createClient({ url: `file:${f.dir}/creator.db` });
   t.after(() => db.close());
-  const routes = await creatorGatewayRoutes({ accounts, agent, db, catalog, files: new ConversationFiles(store) });
+  const routes = await creatorGatewayRoutes({ accounts, agent, db, catalog, files });
   const app = new Hono();
   const mastra = new Mastra({
     agents: { 'creator-agent': agent },
@@ -196,11 +201,14 @@ test('signed creator admission, native thread delivery and billed model usage sh
     const current = await (await request('/creator-gateway/operation', { operation: operationId })).json();
     return current.title && current;
   });
-  assert.notEqual(titled.title, '新会话');
-  assert.match(JSON.stringify(titles.requests[0].messages), /Only A|hello|first|message/i);
-  assert.equal(settled.usages.length, 1);
+  assert.equal(titled.title, 'verified');
+  const titleRequests = () => hub.state.requests.filter(request => request.body.max_tokens === 256);
+  const chatRequests = () => hub.state.requests.filter(request => request.body.max_tokens !== 256);
+  assert.equal(titleRequests().length, 1);
+  assert.match(JSON.stringify(titleRequests()[0].body.messages), /Unique current conversation prompt/);
+  assert.equal(settled.usages.length, 2);
   assert.equal(settled.usages[0].promptTokens, 1);
-  assert.equal(hub.state.requests.length, 1);
+  assert.equal(chatRequests().length, 1);
   assert.match(JSON.stringify(hub.state.requests[0].body.messages), /Only A working memory marker/);
   assert.equal(hub.state.requests[0].body.modelhub_reasoning_effort, 'high');
   await until(() => streamed.includes('verified'));
@@ -208,7 +216,33 @@ test('signed creator admission, native thread delivery and billed model usage sh
   await live;
   const history = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');
   await assertStatus(history, 200);
-  assert.match(await history.text(), /Unique current conversation prompt/);
+  const durableHistory = (await history.json()).messages;
+  const userMessage = durableHistory.find(message =>
+    JSON.stringify(message).includes('Unique current conversation prompt'),
+  );
+  assert.equal(userMessage.id, receipt.signal.id);
+  const branch = 'fc_' + randomUUID();
+  const branchInput = { destination: branch, throughMessageId: userMessage.id };
+  await assertStatus(
+    await request('/creator-gateway/branch', { method: 'POST', body: branchInput, conversation: other }),
+    404,
+  );
+  const branchResponse = await request('/creator-gateway/branch', { method: 'POST', body: branchInput });
+  await assertStatus(branchResponse, 200);
+  assert.deepEqual(
+    await (await request('/creator-gateway/branch', { method: 'POST', body: branchInput })).json(),
+    await branchResponse.json(),
+  );
+  const forked = await request('/memory/threads/free:' + branch + '/messages?agentId=creator-agent', {
+    conversation: branch,
+  });
+  await assertStatus(forked, 200);
+  const forkedMessages = (await forked.json()).messages;
+  assert.equal(
+    forkedMessages.filter(message => JSON.stringify(message).includes('Unique current conversation prompt')).length,
+    1,
+  );
+  assert.ok(forkedMessages.every(message => message.role !== 'assistant'));
   const foreign = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent', {
     conversation: other,
   });
@@ -232,7 +266,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const rejection = await request('/creator-gateway/operation', { operation: rejected });
   assert.deepEqual(await rejection.json(), { state: 'rejected', receipt: null, usages: null });
   await assertStatus(await request('/creator-gateway/send', { method: 'POST', body, operation: rejected }), 409);
-  assert.equal(hub.state.requests.length, 1);
+  assert.equal(chatRequests().length, 1);
 
   hub.state.nextToolCall = body =>
     body.messages.some(message => message.role === 'user' && String(message.content).includes('Pending only here')) &&
@@ -300,7 +334,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   );
   const decide = () => request('/creator-gateway/approval', { method: 'POST', operation: pause, body: approval });
   await assertStatus(await decide(), 200);
-  await until(() => hub.state.requests.length === 4);
+  await until(() => chatRequests().length === 4);
   const afterApproval = await until(async () => {
     const data = await (await request('/creator-gateway/operation', { operation: pause })).json();
     return data.state === 'completed' ? data : undefined;
@@ -360,7 +394,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   });
   const oversized = await request('/creator-gateway/file?id=' + randomUUID() + '&name=large.txt', {
     method: 'POST',
-    body: 'x'.repeat(128),
+    body: 'x'.repeat(4096),
   });
   await assertStatus(oversized.clone(), 413);
   assert.equal((await oversized.json()).code, 'STORAGE_QUOTA_EXCEEDED');
@@ -422,6 +456,44 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.equal(steeredMessages.length, 1);
   await assertStatus(await steer(steering), 200);
   await assertStatus(await steer({ ...steering, steerId: randomUUID() }), 409);
+  hub.state.nextToolCall = modelBody => {
+    const lastUser = modelBody.messages.findLastIndex(message => message.role === 'user');
+    if (modelBody.messages.slice(lastUser + 1).some(message => message.role === 'tool')) return undefined;
+    const content = JSON.stringify(modelBody.messages[lastUser]);
+    const path = 'projects/测试/剧本.md';
+    if (content.includes('Deliver invalid draft'))
+      return { id: 'draft-invalid', name: 'deliver_interactive_script', args: { path, script: '场景1 开门' } };
+    if (content.includes('Deliver verified draft'))
+      return {
+        id: 'draft-verified',
+        name: 'deliver_interactive_script',
+        args: { path, script: interactiveScriptFormat },
+      };
+  };
+  const deliverDraft = async prompt => {
+    const operation = randomUUID();
+    await assertStatus(
+      await request('/creator-gateway/send', {
+        method: 'POST',
+        body: { ...body, message: { contents: prompt } },
+        operation,
+      }),
+      200,
+    );
+    await until(
+      async () => (await (await request('/creator-gateway/operation', { operation })).json()).state === 'completed',
+    );
+  };
+  await deliverDraft('Deliver invalid draft');
+  const listScripts = async () =>
+    (await (await request('/creator-gateway/files')).json()).filter(file => file.name === '剧本.md');
+  assert.deepEqual(await listScripts(), []);
+  await deliverDraft('Deliver verified draft');
+  const [script] = await listScripts();
+  const downloaded = await request('/creator-gateway/file?id=' + script.id);
+  assert.equal(await downloaded.text(), interactiveScriptFormat + '\n');
+  const updated = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');
+  assert.match(await updated.text(), /"delivered":true.*"pathCount":2/);
 });
 
 test('creator budget reuses verified surplus and reserves the full amount for in-flight calls', async t => {

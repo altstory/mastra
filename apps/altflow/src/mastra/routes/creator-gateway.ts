@@ -14,6 +14,7 @@ import type { createAltFlowAuth } from '../altflow-auth';
 import { creatorGatewayContextKey, creatorResourceId, creatorThreadId } from '../creator-gateway-auth';
 import type { ModelHubGateway } from '../modelhub-gateway';
 import { createCreatorMeter, creatorMeterContext, creatorProductModels, creatorUsage } from '../creator-meter';
+import { creatorFileId as fileId } from '../creator-file-id';
 import { defaultConversationModel } from '../model-policy';
 import type { ConversationFiles } from '../services/conversation-files';
 import { FileStorageError } from '../user-storage';
@@ -94,6 +95,35 @@ export async function creatorGatewayRoutes({
     context.set('mastra__userPermissions', ['agents:execute', 'memory:read', 'memory:write']);
     return context;
   };
+  const conversationTitle = async (
+    memory: NonNullable<Awaited<ReturnType<Agent['getMemory']>>>,
+    threadId: string,
+    resourceId: string,
+    title?: string,
+  ) => {
+    if (title && title !== '新会话') return title;
+    if (agent.getActiveThreadRunId({ threadId, resourceId })) return undefined;
+    const { messages } = await memory.recall({
+      threadId,
+      resourceId,
+      perPage: 40,
+      orderBy: { field: 'createdAt', direction: 'ASC' },
+      hideSignals: [],
+    });
+    for (const message of messages) {
+      const signal = z.object({ type: z.string() }).safeParse(message.content.metadata?.signal).data?.type;
+      if (message.role !== 'user' && !(message.role === 'signal' && (signal === 'user' || signal === 'user-message')))
+        continue;
+      const topic = message.content.parts
+        .flatMap(part => (part.type === 'text' ? [part.text] : []))
+        .join('\n')
+        .replace(/<attachment>[\s\S]*?<\/attachment>/g, '')
+        .replace(/[\u0000-\u001f]+/g, ' ')
+        .trim();
+      if (topic && !/^(?:你好|您好|hi\b|hello\b|我是|我叫)/i.test(topic)) return [...topic].slice(0, 20).join('');
+    }
+    return undefined;
+  };
   const lookup = async (id: string, thread: string, resource: string) =>
     (
       await db.execute({
@@ -107,10 +137,18 @@ export async function creatorGatewayRoutes({
       args: [state, Date.now(), id],
     });
 
-  const watchOutput = (id: string, finishReason: PromiseLike<string | undefined>) => {
+  const watchOutput = (
+    id: string,
+    output: {
+      consumeStream: () => Promise<void>;
+      finishReason: PromiseLike<string | undefined>;
+    },
+  ) => {
     const watcher = Symbol();
     outputWatchers.set(id, watcher);
-    void Promise.resolve(finishReason)
+    void output
+      .consumeStream()
+      .then(() => output.finishReason)
       .then(reason => {
         if (reason === 'suspended' || outputWatchers.get(id) !== watcher) return;
         return setState(
@@ -160,11 +198,6 @@ export async function creatorGatewayRoutes({
         }
       },
     });
-  const fileId = (path: string, version: string) =>
-    createHash('sha256')
-      .update(JSON.stringify([path, version]))
-      .digest('hex');
-
   return [
     route('catalog', 'GET', async () => {
       const snapshot = await catalog.catalog();
@@ -204,8 +237,73 @@ export async function creatorGatewayRoutes({
         agentId: 'creator-agent',
         threadId: thread,
         resourceId: resource,
-        title: existing?.title,
+        title: existing ? await conversationTitle(memory, thread, resource, existing.title) : undefined,
       });
+    }),
+    route('branch', 'POST', async ({ request, claims, resource, thread }) => {
+      const input = z
+        .strictObject({
+          destination: z.string().regex(/^fc_[0-9a-f-]{36}$/),
+          throughMessageId: z.string().max(256),
+        })
+        .safeParse(await request.json());
+      if (!input.success || input.data.destination === claims.conversationId)
+        return new Response(null, { status: 400 });
+      const destination = creatorThreadId(input.data.destination);
+      const memory = await agent.getMemory({ requestContext: scopedContext(claims, resource) });
+      if (!memory) return new Response(null, { status: 503 });
+      const source = await memory.getThreadById({ threadId: thread });
+      if (source?.resourceId !== resource || source.metadata?.creatorProjectId !== claims.projectId)
+        return new Response(null, { status: 404 });
+      const existing = await memory.getThreadById({ threadId: destination });
+      if (existing) {
+        if (existing.resourceId !== resource || existing.metadata?.creatorBranchOf !== thread)
+          return new Response(null, { status: 409 });
+        return Response.json({ threadId: destination, title: existing.title });
+      }
+      if (agent.getActiveThreadRunId({ threadId: thread, resourceId: resource }))
+        return new Response(null, { status: 409 });
+
+      const ids: string[] = [];
+      const attachmentPaths = new Set<string>();
+      const boundary = input.data.throughMessageId;
+      let reached = false;
+      for (let page = 0; ; page++) {
+        const { messages, hasMore } = await memory.recall({
+          threadId: thread,
+          resourceId: resource,
+          page,
+          perPage: 100,
+          hideSignals: [],
+          orderBy: { field: 'createdAt', direction: 'ASC' },
+        });
+        for (const message of messages) {
+          ids.push(message.id);
+          for (const part of message.content.parts) {
+            if (part.type !== 'text' || (message.role !== 'user' && message.role !== 'signal')) continue;
+            for (const marker of part.text.matchAll(
+              /<attachment>\s*(\/uploads\/[^/\r\n]+\/[^\r\n]+)\r?\n<\/attachment>/g,
+            ))
+              attachmentPaths.add(marker[1]!);
+          }
+          if (message.id === boundary) {
+            reached = true;
+            break;
+          }
+        }
+        if (reached || !hasMore || !messages.length) break;
+      }
+      if (boundary && !reached) return new Response(null, { status: 404 });
+      await files.copyUploads(claims.userId, thread, destination, attachmentPaths);
+      const { thread: cloned } = await memory.copyThread({
+        sourceThreadId: thread,
+        newThreadId: destination,
+        resourceId: resource,
+        title: source.title || undefined,
+        metadata: { creatorProjectId: claims.projectId, creatorBranchOf: thread },
+        options: { messageFilter: { messageIds: ids } },
+      });
+      return Response.json({ threadId: destination, title: cloned.title });
     }),
     route('files', 'GET', async ({ claims, thread }) => {
       const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
@@ -294,7 +392,9 @@ export async function creatorGatewayRoutes({
           ? await (async () => {
               const memory = await agent.getMemory({ requestContext: scopedContext(claims, resource) });
               const stored = await memory?.getThreadById({ threadId: thread });
-              return stored?.resourceId === resource ? stored.title : undefined;
+              return memory && stored?.resourceId === resource
+                ? conversationTitle(memory, thread, resource, stored.title)
+                : undefined;
             })().catch(() => undefined)
           : undefined;
       return Response.json({
@@ -391,7 +491,7 @@ export async function creatorGatewayRoutes({
           }
           throw error;
         });
-      watchOutput(operationId, output.finishReason);
+      watchOutput(operationId, output);
       const result = { accepted: true, runId, toolCallId };
       await db.execute({
         sql: 'UPDATE creator_gateway_approvals SET receipt=? WHERE operation_id=? AND tool_call_id=?',
@@ -600,7 +700,7 @@ export async function creatorGatewayRoutes({
         sql: "UPDATE creator_gateway_receipts SET state='accepted',run_id=?,receipt=?,updated_ms=? WHERE id=?",
         args: [admission.runId, JSON.stringify(receipt), Date.now(), operationId],
       });
-      watchOutput(operationId, admission.output.finishReason);
+      watchOutput(operationId, admission.output);
       return Response.json(receipt);
     }),
   ];

@@ -53,6 +53,7 @@ import { OfficeReader } from './services/office';
 import { turnFileChangesProcessor } from './services/turn-file-changes';
 import { createAgentTree } from './subagents/agents';
 import { SubagentStore } from './subagents/store';
+import { interactiveScriptFormat } from './tools/deliver-interactive-script';
 import { createCreatorTools } from './tools';
 import { createScriptQaWorkflow } from './workflows/script-qa';
 import { conversationToolPolicy } from './tools/conversation-policy';
@@ -212,20 +213,21 @@ const textReview = createWorkflow({
   .then(composeReport)
   .commit();
 const contextCompaction = new ContextCompaction({ gateway: modelHub, storage });
+const titleGeneration = {
+  model: () => modelHub.resolveTitleModel(model.slice(model.indexOf('/') + 1)),
+  emitEvent: true,
+  instructions: '用用户使用的语言概括会话主题，不超过 20 字。只输出标题。不要在标题中写个人姓名、附件路径或文件名。',
+};
 const creatorMemory = new CreatorMemory({
   storage,
   vector,
   embedder: localEmbedder,
   options: {
     ...CREATOR_MEMORY_OPTIONS,
-    generateTitle: {
-      emitEvent: true,
-      instructions:
-        '用用户使用的语言概括会话主题，不超过 20 字。只输出标题。不要在标题中写个人姓名、附件路径或文件名。',
-    },
+    generateTitle: titleGeneration,
   },
 });
-const disabledRecallMemory = new DisabledRecallMemory({ storage, options: { generateTitle: true } });
+const disabledRecallMemory = new DisabledRecallMemory({ storage, options: { generateTitle: titleGeneration } });
 const creativeMemoryStore = new CreativeMemoryStore(`file:${previewPath('data/creative-memory.db')}`);
 await creativeMemoryStore.init();
 const conversationFiles = new ConversationFiles(userFiles);
@@ -323,7 +325,10 @@ const creatorAgent = new Agent({
 - 做互动剧项目时，读取 interactive-drama-workflow 了解可用方法，再根据已有材料和当前任务自主选择、组合技能。可以跳过、回退或并行处理创意、角色、世界观、互动和剧本，不把默认环节顺序当成执行门禁。
 - 项目产出保存在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。需要了解项目整体进度时用 project_status 展示卡片，不逐项复述。只补会影响当前写作的缺口；缺少整套前置文档不是门禁，可以依据已有材料直接开始，并记录关键假设。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
-- 要求精确字数时用 countText；整体篇幅检查用 text-review 工作流。剧本写完后：局部检查用 validate_script_format；整集或整部的质量检查用 script-qa 工作流，报告会以卡片展示给用户，你只概述结论和最该先改的几项，不要整段复述，也不要删减问题。分支结构设计好或有改动后，用 show_branch_graph 把结构图展示给用户。
+- 用户让你新写、续写或改写互动剧本时，使用下面的交付格式。动作以 △ 开头，台词用「人物：台词」。集名、场景、选项、跳转、分支收束和集尾都各占一行。剧本正文不混入改稿说明、角色卡或分析报告。
+${interactiveScriptFormat}
+- 交付互动剧本时必须调用 deliver_interactive_script 传入完整稿，校验失败时按行修正再提交。工具会同时保存文件和展示分支图。用户要求正文直接贴在聊天里时，也用同一份校验通过的剧本。分析已有剧本的分支结构时，用 show_branch_graph。
+- 要求精确字数时用 countText，整体篇幅检查用 text-review 工作流。检查已有剧本格式用 validate_script_format，评估整集质量用 script-qa。报告会以卡片展示，只概述主要结论。
 
 ## 内部资料
 ${internalReferencePolicy}
@@ -333,7 +338,7 @@ ${internalReferencePolicy}
 - 只使用实际提供给你的工具。做不到的事，直接告诉用户，并给替代办法。不编造工具结果、文件路径或链接。
 
 ## 文件与记忆
-- 当前会话的附件和你生成的文件都在当前会话的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
+- 当前会话的附件和你生成的文件都在当前会话的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。普通文件写入成功后，调用 present 交付。互动剧本由 deliver_interactive_script 交付。
 - 当前会话的目标、候选方案、待选事项和执行进度使用 updateWorkingMemory。用户明确自述的姓名、常用称呼和长期偏好，以及当前关联项目约定和带版本的作品事实使用 remember；更正时更新原条目，要求忘记时用 forget_memory。以记忆内容规则和工具结果为准，不把未确认的建议变成事实。
 - 用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。历史记录不能直接作为写入长期记忆的确认依据。
 - 不接触其他用户或其他会话的文件。问候或新话题不能推断用户要继续旧项目；工作区仅代表当前会话，不是账号全部项目。

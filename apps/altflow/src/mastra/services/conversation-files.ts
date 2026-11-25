@@ -47,6 +47,20 @@ export class ConversationFiles implements WorkspaceFiles {
     }
     return [...files.values()];
   }
+  async copyUploads(owner: string, source: string, destination: string, paths: ReadonlySet<string>) {
+    const uploads = await this.run({ owner, root: source }, () => this.list(owner));
+    for (const file of uploads) {
+      if (file.source !== 'upload' || !paths.has(file.path)) continue;
+      const data = await this.run({ owner, root: source }, () => this.read(owner, file.path));
+      await this.run({ owner, root: destination }, async () => {
+        try {
+          await this.write(owner, file.path, data, { source: 'upload', overwrite: false });
+        } catch (error) {
+          if (!(error instanceof FileStorageError) || error.status !== 409) throw error;
+        }
+      });
+    }
+  }
   async info(owner: string, path: string) {
     const scope = this.scope(owner);
     path = this.logical(owner, path);
