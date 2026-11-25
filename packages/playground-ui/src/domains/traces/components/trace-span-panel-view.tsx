@@ -229,6 +229,7 @@ export function TraceSpanPanelView({
             }
             main={
               <TracePanel.Main
+                loadError={fullTrace?.error}
                 toolbar={
                   <TracePanel.SpansToolbar search={<TracePanel.Search />} actions={<TracePanel.SpanViewSwitch />} />
                 }

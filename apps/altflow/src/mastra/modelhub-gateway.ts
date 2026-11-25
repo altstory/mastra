@@ -1,6 +1,7 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { MastraModelGateway } from '@mastra/core/llm';
 import type { ProviderConfig } from '@mastra/core/llm';
+import { resolveCurrentSpan, SpanType } from '@mastra/core/observability';
 import { z } from 'zod';
 import { creatorMeterContext, fetchMeteredCreatorModel } from './creator-meter';
 import { contextPolicy } from './context-policy.ts';
@@ -311,6 +312,22 @@ export class ModelHubGateway extends MastraModelGateway {
         if (body.creatorMeterRequired && !meter) throw new Error('Creator model request has no metering context');
         delete body.creatorMeterRequired;
         const serialized = JSON.stringify(body);
+        const span = resolveCurrentSpan();
+        const inference = span?.type === SpanType.MODEL_INFERENCE ? span : span?.findParent(SpanType.MODEL_INFERENCE);
+        if (purpose === 'chat') {
+          inference?.update({
+            metadata: {
+              modelHubRequest: {
+                productModel: product.id,
+                targetModel: option.target,
+                reasoningLevel: option.level,
+                reasoningBudget: body.modelhub_thinking_budget,
+                maxOutputTokens: body.max_tokens,
+                catalogVersion: catalog.config_version,
+              },
+            },
+          });
+        }
         if (meter) {
           const hasImage = body.messages?.some(
             (message: { content?: unknown }) =>

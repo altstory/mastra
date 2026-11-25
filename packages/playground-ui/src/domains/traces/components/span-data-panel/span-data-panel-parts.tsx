@@ -1,4 +1,3 @@
-import { t as studioT } from '@/lib/i18n';
 import { describeProcessorPipeline, describeSpanInput } from '@mastra/core/observability';
 import type { UsageStats } from '@mastra/core/observability';
 import type { ReactNode } from 'react';
@@ -22,8 +21,9 @@ import {
 import { asCoreSpan, getSpanTools } from '../span-payload/span-payload-registry';
 import { SpanToolCallList, SpanToolList } from '../span-payload/span-tools-section';
 import type { RegisteredTools } from '../span-payload/span-tools-section';
+import { SpanKnowledgeTrace, SpanPromptAssembly } from '../span-prompt-assembly';
 import { SpanPromptChanges } from '../span-prompt-changes';
-import { getPromptChanges, runsAfterModel } from '../span-prompt-impact';
+import { getPromptChanges, runsAfterModel, showsPromptAssembly } from '../span-prompt-impact';
 import { SpanTokenUsage } from '../span-token-usage';
 import { getModelFacts, getTokenUsageRows } from '../span-token-usage.utils';
 import { SpanTypeBadge } from '../span-type-badge';
@@ -44,6 +44,7 @@ import { IconCircleX } from '@/ds/icons/central/IconCircleX';
 import { IconCodeBrackets } from '@/ds/icons/central/IconCodeBrackets';
 import { IconEyeOpen } from '@/ds/icons/central/IconEyeOpen';
 import { IconSquareArrowTopRight } from '@/ds/icons/central/IconSquareArrowTopRight';
+import { t as studioT } from '@/lib/i18n';
 import { formatTimestampPrecise } from '@/utils/date-format';
 import { formatDuration, formatDurationPrecise } from '@/utils/duration';
 
@@ -134,22 +135,31 @@ export function SpanDataPanelCloseButton({ onClose }: { onClose: () => void }) {
  * ---------------------------------------------------------------------------------------------- */
 
 /** The Details tab: prompt changes, model, token usage, timing, ids, metadata and attributes. */
-export function SpanDataPanelDetails() {
+export function SpanDataPanelDetails({ traceSpans }: { traceSpans?: TraceSpanRecord[] }) {
   const { traceId, span } = useSpanDataPanel();
   if (!span) return null;
-  return <DetailsTab traceId={traceId} span={span} />;
+  return <DetailsTab traceId={traceId} span={span} traceSpans={traceSpans} />;
 }
 
 export interface SpanDataPanelInputProps {
   /** The tool registry (`listTools`), so the tools the span offered link to their pages. */
   registeredTools?: RegisteredTools;
+  assemblySpans?: TraceSpanRecord[];
 }
 
 /** The Input tab: what the span was given, previewed or as JSON, and the tools it offered. */
-export function SpanDataPanelInput({ registeredTools }: SpanDataPanelInputProps) {
+export function SpanDataPanelInput({ registeredTools, assemblySpans }: SpanDataPanelInputProps) {
   const { span, view, setView } = useSpanDataPanel();
   if (!span) return null;
-  return <InputTab span={span} view={view} onViewChange={setView} registeredTools={registeredTools} />;
+  return (
+    <InputTab
+      span={span}
+      view={view}
+      onViewChange={setView}
+      registeredTools={registeredTools}
+      assemblySpans={assemblySpans}
+    />
+  );
 }
 
 export interface SpanDataPanelOutputProps extends TraceToolCallsProps {
@@ -260,11 +270,14 @@ function InputTab({
   view,
   onViewChange,
   registeredTools,
-}: PayloadTabProps & { registeredTools?: RegisteredTools }) {
+  assemblySpans,
+}: PayloadTabProps & SpanDataPanelInputProps) {
   const tools = getSpanTools(span);
   const processorInput = getProcessorInput(span);
   return (
     <Stack>
+      {assemblySpans && showsPromptAssembly(span) && <SpanPromptAssembly anchor={span} spans={assemblySpans} />}
+      <JsonSection title={studioT('ModelHub request')} value={span.metadata?.modelHubRequest} />
       <Payload
         label={studioT('Input')}
         raw={span.input}
@@ -304,7 +317,11 @@ function OutputTab({
           <Notice.Message>{getTokenLimitMessage(span)}</Notice.Message>
         </Notice>
       )}
-      {(output != null || span.error == null) && (
+      {!runsAfterModel(span) && <PromptSection span={span} />}
+      <SpanKnowledgeTrace span={span} traceSpans={traceSpans} />
+      <JsonSection title={studioT('Semantic recall')} value={span.metadata?.semanticRecall} />
+      {(output != null ||
+        (span.error == null && getPromptChanges(span).length === 0 && span.metadata?.semanticRecall == null)) && (
         <Payload
           label={studioT('Output')}
           raw={output}
@@ -322,7 +339,15 @@ function OutputTab({
 }
 
 /** Everything looked up rather than read, grouped the same way for every span type. */
-function DetailsTab({ traceId, span }: { traceId: string; span: SpanRecord }) {
+function DetailsTab({
+  traceId,
+  span,
+  traceSpans,
+}: {
+  traceId: string;
+  span: SpanRecord;
+  traceSpans?: TraceSpanRecord[];
+}) {
   const { finishReason, firstToken, speed, ...facts } = getModelFacts(span);
   // Agent runs and model steps record the model they ran natively, not only model-call spans.
   const model = span.model || facts.model;
@@ -346,6 +371,7 @@ function DetailsTab({ traceId, span }: { traceId: string; span: SpanRecord }) {
 
   return (
     <Stack>
+      <SpanKnowledgeTrace span={span} traceSpans={traceSpans} />
       <PromptSection span={span} />
 
       {hasModel && (

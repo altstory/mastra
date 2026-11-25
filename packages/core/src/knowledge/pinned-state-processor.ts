@@ -12,6 +12,7 @@
  * current body, so a delta can say exactly which pin appeared, changed or left.
  * An edited page arrives as a `change` of the same id with its new text.
  */
+import { SpanType } from '../observability/types';
 import type {
   ComputeStateSignalArgs,
   ComputeStateSignalResult,
@@ -179,6 +180,22 @@ export class PinnedStateProcessor implements Processor<typeof PINNED_KNOWLEDGE_S
     const priorPins = effectivePriorPins(args);
     const hasBase = Boolean(args.lastSnapshot) && args.contextWindow.hasSnapshot;
     const ops = diffPins(priorPins, currentPins);
+
+    if (args.stepNumber === 0 || ops.length > 0 || (!hasBase && currentPins.length > 0)) {
+      args.tracingContext?.currentSpan
+        ?.createChildSpan({
+          type: SpanType.GENERIC,
+          name: 'knowledge:pins',
+        })
+        .end({
+          output: {
+            stepNumber: args.stepNumber,
+            delivery:
+              hasBase && ops.length === 0 ? 'retained' : !hasBase && currentPins.length === 0 ? 'empty' : 'updated',
+            pins: currentPins,
+          },
+        });
+    }
 
     // No change and the base snapshot is still visible: emit nothing so the
     // cached prefix and the active window stay stable.

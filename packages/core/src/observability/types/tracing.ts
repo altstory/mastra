@@ -7,7 +7,7 @@
  */
 import { EntityType } from '@internal/core/storage';
 
-import type { MessageListInput } from '../../agent/message-list/types';
+import type { MastraDBMessage, MessageListInput } from '../../agent/message-list/types';
 import type { MastraError } from '../../error';
 import type { Mastra } from '../../mastra';
 import type { RequestContext } from '../../request-context';
@@ -715,6 +715,7 @@ export interface ProcessorPipelineAttributes {
     text?: string;
     tag?: string;
     message?: any;
+    messages?: MastraDBMessage[];
   }>;
   /** Tripwire abort details when a processor triggered a tripwire */
   tripwireAbort?: {
@@ -1780,7 +1781,7 @@ export interface IModelSpanTracker {
    * Pass the prompt (`inputMessages`) so the span records what this call sent.
    * Falls back to auto-creation on first chunk if the caller forgets.
    */
-  startInference?(payload?: StepStartPayload): void;
+  startInference?(payload?: StepStartPayload): AnySpan | void;
   /** Close the current attempt without ending the generation or agent. */
   endAttempt?(termination: SpanTermination): void;
 

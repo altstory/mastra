@@ -578,7 +578,7 @@ export class ProcessorRunner {
 
     if (!result) return;
 
-    await applyStateSignal({
+    const applied = await applyStateSignal({
       input: result,
       memory: resolvedMemory,
       thread,
@@ -590,6 +590,8 @@ export class ProcessorRunner {
       beforeAddSignal: beforeAddStateSignal,
       writeSignal: signal => writer?.custom(signal.toDataPart()),
     });
+
+    if (applied.skipped) return;
 
     // Record the emission as an event: a signal is a point-in-time fact about
     // what entered the model's context, and the work of computing it is already
@@ -1615,8 +1617,10 @@ export class ProcessorRunner {
 
       const currentSystemMessages = messageList.getSystemMessages();
       const inputMessagesBefore = processableMessages;
-      const inputSystemMessagesBefore = currentSystemMessages;
       const currentSpan = observabilityContext?.tracingContext?.currentSpan;
+      const inputSystemMessagesBefore = currentSpan?.isValid
+        ? messageList.getAllSystemMessages()
+        : currentSystemMessages;
       const parentSpan = currentSpan?.findParent(SpanType.AGENT_RUN) || currentSpan?.parent || currentSpan;
       const processorSpan = parentSpan?.createChildSpan({
         type: processor.spanType ?? SpanType.PROCESSOR_RUN,
@@ -1631,7 +1635,7 @@ export class ProcessorRunner {
         },
         input: {
           messages: processableMessages,
-          systemMessages: currentSystemMessages,
+          systemMessages: inputSystemMessagesBefore,
         },
       });
 
@@ -1756,13 +1760,16 @@ export class ProcessorRunner {
           }
         }
 
+        const tracedSystemMessages = processorSpan?.isValid
+          ? messageList.getAllSystemMessages()
+          : currentSystemMessages;
         processorSpan?.end({
           output: {
             ...(!areProcessorMessageArraysEqual(inputMessagesBefore, processableMessages)
               ? { messages: processableMessages }
               : {}),
-            ...(!areProcessorMessageArraysEqual(inputSystemMessagesBefore, messageList.getSystemMessages())
-              ? { systemMessages: messageList.getSystemMessages() }
+            ...(!areProcessorMessageArraysEqual(inputSystemMessagesBefore, tracedSystemMessages)
+              ? { systemMessages: tracedSystemMessages }
               : {}),
           },
           attributes: mutations.length > 0 ? { messageListMutations: mutations } : undefined,
@@ -1937,6 +1944,9 @@ export class ProcessorRunner {
 
       // Use the current span (the step span) as the parent for processor spans
       const currentSpan = observabilityContext.tracingContext?.currentSpan;
+      const tracedSystemMessagesBefore = currentSpan?.isValid
+        ? messageList.getAllSystemMessages()
+        : inputData.systemMessages;
       const processorSpan = currentSpan?.createChildSpan({
         type: processor.spanType ?? SpanType.PROCESSOR_RUN,
         name: resolveProcessorSpanName(processor, 'inputStep', `input step processor: ${processor.id}`),
@@ -1950,7 +1960,7 @@ export class ProcessorRunner {
         },
         input: buildProcessInputStepSpanInput({
           messages: inputData.messages,
-          systemMessages: inputData.systemMessages,
+          systemMessages: tracedSystemMessagesBefore,
           stepNumber: inputData.stepNumber,
           messageId: inputData.messageId,
           retryCount: args.retryCount ?? 0,
@@ -2087,9 +2097,9 @@ export class ProcessorRunner {
             beforeStepInput,
             afterStepInput: stepInput,
             beforeMessages: inputData.messages,
-            beforeSystemMessages: inputData.systemMessages,
+            beforeSystemMessages: tracedSystemMessagesBefore,
             messages: messageList.get.all.db(),
-            systemMessages: messageList.getSystemMessages(),
+            systemMessages: messageList.getAllSystemMessages(),
           }),
           attributes: mutations.length > 0 ? { messageListMutations: mutations } : undefined,
         });

@@ -217,12 +217,16 @@ export class SemanticRecall implements Processor {
       requestContext?: RequestContext;
     } & Partial<ObservabilityContext>,
   ): Promise<MessageList | MastraDBMessage[]> {
-    const { messages, messageList, requestContext } = args;
+    const { messages, messageList, requestContext, tracingContext } = args;
+    const report = (status: string, matches = 0, addedMessageIds: string[] = []) =>
+      tracingContext?.currentSpan?.update({
+        metadata: { semanticRecall: { status, scope: this.scope, matches, addedMessageIds } },
+      });
 
     // Get memory context from RequestContext
     const memoryContext = parseMemoryRequestContext(requestContext);
     if (!memoryContext) {
-      // No memory context available, return messages unchanged
+      report('no-memory-context');
       return messageList;
     }
 
@@ -230,14 +234,14 @@ export class SemanticRecall implements Processor {
     const threadId = thread?.id;
 
     if (!threadId) {
-      // No thread ID available, return messages unchanged
+      report('no-thread');
       return messageList;
     }
 
     // Extract user query from the last user message
     const userQuery = this.extractUserQuery(messages);
     if (!userQuery) {
-      // No user query to search with, return messages unchanged
+      report('no-query');
       return messageList;
     }
 
@@ -250,7 +254,7 @@ export class SemanticRecall implements Processor {
       });
 
       if (similarMessages.length === 0) {
-        // No similar messages found, return original messages
+        report('no-matches');
         return messageList;
       }
 
@@ -261,7 +265,7 @@ export class SemanticRecall implements Processor {
       const newMessages = similarMessages.filter(m => m.id && !existingIds.has(m.id));
 
       if (newMessages.length === 0) {
-        // All similar messages are already in input, return original messageList
+        report('already-in-context', similarMessages.length);
         return messageList;
       }
 
@@ -283,9 +287,16 @@ export class SemanticRecall implements Processor {
         // Add all recalled messages with 'memory' source
         messageList.add(sameThreadMessages, 'memory');
       }
+      const addedMessages = this.scope === 'resource' ? newMessages : sameThreadMessages;
+      report(
+        addedMessages.length ? 'added' : 'no-admitted-matches',
+        similarMessages.length,
+        addedMessages.map(message => message.id),
+      );
       return messageList;
     } catch (error) {
       if (isEmbeddingDimensionMismatchError(error)) throw error;
+      report('search-error');
       // Log error but don't fail the request
       this.logger?.error('[SemanticRecall] Error during semantic search:', { error });
       return messageList;

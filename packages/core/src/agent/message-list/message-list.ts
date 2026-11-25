@@ -372,6 +372,7 @@ export class MessageList {
     text?: string;
     tag?: string;
     message?: CoreMessageV4;
+    messages?: MastraDBMessage[];
   }> = [];
 
   constructor({
@@ -415,15 +416,7 @@ export class MessageList {
     return this.recordedEvents.length > 0;
   }
 
-  public getRecordedEvents(): Array<{
-    type: 'add' | 'addSystem' | 'removeByIds' | 'clear';
-    source?: MessageSource;
-    count?: number;
-    ids?: string[];
-    text?: string;
-    tag?: string;
-    message?: CoreMessageV4;
-  }> {
+  public getRecordedEvents(): MessageList['recordedEvents'] {
     const events = [...this.recordedEvents];
     return events;
   }
@@ -431,15 +424,7 @@ export class MessageList {
   /**
    * Stop recording and return the list of recorded events
    */
-  public stopRecording(span?: AnySpan): Array<{
-    type: 'add' | 'addSystem' | 'removeByIds' | 'clear';
-    source?: MessageSource;
-    count?: number;
-    ids?: string[];
-    text?: string;
-    tag?: string;
-    message?: CoreMessageV4;
-  }> {
+  public stopRecording(span?: AnySpan): MessageList['recordedEvents'] {
     if (span) {
       const events = this.spanRecordings.get(span) ?? [];
       this.spanRecordings.delete(span);
@@ -545,12 +530,20 @@ export class MessageList {
 
     if (!messages) return this;
     const messageArray = Array.isArray(messages) ? messages : [messages];
+    const recalled =
+      messageSource === 'memory' && (this.isRecording || this.spanRecordings.size > 0)
+        ? messageArray.filter(
+            (message): message is MastraDBMessage =>
+              typeof message !== 'string' && !isCreatedAgentSignal(message) && TypeDetector.isMastraDBMessage(message),
+          )
+        : undefined;
 
     // Record event if recording is enabled
     this.recordMutation({
       type: 'add',
       source: messageSource,
       count: messageArray.length,
+      ...(recalled?.length ? { messages: recalled } : {}),
     });
 
     for (const message of messageArray) {

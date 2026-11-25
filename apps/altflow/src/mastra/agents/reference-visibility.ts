@@ -8,6 +8,8 @@ import { creatorGatewayContextKey } from '../creator-gateway-auth';
 const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
 const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory|remember|forget_memory)$/;
 const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
+const pinnedKnowledgeTags = new Set(['pinned-knowledge', 'pinned-knowledge-update']);
+const pinnedKnowledgeBlock = /^\s*<(pinned-knowledge(?:-update)?)(?:\s[^>]*)?>[\s\S]*<\/\1>\s*$/;
 
 export function creatorReferenceScopes({ scopes, user }: { scopes: string[]; user?: { id?: string } }) {
   return user?.id ? [...new Set([...scopes, 'library:creator'])] : scopes;
@@ -54,8 +56,15 @@ export function projectConversation(value: unknown): unknown {
   const type = record.type;
   if (
     [type, record.tagName, payload?.tagName, metadata?.tagName].some(
-      tag => tag === 'pinned-knowledge' || tag === 'pinned-knowledge-update',
-    )
+      tag => typeof tag === 'string' && pinnedKnowledgeTags.has(tag),
+    ) ||
+    (record.role === 'user' &&
+      (typeof record.content === 'string'
+        ? pinnedKnowledgeBlock.test(record.content)
+        : Array.isArray(record.content) &&
+          record.content.some(
+            part => part?.type === 'text' && typeof part.text === 'string' && pinnedKnowledgeBlock.test(part.text),
+          )))
   )
     return undefined;
   if (

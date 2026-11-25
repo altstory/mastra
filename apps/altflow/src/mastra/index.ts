@@ -100,8 +100,11 @@ const storage = new MastraCompositeStore({
   id: 'creator-preview-storage',
   default: new LibSQLStore({ id: 'preview-storage', url: `file:${previewPath('src/mastra/public/preview.db')}` }),
   domains: {
-    observability: new DuckDBStore({ path: previewPath('data/observability.duckdb'), memoryLimit: '256MB', threads: 2 })
-      .observability,
+    observability: new DuckDBStore({
+      path: previewPath('data/observability.duckdb'),
+      memoryLimit: process.env.ALTFLOW_TRACE_MEMORY_LIMIT ?? '1GB',
+      threads: 2,
+    }).observability,
   },
 });
 const projectMemory = await storage.getStore('memory');

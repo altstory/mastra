@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import { SpanType } from '@mastra/core/observability';
+import { useTraceSpans } from '@mastra/react/hooks/traces';
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SpanDataPanelView } from '../span-data-panel-view';
 import type { SpanDataPanelViewProps } from '../span-data-panel-view';
-import { spanFixture, traceFixture } from './fixtures/span-data-panel-view';
+import {
+  knowledgeProcessorFixture,
+  knowledgeTraceFixture,
+  spanFixture,
+  traceFixture,
+} from './fixtures/span-data-panel-view';
 import { server } from '@/test/msw-server';
 import { renderWithProviders, TEST_BASE_URL } from '@/test/render';
 
@@ -132,6 +138,31 @@ describe('SpanDataPanelView', () => {
   });
 
   describe('details tab', () => {
+    it('shows the recorded source and lets the reader open the knowledge given to the agent', async () => {
+      server.use(
+        http.get(`${TEST_BASE_URL}/api/observability/traces/:traceId`, () => HttpResponse.json(knowledgeTraceFixture)),
+      );
+      function KnowledgeDetails() {
+        const { data } = useTraceSpans({ traceId: baseProps.traceId });
+        return (
+          <SpanDataPanelView
+            {...baseProps}
+            spanId={knowledgeProcessorFixture.spanId}
+            span={knowledgeProcessorFixture}
+            traceSpans={data?.spans}
+          />
+        );
+      }
+      renderWithProviders(<KnowledgeDetails />);
+
+      const details = within(await screen.findByRole('region', { name: 'Knowledge in this run' }));
+      const page = await details.findByRole('link', { name: 'Research guide' });
+      expect(page.getAttribute('href')).toBe('/knowledge?page=research-guide&view=page');
+      expect(details.getByText('library:creator')).toBeTruthy();
+      fireEvent.click(details.getByRole('button', { name: 'Text' }));
+      expect(details.getByText('Interview two readers before the second draft.')).toBeTruthy();
+    });
+
     it('lists when the span started and ended, and its precise duration', () => {
       renderWithProviders(<SpanDataPanelView {...baseProps} />);
 

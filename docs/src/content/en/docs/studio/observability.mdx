@@ -98,6 +98,10 @@ Token and estimated cost columns require an observability store that supports me
 
 Tracing filters out low-level framework details so your traces stay focused and readable. Visit [Traces usage](/docs/observability/tracing/overview) for more details.
 
+Open an agent run, model step, or inference span and select **Input** to see **Prompt assembly**. Expand a stage to see recorded changes from memory, skills, and other processors. The tool preparation stage lists where tools came from. Inference spans show which tools the model received, and tool call spans show the arguments and results. Earlier traces can only show data that was recorded when the run happened.
+
+Select a memory recall span and open **Details** to read the messages it added. Select the Knowledge processor to see the pinned page names, their scopes, the text projected into the prompt, and the results of Knowledge tool calls in that run.
+
 To export a trace, select **Download trace JSON** in the trace panel header. This saves the entire trace as a `trace-<id>.json` file, with every span and its full input, output, metadata, and attributes. Use it to share a trace or attach it to a bug report, or alternatively build an evaluation dataset offline.
 
 ## Logs

@@ -9,6 +9,7 @@ import { createClient } from '@libsql/client';
 import { LibSQLSessionSearch } from '@mastra/altflow-tools';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
+import { SpanType } from '@mastra/core/observability';
 import { RequestContext, MASTRA_RESOURCE_ID_KEY, MASTRA_NORMALIZED_USER_KEY } from '@mastra/core/request-context';
 import { MastraCompositeStore } from '@mastra/core/storage';
 import { createTool, TaskStateProcessor } from '@mastra/core/tools';
@@ -56,9 +57,13 @@ test('ordinary agents apply published references while public responses and hist
     storage,
     tools: true,
     instructions: false,
+    pinnedContext: true,
     scopes: {
       ...knowledgeMemoryScopes({ org: false }),
-      'library:$libraryId': { access: [{ principal: 'self', role: 'owner' }] },
+      'library:$libraryId': {
+        access: [{ principal: 'self', role: 'owner' }],
+        pinnedContext: ['library:$libraryId#internal'],
+      },
     },
   });
   const secret = 'FIXTURE_REFERENCE_PRIVATE_MARKER';
@@ -107,12 +112,43 @@ test('ordinary agents apply published references while public responses and hist
     origins: [],
     secureCookies: false,
   });
+  const workingMemory = 'FIXTURE_WORKING_MEMORY_MARKER';
+  const memory = await storage.getStore('memory');
+  const now = new Date();
+  const recalledMessage = 'FIXTURE_RECALLED_CONVERSATION_MARKER';
+  await memory.saveResource({
+    resource: { id: 'altflow:creator', workingMemory, createdAt: now, updatedAt: now },
+  });
+  await memory.saveThread({
+    thread: {
+      id: 'private-reference-stream',
+      resourceId: 'altflow:creator',
+      title: 'Reference fixture',
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  await memory.saveMessages({
+    messages: [
+      {
+        id: 'fixture-recalled-message',
+        role: 'user',
+        threadId: 'private-reference-stream',
+        resourceId: 'altflow:creator',
+        createdAt: now,
+        content: { format: 2, parts: [{ type: 'text', text: recalledMessage }] },
+      },
+    ],
+  });
   const agent = new Agent({
     id: 'creator-agent',
     name: 'Creator',
     instructions: 'Use the requested tool.',
     model: edge.model,
-    memory: new HistoryMemory({ storage, options: { lastMessages: 10, generateTitle: false } }),
+    memory: new HistoryMemory({
+      storage,
+      options: { lastMessages: 10, generateTitle: false, workingMemory: { enabled: true, scope: 'resource' } },
+    }),
     scopes: creatorReferenceScopes,
     knowledge,
     workspace: ({ user }) => (user?.id ? workspace(user) : undefined),
@@ -189,6 +225,8 @@ test('ordinary agents apply published references while public responses and hist
     const modelContext = JSON.stringify(edge.requests.at(-1).messages);
     assert.match(modelContext, new RegExp(skillSecret));
     assert.match(modelContext, new RegExp(secret));
+    assert.match(modelContext, new RegExp(workingMemory));
+    if (method === 'stream') assert.match(modelContext, new RegExp(recalledMessage));
     assert.match(wire, /Original work/);
     assert.doesNotMatch(wire, protectedContent);
     const history = await request(`/memory/threads/${thread}/messages?agentId=creator-agent`, 'creator');
@@ -212,7 +250,46 @@ test('ordinary agents apply published references while public responses and hist
   assert.equal(measured.metrics[0].steps, 2);
   assert.ok(measured.metrics[0].models.some(usage => usage.input === 10 && usage.output === 5));
   assert.equal((await request('/observability/traces', 'creator')).status, 403);
-  const memory = await storage.getStore('memory');
+  const {
+    spans: [run],
+  } = await duck.observability.listTracesLight({
+    filters: { threadId: 'private-reference-stream', spanType: SpanType.AGENT_RUN },
+  });
+  assert.ok(run);
+  const tracePath = '/observability/traces/' + run.traceId;
+  const traceResponse = await request(tracePath, 'admin');
+  assert.equal(traceResponse.status, 200);
+  const { spans } = await traceResponse.json();
+  const prepare = spans.find(span => span.name === 'agent:prepare-tools');
+  assert.ok(prepare.output.toolSources.knowledge.includes('knowledge_read'));
+  assert.ok(prepare.output.toolSources.skills.includes('skill'));
+  const working = spans.find(span => span.entityId === 'working-memory');
+  assert.ok(working.output.systemMessages.some(message => message.content.includes(workingMemory)));
+  const recall = spans.find(span => span.name === 'memory:recall' || span.entityName === 'MessageHistory');
+  assert.ok(
+    recall.attributes.messageListMutations.some(
+      change =>
+        change.source === 'memory' &&
+        change.messages?.some(
+          message =>
+            message.id === 'fixture-recalled-message' &&
+            message.content.parts.some(part => part.text === recalledMessage),
+        ),
+    ),
+  );
+  const pins = spans.find(span => span.name === 'knowledge:pins');
+  assert.ok(
+    pins.output.pins.some(
+      pin => pin.name === 'Private guide' && pin.scope === 'library:creator' && pin.text.includes(secret),
+    ),
+  );
+  const inferences = spans.filter(span => span.spanType === SpanType.MODEL_INFERENCE);
+  assert.ok(inferences[0].attributes.availableTools.includes('knowledge_read'));
+  for (const marker of [secret, skillSecret]) {
+    assert.ok(spans.some(span => span.spanType === SpanType.TOOL_CALL && JSON.stringify(span.output).includes(marker)));
+  }
+  assert.equal((await request(tracePath, 'creator')).status, 403);
+  assert.equal((await request(tracePath + '/spans/' + working.spanId, 'creator')).status, 403);
   const legacyThread = 'private-reference-generate';
   const { messages: adminHistory } = await memory.listMessages({
     threadId: 'admin-reference',

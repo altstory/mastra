@@ -21,7 +21,7 @@ import { Trans } from '@/lib/i18n/trans';
 import { pluralize } from '@/lib/string';
 import { cn } from '@/lib/utils';
 
-type Change = Exclude<ReturnType<typeof getPromptChanges>[number], null | undefined>;
+type Change = Exclude<ReturnType<typeof getPromptChanges>[number], null | undefined> & { messages?: unknown[] };
 
 /** Long content (a skills catalog, workspace instructions) is clipped to this height until expanded. */
 const COLLAPSED_HEIGHT = 160;
@@ -38,7 +38,7 @@ const isRemoval = (change: Change) => change.type === 'removeByIds' || change.ty
 function textOf(message: unknown): string {
   if (typeof message === 'string') return message;
   if (!isRecord(message)) return '';
-  const { content } = message;
+  const content = isRecord(message.content) ? (message.content.parts ?? message.content.content) : message.content;
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
   return content
@@ -68,7 +68,8 @@ function describeMessage(message: unknown): { title: string; meta: ReactNode } {
     .split('\n')
     .map(line => line.trim().replace(/^#+\s*/, ''))
     .find(Boolean);
-  return { title: firstLine ?? studioT('Empty message'), meta: size };
+  const role = isRecord(message) && typeof message.role === 'string' ? message.role : undefined;
+  return { title: firstLine ?? role ?? studioT('Empty message'), meta: text.length ? size : undefined };
 }
 
 /** What a change without content was about, e.g. "2 messages from memory". */
@@ -101,7 +102,7 @@ function mergeCountOnly(changes: readonly Change[]): Change[] {
   return merged;
 }
 
-const isCountOnly = (change: Change) => change.message === undefined && !(change.ids && change.ids.length > 0);
+const isCountOnly = (change: Change) => change.message === undefined && !change.messages?.length && !change.ids?.length;
 const sameKind = (a: Change, b: Change) => a.type === b.type && a.source === b.source && a.tag === b.tag;
 
 const isMessage = (value: unknown): value is SpanInputMessage => isRecord(value) && typeof value.role === 'string';
@@ -211,11 +212,22 @@ function Clipped({ children }: { children: ReactNode }) {
   );
 }
 
-function MessageRow({ sign, message, tag }: { sign: Sign; message: SpanInputMessage; tag?: string }) {
+function MessageRow({
+  sign,
+  message,
+  tag,
+  defaultOpen,
+}: {
+  sign: Sign;
+  message: SpanInputMessage;
+  tag?: string;
+  defaultOpen?: boolean;
+}) {
   const { title, meta } = describeMessage(message);
   return (
     <DiffRow
       sign={sign}
+      defaultOpen={defaultOpen}
       title={
         tag ? (
           <Metadata singleLine>
@@ -240,6 +252,20 @@ function ChangeRow({ change }: { change: Change }) {
 
   if (change.message !== undefined) return <MessageRow sign={sign} message={change.message} tag={change.tag} />;
 
+  const messages = Array.isArray(change.messages) ? change.messages.filter(isMessage) : [];
+  if (messages.length > 0) {
+    return (
+      <>
+        {messages.map((message, index) => (
+          <MessageRow key={index} sign={sign} message={message} defaultOpen={false} />
+        ))}
+        {countOf(change) > messages.length && (
+          <DiffRow sign={sign} title={studioT('Some message contents were not recorded.')} />
+        )}
+      </>
+    );
+  }
+
   if (change.ids && change.ids.length > 0) {
     return (
       <DiffRow sign={sign} title={pluralize(change.ids.length, 'message')} meta="by id">
@@ -250,7 +276,13 @@ function ChangeRow({ change }: { change: Change }) {
     );
   }
 
-  return <DiffRow sign={sign} title={describeCountOnly(change)} />;
+  return (
+    <DiffRow
+      sign={sign}
+      title={describeCountOnly(change)}
+      meta={change.source === 'memory' ? studioT('Message contents were not recorded.') : undefined}
+    />
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -318,7 +350,7 @@ function DiffCard({
  * and removed rows are tinted and start open, the system messages the span kept sit above them closed,
  * so the change shows where it landed in the prompt without the rest of the prompt drowning it.
  */
-export function SpanPromptChanges({ span }: { span: SpanRecord }) {
+export function SpanPromptChanges({ span, showContext = true }: { span: SpanRecord; showContext?: boolean }) {
   useLocale();
   const changes = mergeCountOnly(getPromptChanges(span).filter((change): change is Change => isRecord(change)));
   if (changes.length === 0) return null;
@@ -333,7 +365,7 @@ export function SpanPromptChanges({ span }: { span: SpanRecord }) {
           icon={<IconScript />}
           title={studioT('System prompt')}
           changes={system}
-          kept={keptSystemMessages(span, system)}
+          kept={showContext ? keptSystemMessages(span, system) : []}
         />
       )}
       {conversation.length > 0 && (

@@ -1,4 +1,4 @@
-import { EntityType } from '@mastra/core/observability';
+import { EntityType, SpanType } from '@mastra/core/observability';
 import type { SpanRecord } from '../types';
 import { getSpanChanges } from './span-outcome.utils';
 
@@ -10,6 +10,11 @@ const AFTER_MODEL: ReadonlySet<string> = new Set([
 ]);
 
 type Change = ReturnType<typeof getSpanChanges>[number];
+
+export const showsPromptAssembly = (span: SpanRecord) =>
+  span.spanType === SpanType.AGENT_RUN ||
+  span.spanType === SpanType.MODEL_STEP ||
+  span.spanType === SpanType.MODEL_INFERENCE;
 
 const hasSystemMessages = (value: unknown) =>
   typeof value === 'object' && value !== null && Array.isArray((value as { systemMessages?: unknown }).systemMessages);

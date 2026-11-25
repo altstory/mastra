@@ -134,14 +134,14 @@ function createSkillTool(skills: WorkspaceSkills) {
         const result = await resolveSkill(scopedSkills, name);
 
         if ('notFound' in result) {
-          span.end({ success: false });
+          span.end({ success: false }, { found: false });
           return result.notFound;
         }
 
         const { skill } = result;
         const output = formatSkillActivation(skill);
 
-        span.end({ success: true });
+        span.end({ success: true, skillName: skill.name }, { name: skill.name, characters: output.length });
         return output;
       } catch (err) {
         span.error(err);

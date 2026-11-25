@@ -7936,11 +7936,17 @@ export class Agent<
       name: 'agent:prepare-tools',
     });
     const slowSourcesMs: Record<string, number> = {};
+    const toolSources: Record<string, string[]> = {};
     let failedSource: string | undefined;
     const traced = async <T extends object>(source: string, list: () => Promise<T>): Promise<T> => {
       const startedAt = Date.now();
       try {
-        return await list();
+        const result = await list();
+        if (prepareSpan?.isValid && source !== 'input-processor-config') {
+          const tools = Object.keys(result);
+          if (tools.length > 0) toolSources[source] = tools;
+        }
+        return result;
       } catch (error) {
         failedSource = source;
         throw error;
@@ -8167,6 +8173,7 @@ export class Agent<
       prepareSpan?.end({
         output: {
           toolCount: Object.keys(allTools).length,
+          toolSources,
           ...(Object.keys(slowSourcesMs).length > 0 ? { slowSourcesMs } : {}),
         },
       });

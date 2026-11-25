@@ -4,6 +4,7 @@ import { useLiveToolCalls } from '../hooks/use-live-tool-calls';
 import { formatSpanToolCallMessages } from './format-trace-thread-messages';
 import { SpanDataPanel, useSpanDataPanel } from './span-data-panel';
 import { getSpanTools } from './span-payload/span-payload-registry';
+import { showsPromptAssembly } from './span-prompt-impact';
 import { ThreadTrace } from './thread-trace';
 import type { ThreadTraceTurnMessagesProps } from './thread-trace';
 import { TracePanel } from './trace-panel';
@@ -27,11 +28,16 @@ export function LiveTurnMessages(props: ThreadTraceTurnMessagesProps) {
 
 /** The span's Input tab, opening the tools it offered once the tool registry loads. */
 export function LiveSpanInput() {
-  const { span } = useSpanDataPanel();
+  const { span, traceId } = useSpanDataPanel();
   // Only a span that offered the model tools lists them: the registry says which have a page.
   const offersTools = !!span && !!getSpanTools(span)?.tools.length;
   const { data: registeredTools } = useTools({ queryOptions: { enabled: offersTools } });
-  return <SpanDataPanel.Input registeredTools={registeredTools} />;
+  const { data: trace } = useTraceSpans({
+    traceId,
+    passive: true,
+    queryOptions: { enabled: !!traceId && !!span && showsPromptAssembly(span) },
+  });
+  return <SpanDataPanel.Input registeredTools={registeredTools} assemblySpans={trace?.spans} />;
 }
 
 /** The span's Output tab: the trace's spans give its tool calls their results, drawn with the live cards. */

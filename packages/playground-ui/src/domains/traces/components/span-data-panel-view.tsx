@@ -102,7 +102,7 @@ export function SpanDataPanelView({
           }
         />
       }
-      details={<SpanDataPanel.Details />}
+      details={<SpanDataPanel.Details traceSpans={traceSpans} />}
       input={input ?? <SpanDataPanel.Input registeredTools={registeredTools} />}
       output={
         output ?? (

@@ -2224,7 +2224,7 @@ export function createLLMExecutionStep<TOOLS extends ToolSet = ToolSet, OUTPUT =
             toolChoice: currentStep.toolChoice as ModelInferenceContext['toolChoice'],
             responseFormat: currentStep.structuredOutput ? 'json_schema' : undefined,
           });
-          modelSpanTracker?.startInference?.({
+          const inferenceSpan = modelSpanTracker?.startInference?.({
             request: {},
             inputMessages,
             messageId: currentStep.messageId,
@@ -2234,7 +2234,7 @@ export function createLLMExecutionStep<TOOLS extends ToolSet = ToolSet, OUTPUT =
           const inferenceStartedAt = Date.now();
 
           modelResult = executeWithContextSync({
-            span: modelSpanTracker?.getTracingContext()?.currentSpan,
+            span: inferenceSpan || modelSpanTracker?.getTracingContext()?.currentSpan,
             fn: () =>
               execute({
                 runId,

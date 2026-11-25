@@ -810,12 +810,13 @@ export class ModelSpanTracker {
    * never records them: a replayed step-start chunk names the model of the
    * original call.
    */
-  startInference(payload?: StepStartPayload): void {
+  startInference(payload?: StepStartPayload): Span<SpanType.MODEL_INFERENCE> | undefined {
     if (payload?.modelId && payload.provider) {
       this.#currentStepSpan?.update({ attributes: { model: payload.modelId, provider: payload.provider } });
       this.failInference(new Error('Model call ended without a result before the next attempt started'));
     }
     this.#openInference(payload);
+    return this.#currentInferenceSpan;
   }
 
   /** End the current attempt only; generation and agent spans belong to their owners. */

@@ -1,9 +1,8 @@
-import { t as studioT } from '@/lib/i18n';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from 'react-resizable-panels';
-
 import { getAllSpanIds } from '../../hooks/get-all-span-ids';
+
 import { useTraceSearchResult } from '../../hooks/use-trace-search';
 import type { TraceSearchResult } from '../../hooks/use-trace-search';
 import type { TraceSpanRecord } from '../../types';
@@ -22,6 +21,7 @@ import { IconCodeTree } from '@/ds/icons/central/IconCodeTree';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
 import { IconGanttChart } from '@/ds/icons/central/IconGanttChart';
 import { IconMagnifyingGlass } from '@/ds/icons/central/IconMagnifyingGlass';
+import { t as studioT } from '@/lib/i18n';
 
 const NO_SPANS: TracePanelSpan[] = [];
 
@@ -50,13 +50,16 @@ export interface TracePanelMainProps {
   toolbar?: ReactNode;
   /** Above the spans, e.g. `TracePanel.RootError`. */
   notices?: ReactNode;
+  loadError?: Error;
   /** Typically a `TracePanel.Spans`. */
   spans: ReactNode;
 }
 
 /** The main column: toolbar, then notices above the spans. A trace without spans says so instead. */
-export function TracePanelMain({ toolbar, notices, spans }: TracePanelMainProps) {
+export function TracePanelMain({ toolbar, notices, loadError, spans }: TracePanelMainProps) {
   const { spans: traceSpans, isLoading } = useTracePanel();
+  if (!isLoading && !traceSpans?.length && loadError)
+    return <DataPanel.NoData>{studioT('Failed to load traces')}</DataPanel.NoData>;
   if (!isLoading && !traceSpans?.length)
     return <DataPanel.NoData>{studioT('No spans found for this trace.')}</DataPanel.NoData>;
   return (

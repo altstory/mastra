@@ -1,5 +1,5 @@
 import type { MastraClient, RouteResponse } from '@mastra/client-js';
-import { SpanType } from '@mastra/core/observability';
+import { EntityType, SpanType } from '@mastra/core/observability';
 
 type SpanRecord = RouteResponse<'GET /observability/traces/:traceId/spans/:spanId'>['span'];
 
@@ -42,4 +42,41 @@ export const spanFixture: SpanRecord = {
 export const traceFixture: Awaited<ReturnType<MastraClient['getTrace']>> = {
   traceId: 'trace-1',
   spans: [],
+};
+
+export const knowledgeProcessorFixture: SpanRecord = {
+  ...spanFixture,
+  spanId: 'knowledge-processor',
+  parentSpanId: spanFixture.spanId,
+  name: 'knowledge',
+  entityType: EntityType.INPUT_PROCESSOR,
+  entityId: 'knowledge',
+  spanType: SpanType.PROCESSOR_RUN,
+};
+
+export const knowledgeTraceFixture: typeof traceFixture = {
+  ...traceFixture,
+  spans: [
+    spanFixture,
+    knowledgeProcessorFixture,
+    {
+      ...spanFixture,
+      spanId: 'knowledge-pins',
+      parentSpanId: spanFixture.spanId,
+      name: 'knowledge:pins',
+      spanType: SpanType.GENERIC,
+      output: {
+        stepNumber: 0,
+        delivery: 'updated',
+        pins: [
+          {
+            id: 'research-guide',
+            name: 'Research guide',
+            scope: 'library:creator',
+            text: 'Interview two readers before the second draft.',
+          },
+        ],
+      },
+    },
+  ],
 };

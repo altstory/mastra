@@ -879,12 +879,18 @@ function createStepFromProcessor<TProcessorId extends string>(
         steps: [],
       };
 
+      const tracesInputPrompt = phase === 'input' || phase === 'inputStep';
+      const traceSystemMessages =
+        tracingContext?.currentSpan?.isValid && tracesInputPrompt
+          ? (messageList?.getAllSystemMessages() ?? systemMessages)
+          : systemMessages;
+
       const buildProcessorSpanInput = () => {
         switch (phase) {
           case 'input':
             return {
               messages: (messages as MastraDBMessage[]) ?? [],
-              ...(systemMessages ? { systemMessages } : {}),
+              ...(traceSystemMessages ? { systemMessages: traceSystemMessages } : {}),
               ...(retryCount !== undefined ? { retryCount } : {}),
             };
           case 'inputStep': {
@@ -895,7 +901,7 @@ function createStepFromProcessor<TProcessorId extends string>(
 
             return {
               messages: (messages as MastraDBMessage[]) ?? [],
-              ...(systemMessages ? { systemMessages } : {}),
+              ...(traceSystemMessages ? { systemMessages: traceSystemMessages } : {}),
               ...(stepNumber !== undefined ? { stepNumber } : {}),
               ...(currentMessageId ? { messageId: currentMessageId } : {}),
               ...(retryCount !== undefined ? { retryCount } : {}),
@@ -937,7 +943,7 @@ function createStepFromProcessor<TProcessorId extends string>(
         }
       };
 
-      const buildProcessorSpanOutput = (result: unknown) => {
+      const buildProcessorSpanOutput = (result: unknown, tracedMessages: unknown) => {
         if (result === null || typeof result !== 'object' || Array.isArray(result)) {
           return result;
         }
@@ -950,9 +956,9 @@ function createStepFromProcessor<TProcessorId extends string>(
               !areProcessorMessageArraysEqual(messages as unknown[] | undefined, payload.messages)
                 ? { messages: payload.messages }
                 : {}),
-              ...(Array.isArray(payload.systemMessages) &&
-              !areProcessorMessageArraysEqual(systemMessages as unknown[] | undefined, payload.systemMessages)
-                ? { systemMessages: payload.systemMessages }
+              ...(Array.isArray(tracedMessages) &&
+              !areProcessorMessageArraysEqual(traceSystemMessages as unknown[] | undefined, tracedMessages)
+                ? { systemMessages: tracedMessages }
                 : {}),
             };
           case 'inputStep': {
@@ -966,10 +972,10 @@ function createStepFromProcessor<TProcessorId extends string>(
             }
 
             if (
-              Array.isArray(payload.systemMessages) &&
-              !areProcessorMessageArraysEqual(systemMessages as unknown[] | undefined, payload.systemMessages)
+              Array.isArray(tracedMessages) &&
+              !areProcessorMessageArraysEqual(traceSystemMessages as unknown[] | undefined, tracedMessages)
             ) {
-              output.systemMessages = payload.systemMessages;
+              output.systemMessages = tracedMessages;
             }
 
             if (payload.messageId !== undefined && payload.messageId !== initialMessageId) {
@@ -1195,7 +1201,13 @@ function createStepFromProcessor<TProcessorId extends string>(
         };
         try {
           const result = await executeWithContext({ span: processorSpan, fn });
-          processorSpan?.end({ output: buildProcessorSpanOutput(result), attributes: takeMutations() });
+          processorSpan?.end({
+            output: buildProcessorSpanOutput(
+              result,
+              tracesInputPrompt ? processorMessageList?.getAllSystemMessages() : undefined,
+            ),
+            attributes: takeMutations(),
+          });
           return result;
         } catch (error) {
           const mutationAttributes = takeMutations();
