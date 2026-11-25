@@ -116,16 +116,18 @@ Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、�
 
 `ContextCompaction.processLLMRequest` uses the exported Mastra `TokenCounter` from `@mastra/memory/processors` to count system instructions, converted conversation messages (including attachments), and tool definitions after pruning and checkpoint projection. The numeric estimates are persisted as `contextBreakdown` metadata on each model-step span. The UI labels these with `~`; aggregate occupancy and uncached-input usage continue to use the provider's reported usage. Historical traces without this metadata cannot retroactively acquire exact component counts.
 
-DSH pressure pricing remains separate from these display estimates: trigger at `floor(min(W * 0.8, W - O - 65536))`, retain `floor((W - O) * 0.16)`, using a configured maximum window of 131072 and output reserve of 8192. Full original messages remain in memory storage.
+DSH pressure pricing remains separate from these display estimates: trigger at `floor(min(W * 0.8, W - O - 65536))`, retain `floor((W - O) * 0.16)`, using a configured maximum window of 262144 and output reserve of 8192. Full original messages remain in memory storage.
 
 DSH checkpoint compaction is the only conversation compression mechanism. Mastra
 loads the complete stored history instead of its default recent-message count;
 observational memory is disabled so its observation cursor cannot hide original
 messages before DSH applies its checkpoint. Existing observation records remain
 stored but are not injected. Managed-user requests cannot re-enable observations or impose a
-message-count cap. At the default capacity, compaction starts at 57344 tokens and
-retains a recent verbatim tail budget of 19660 tokens. Checkpoints persist with the
-thread and reload when the Agent is rebuilt.
+message-count cap. At the default capacity, AltFlow attempts compaction before
+the main model request once it estimates 188416 input tokens, keeping a recent
+verbatim tail budget of 40632 tokens. The context window is capped by the
+selected model route when it has a smaller capacity. Checkpoints persist with
+the thread and reload when the Agent is rebuilt.
 
 ## Master memory switch
 

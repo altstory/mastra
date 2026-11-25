@@ -107,7 +107,7 @@ test('catalog publishes names and supported reasoning; a selected level controls
   assert.deepEqual(providers.altflow.modelReasoning['qwen3.8-max'], {
     defaultLevel: 'high',
     levels: ['high', 'off'],
-    contextWindows: { high: 131072 },
+    contextWindows: { high: 262144 },
   });
   const model = await gateway.resolveLanguageModel({ modelId: 'qwen3.8-max' });
   const generate = level =>
@@ -142,9 +142,9 @@ test('model/info supplies exact per-reasoning route capacities without guessing 
   );
   const gateway = new ModelHubGateway({ apiKey: 'test-key', baseURL: hub.baseURL });
   const { altflow } = await gateway.fetchProviders();
-  assert.equal(altflow.modelContextWindows['deepseek-v4-pro'], 131072);
-  assert.equal(altflow.modelContextWindows['qwen3.8-max'], 131072);
-  assert.deepEqual(altflow.modelReasoning['qwen3.8-max'].contextWindows, { high: 131072, off: 131072 });
+  assert.equal(altflow.modelContextWindows['deepseek-v4-pro'], 262144);
+  assert.equal(altflow.modelContextWindows['qwen3.8-max'], 262144);
+  assert.deepEqual(altflow.modelReasoning['qwen3.8-max'].contextWindows, { high: 262144, off: 262144 });
   await gateway.fetchProviders();
   assert.equal(hub.state.infos, 1);
 });

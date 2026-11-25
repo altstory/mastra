@@ -1,6 +1,6 @@
 /** Operating capacities from the local DSH ModelHub integration; physical limits may be smaller. */
 export const CONTEXT_POLICY = Object.freeze({
-  contextWindow: 131_072,
+  contextWindow: 262_144,
   maxOutputTokens: 8_192,
   thresholdRatio: 0.8,
   headroomTokens: 65_536,

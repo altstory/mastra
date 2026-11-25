@@ -111,7 +111,7 @@ async function setup(t, trace = false, persistedOptOut = false, gatewayOptions =
     });
     return instance;
   };
-  const seed = async (count = 18, size = 18000) => {
+  const seed = async (count = 40, size = 21000) => {
     await store.saveMessages({
       messages: Array.from({ length: count }, (_, i) => ({
         id: `old-${i}`,
@@ -196,7 +196,7 @@ for (const mode of ['generate', 'stream'])
     for (const longHistory of [false, true])
       test(`${mode}: answers a ${type} upload with ${longHistory ? 'compacted' : 'short'} history`, async t => {
         const { hub, agent, seed } = await setup(t);
-        await seed(longHistory ? 40 : 4, longHistory ? 9000 : 64);
+        await seed(longHistory ? 40 : 4, longHistory ? 21000 : 64);
         const data = `data:image/png;base64,${imageFixture().toString('base64')}`;
         const attachment =
           type === 'image'
@@ -217,16 +217,25 @@ for (const mode of ['generate', 'stream'])
 
 test('DSH pressure policy reserves output, headroom and recent verbatim history', () => {
   assert.deepEqual(contextPolicy(1000000), {
-    window: 131072,
+    window: 262144,
     output: 8192,
-    threshold: 57344,
-    retain: 19660,
+    threshold: 188416,
+    retain: 40632,
   });
+});
+
+test('history beyond the old pressure threshold reaches the model without summarizing', async t => {
+  const { hub, agent, seed } = await setup(t);
+  await seed(40, 9000);
+  const result = await (await agent()).generate('Continue with the full history.', options);
+  assert.equal(result.text, 'verified');
+  assert.equal(hub.state.requests.filter(isSummary).length, 0);
+  assert.match(JSON.stringify(hub.state.requests.at(-1).body.messages), /old-0: original fact/);
 });
 
 test('old conversations compact with the current model when their last model was retired', async t => {
   const { hub, store, agent, seed } = await setup(t, false, false, { allowedModels: ['qwen3.8-max'] });
-  await seed(40, 9000);
+  await seed();
   await store.updateThreadMetadata({
     id: 'thread',
     resourceId: 'owner',
@@ -274,13 +283,14 @@ for (const mode of ['generate', 'stream'])
   });
 
 for (const mode of ['generate', 'stream'])
-  test(`${mode}: compacts old history and reloads its durable checkpoint`, async t => {
+  test(`${mode}: compacts history beyond the input limit before generation and reloads the checkpoint`, async t => {
     const { hub, store, agent, seed } = await setup(t);
-    await seed(40, 9000);
+    await seed(40, 27000);
     const first = await (await agent())[mode]('CURRENT TASK: finish the original work', options);
     if (mode === 'stream') await first.consumeStream();
     assert.equal(await first.text, 'verified');
     assert.equal(hub.state.requests.filter(isSummary).length, 1);
+    assert.ok(isSummary(hub.state.requests[0]), 'summary precedes the main model request');
     const main = hub.state.requests.filter(request => !isSummary(request)).at(-1).body;
     assert.match(JSON.stringify(main.messages), /<compacted-summary>/);
     assert.match(JSON.stringify(main.messages), /CURRENT TASK: finish the original work/);
@@ -328,7 +338,7 @@ test('compaction stays billable but is explicitly separated from the main model 
   const step = spans.find(span => span.type === SpanType.MODEL_STEP);
   assert.equal(step.metadata.contextBreakdown.method, 'mastra-token-counter');
   assert.ok(
-    step.metadata.contextBreakdown.messages < 57344,
+    step.metadata.contextBreakdown.messages < contextPolicy().threshold,
     'counts the compacted projection, not the stored original history',
   );
 });
@@ -336,7 +346,7 @@ test('compaction stays billable but is explicitly separated from the main model 
 test('long tool output is pruned only on the model projection and retains its complete tool pair', async t => {
   const { hub, store, agent } = await setup(t);
   hub.state.toolCallText = 'read';
-  const large = '头'.repeat(4096) + '中'.repeat(250000) + '尾'.repeat(1024);
+  const large = '头'.repeat(4096) + '中'.repeat(800000) + '尾'.repeat(1024);
   const tool = createTool({
     id: 'countText',
     description: 'Read a large file',
@@ -364,7 +374,7 @@ test('long tool output is pruned only on the model projection and retains its co
 test('Qwen streams past the pressure threshold during a single turn with many document reads', async t => {
   const { hub, agent, store, seed } = await setup(t);
   await seed(4, 8000);
-  const slices = Array.from({ length: 64 }, (_, index) => `page-${index}: ${'abcd'.repeat(1950)}`);
+  const slices = Array.from({ length: 100 }, (_, index) => `page-${index}: ${'abcd'.repeat(1950)}`);
   const readPage = createTool({
     id: 'readPage',
     description: 'Read one page of the supplied manuscript.',
