@@ -11,7 +11,16 @@ export const creativeWorkSchema = z
       ...common,
       kind: z.literal('directions'),
       directions: z
-        .array(z.object({ title: heading, premise: shortText, appeal: shortText, tradeoff: shortText }))
+        .array(
+          z.object({
+            title: heading.describe(
+              '方案名称。保留已有编号。摘要或提问用 A、B 等编号指代方案时，在对应标题开头写同一个编号',
+            ),
+            premise: shortText,
+            appeal: shortText,
+            tradeoff: shortText,
+          }),
+        )
         .min(2)
         .max(4),
     }),
