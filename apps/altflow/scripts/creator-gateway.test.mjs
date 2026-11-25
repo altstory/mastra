@@ -579,7 +579,12 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const backgroundOperation = randomUUID();
   let rootSteps = 0,
     childSteps = 0,
+    approvalResumed = false,
+    releaseApproval,
     releaseChild;
+  const approvalGate = new Promise(resolve => {
+    releaseApproval = resolve;
+  });
   const childGate = new Promise(resolve => {
     releaseChild = resolve;
   });
@@ -587,6 +592,10 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const isChild = body => JSON.stringify(body.messages).includes('Your name is background_worker.');
   hub.state.onRequest = async body => {
     if (isChild(body) && ++childSteps === 1) await childGate;
+    if (body.tools?.length && rootSteps === 3 && !isChild(body)) {
+      approvalResumed = true;
+      await approvalGate;
+    }
   };
   hub.state.nextToolCall = body => {
     if (!body.tools?.length) return undefined;
@@ -607,7 +616,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const backgroundBody = {
     ...body,
     threadId: 'free:' + backgroundConversation,
-    message: { contents: 'Delegate background work.' },
+    message: { contents: 'Plan the opening.' },
   };
   const backgroundAdmission = await request('/creator-gateway/send', {
     method: 'POST',
@@ -644,27 +653,40 @@ test('signed creator admission, native thread delivery and billed model usage sh
     return value.receipt.runId !== originalRun && value;
   });
   assert.equal(resumed.state, 'accepted');
-  await assertStatus(
-    await request('/creator-gateway/approval', {
+  await memory.updateThread({ id: backgroundBody.threadId, title: '' });
+  let runningThread;
+  try {
+    await assertStatus(
+      await request('/creator-gateway/approval', {
+        method: 'POST',
+        operation: backgroundOperation,
+        conversation: backgroundConversation,
+        body: {
+          threadId: backgroundBody.threadId,
+          resourceId,
+          toolCallId: 'background-question',
+          approved: true,
+          resumeData: '开场',
+        },
+      }),
+      200,
+    );
+    await until(() => approvalResumed);
+    runningThread = await request('/creator-gateway/thread', {
       method: 'POST',
-      operation: backgroundOperation,
       conversation: backgroundConversation,
-      body: {
-        threadId: backgroundBody.threadId,
-        resourceId,
-        toolCallId: 'background-question',
-        approved: true,
-        resumeData: '开场',
-      },
-    }),
-    200,
-  );
+    });
+  } finally {
+    releaseApproval();
+  }
   const finished = await until(async () => {
     const value = await backgroundReceipt();
     return value.state === 'completed' && value;
   });
   assert.ok(finished.usages.length >= 6, 'child steps and the awakened lead must all be billed');
   assert.equal(childSteps, 2);
+  await assertStatus(runningThread, 200);
+  assert.equal((await runningThread.json()).title, 'Plan the opening.');
 });
 
 test('creator budget reuses verified surplus and reserves the full amount for in-flight calls', async t => {

@@ -114,7 +114,6 @@ export async function creatorGatewayRoutes({
     title?: string,
   ) => {
     if (title && title !== '新会话') return title;
-    if (agent.getActiveThreadRunId({ threadId, resourceId })) return undefined;
     const { messages } = await memory.recall({
       threadId,
       resourceId,
