@@ -142,7 +142,8 @@ export async function creatorGatewayRoutes({
           response.headers.set('Cache-Control', 'no-store');
           return response;
         } catch (error) {
-          if (error instanceof FileStorageError) return c.json({ error: 'File unavailable' }, error.status);
+          if (error instanceof FileStorageError)
+            return c.json({ error: 'File unavailable', ...(error.code ? { code: error.code } : {}) }, error.status);
           return c.json({ error: 'Creator service unavailable' }, 503);
         }
       },
@@ -181,14 +182,18 @@ export async function creatorGatewayRoutes({
           await memory.createThread({
             threadId: thread,
             resourceId: resource,
-            title: '新会话',
             metadata: { creatorProjectId: claims.projectId },
           });
         } catch (error) {
           if ((await memory.getThreadById({ threadId: thread }))?.resourceId !== resource) throw error;
         }
       }
-      return Response.json({ agentId: 'creator-agent', threadId: thread, resourceId: resource });
+      return Response.json({
+        agentId: 'creator-agent',
+        threadId: thread,
+        resourceId: resource,
+        title: existing?.title,
+      });
     }),
     route('files', 'GET', async ({ claims, thread }) => {
       const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
@@ -267,8 +272,17 @@ export async function creatorGatewayRoutes({
           await setState(claims.operationId, state);
         }
       }
+      const title =
+        state === 'completed'
+          ? await (async () => {
+              const memory = await agent.getMemory({ requestContext: scopedContext(claims, resource) });
+              const stored = await memory?.getThreadById({ threadId: thread });
+              return stored?.resourceId === resource ? stored.title : undefined;
+            })().catch(() => undefined)
+          : undefined;
       return Response.json({
         state,
+        title,
         receipt: row.receipt ? JSON.parse(String(row.receipt)) : null,
         usages: ['completed', 'cancelled', 'interrupted'].includes(state)
           ? await creatorUsage(db, claims.operationId)
@@ -317,15 +331,14 @@ export async function creatorGatewayRoutes({
         if (!prompt.success || !approved) return new Response(null, { status: 400 });
         const options = prompt.data.options?.map(item => item.label) ?? [];
         const valid =
-          options.length > 0 && prompt.data.selectionMode === 'multi_select'
-            ? Array.isArray(answer) &&
+          typeof answer === 'string'
+            ? answer.trim().length > 0 && answer.length <= 4000
+            : prompt.data.selectionMode === 'multi_select' &&
+              Array.isArray(answer) &&
               answer.length > 0 &&
               new Set(answer).size === answer.length &&
-              answer.every(item => options.includes(item))
-            : typeof answer === 'string' &&
-              answer.trim().length > 0 &&
-              answer.length <= 4000 &&
-              (!options.length || options.includes(answer));
+              answer.every(item => options.includes(item));
+        if (typeof answer === 'string') answer = answer.trim();
         if (!valid) return new Response(null, { status: 422 });
       } else {
         if (resumeData !== undefined) return new Response(null, { status: 400 });
@@ -416,6 +429,8 @@ export async function creatorGatewayRoutes({
       const parts: Array<
         { type: 'text'; text: string } | { type: 'file'; data: string; mediaType: string; filename: string }
       > = [];
+      const displayAttachments: { id: string; name: string }[] = [];
+      const context = scopedContext(claims, resource);
       if (message.contents) parts.push({ type: 'text', text: message.contents });
       try {
         const snapshot = await catalog.catalog();
@@ -442,6 +457,7 @@ export async function creatorGatewayRoutes({
             let imageBytes = 0;
             for (const file of attached) {
               if (!file) continue;
+              displayAttachments.push({ id: fileId(file.path, String(file.updatedAt)), name: file.name });
               parts.push({ type: 'text', text: '<attachment>\n' + file.path + '\n</attachment>' });
               if (!nativeImageTypes.has(file.mimeType)) continue;
               imageBytes += file.size;
@@ -457,6 +473,11 @@ export async function creatorGatewayRoutes({
           });
           if (attachmentError) return attachmentError;
         }
+        const memory = await agent.getMemory({ requestContext: context });
+        const stored = await memory?.getThreadById({ threadId: thread });
+        if (stored?.resourceId === resource && stored.title === '新会话') {
+          await memory?.updateThread({ id: thread, title: '' });
+        }
       } catch (error) {
         await db.execute({
           sql: "DELETE FROM creator_gateway_receipts WHERE id=? AND state='dispatching'",
@@ -464,18 +485,20 @@ export async function creatorGatewayRoutes({
         });
         throw error;
       }
-      const context = scopedContext(claims, resource);
       const scopes = [`resource:${resource}`];
       const signal = createSignal({
         id: operationId,
         type: 'user-message',
         tagName: 'user',
         contents: ids.length ? parts : message.contents,
-        metadata: Object.fromEntries(
-          Object.entries(message.metadata ?? {}).filter(
-            ([key, value]) => key === 'clientMessageId' && typeof value === 'string' && value.length <= 100,
+        metadata: {
+          ...Object.fromEntries(
+            Object.entries(message.metadata ?? {}).filter(
+              ([key, value]) => key === 'clientMessageId' && typeof value === 'string' && value.length <= 100,
+            ),
           ),
-        ),
+          ...(displayAttachments.length ? { creatorAttachments: displayAttachments } : {}),
+        },
       });
       const admission = await creatorMeterContext
         .run(

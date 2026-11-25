@@ -21,8 +21,7 @@ export const isolateConversationReferences = {
     if (mayReadReferences(requestContext)) return;
     const product = Boolean(requestContext?.getRaw(creatorGatewayContextKey));
     const allowed = (name: string) =>
-      !privateReferenceTool.test(name) &&
-      (!product || !/^(?:recall|session_search|remember|forget_memory)$/.test(name));
+      !privateReferenceTool.test(name) && (!product || !/^(?:recall|session_search)$/.test(name));
     return {
       tools: Object.fromEntries(Object.entries(tools ?? {}).filter(([name]) => allowed(name))),
       activeTools: activeTools?.filter(allowed),

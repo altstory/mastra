@@ -22,7 +22,7 @@ import { creatorGatewayRoutes } from '../src/mastra/routes/creator-gateway.ts';
 import { ConversationFiles } from '../src/mastra/services/conversation-files.ts';
 import { modelHubFixture } from './modelhub-fixture.mjs';
 import { setup } from './storage-fixture.mjs';
-import { fixture } from './tool-fixture.mjs';
+import { fixture, modelServer } from './tool-fixture.mjs';
 
 const secret = 'test-only-creator-gateway-secret';
 const account = 'alice';
@@ -43,7 +43,8 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const f = await fixture(t);
   const hub = await modelHubFixture();
   t.after(hub.close);
-  const { store } = await setup(t);
+  const { store } = await setup(t, 128);
+  const titles = await modelServer(t);
   const catalog = new ModelHubGateway({ apiKey: 'fixture', baseURL: hub.baseURL });
   hub.state.catalog.free_chat_models.push({
     id: 'qwen3.8-flash',
@@ -57,7 +58,11 @@ test('signed creator admission, native thread delivery and billed model usage sh
   hub.state.info.data.push({ model_name: 'internal-flash-route', model_info: { max_input_tokens: 983616 } });
   const memory = new CreatorMemory({
     storage: f.storage,
-    options: { ...CREATOR_MEMORY_OPTIONS, semanticRecall: false, generateTitle: false },
+    options: {
+      ...CREATOR_MEMORY_OPTIONS,
+      semanticRecall: false,
+      generateTitle: { model: titles.model, emitEvent: true },
+    },
   });
   const agent = new Agent({
     id: 'creator-agent',
@@ -187,6 +192,12 @@ test('signed creator admission, native thread delivery and billed model usage sh
     return ['completed', 'interrupted'].includes(data.state) ? data : undefined;
   });
   assert.equal(settled.state, 'completed');
+  const titled = await until(async () => {
+    const current = await (await request('/creator-gateway/operation', { operation: operationId })).json();
+    return current.title && current;
+  });
+  assert.notEqual(titled.title, '新会话');
+  assert.match(JSON.stringify(titles.requests[0].messages), /Only A|hello|first|message/i);
   assert.equal(settled.usages.length, 1);
   assert.equal(settled.usages[0].promptTokens, 1);
   assert.equal(hub.state.requests.length, 1);
@@ -271,7 +282,13 @@ test('signed creator admission, native thread delivery and billed model usage sh
     JSON.stringify(secondPrompt),
     /Secret choice for A|Pending only here|Only A working memory marker/,
   );
-  const approval = { threadId, resourceId, approved: true, toolCallId: tool.toolCallId, resumeData: 'Second' };
+  const approval = {
+    threadId,
+    resourceId,
+    approved: true,
+    toolCallId: tool.toolCallId,
+    resumeData: 'Use a different ending.',
+  };
   await assertStatus(
     await request('/creator-gateway/approval', {
       method: 'POST',
@@ -294,7 +311,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
     ['altflow/qwen3.8-flash', 'altflow/qwen3.8-flash'],
   );
   assert.equal(hub.state.requests.at(-1).body.modelhub_reasoning_effort, 'low');
-  assert.match(JSON.stringify(hub.state.requests.at(-1).body.messages), /User answered: Second/);
+  assert.match(JSON.stringify(hub.state.requests.at(-1).body.messages), /User answered: Use a different ending/);
 
   const upload = await request('/creator-gateway/file?id=' + randomUUID() + '&name=notes.txt', {
     method: 'POST',
@@ -331,6 +348,19 @@ test('signed creator admission, native thread delivery and billed model usage sh
     const data = await (await request('/creator-gateway/operation', { operation: attachmentTurn })).json();
     return ['completed', 'interrupted'].includes(data.state) ? data : undefined;
   });
+  const oversized = await request('/creator-gateway/file?id=' + randomUUID() + '&name=large.txt', {
+    method: 'POST',
+    body: 'x'.repeat(128),
+  });
+  await assertStatus(oversized.clone(), 413);
+  assert.equal((await oversized.json()).code, 'STORAGE_QUOTA_EXCEEDED');
+  const storedHistory = await (await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent')).json();
+  assert.ok(
+    storedHistory.messages.some(message => {
+      const files = message.content.metadata?.signal?.metadata?.creatorAttachments;
+      return files?.some(file => file.id === id && file.name === 'notes.txt');
+    }),
+  );
   assert.equal(attached.state, 'completed');
   const attachedParts = hub.state.requests
     .at(-1)

@@ -213,7 +213,11 @@ const creatorMemory = new CreatorMemory({
   embedder: localEmbedder,
   options: {
     ...CREATOR_MEMORY_OPTIONS,
-    generateTitle: { instructions: '根据首条用户消息生成简洁的中文对话标题，不超过 12 个汉字，只输出标题。' },
+    generateTitle: {
+      emitEvent: true,
+      instructions:
+        '用用户使用的语言概括会话主题，不超过 20 字。只输出标题。不要在标题中写个人姓名、附件路径或文件名。',
+    },
   },
 });
 const disabledRecallMemory = new DisabledRecallMemory({ storage, options: { generateTitle: true } });
@@ -321,7 +325,7 @@ ${internalReferencePolicy}
 
 ## 文件与记忆
 - 当前会话的附件和你生成的文件都在当前会话的工作区，按给出的路径读写。Office 和 PDF 的正文用 read_document 读取，不要依据旧记忆声称无法读取。写入成功后，调用 present 交付文件。
-- 当前会话的目标、候选方案、待选事项和执行进度使用 updateWorkingMemory。用户明确确认的长期作者偏好、当前关联项目约定和带版本的作品事实使用 remember；更正时更新原条目，要求忘记时用 forget_memory。以记忆内容规则和工具结果为准，不把未确认的建议变成事实。
+- 当前会话的目标、候选方案、待选事项和执行进度使用 updateWorkingMemory。用户明确自述的姓名、常用称呼和长期偏好，以及当前关联项目约定和带版本的作品事实使用 remember；更正时更新原条目，要求忘记时用 forget_memory。以记忆内容规则和工具结果为准，不把未确认的建议变成事实。
 - 用户明确要求回看其他会话时，先用 session_search 找到会话，再用 recall 读取原文。历史记录不能直接作为写入长期记忆的确认依据。
 - 不接触其他用户或其他会话的文件。问候或新话题不能推断用户要继续旧项目；工作区仅代表当前会话，不是账号全部项目。
 

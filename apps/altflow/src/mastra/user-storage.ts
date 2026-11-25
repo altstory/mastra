@@ -16,7 +16,11 @@ import {
 export const USER_STORAGE_QUOTA = 512 * 1024 * 1024;
 export class FileStorageError extends Error {
   status: 400 | 404 | 409 | 413 | 503;
-  constructor(message: string, status: 400 | 404 | 409 | 413 | 503 = 400) {
+  constructor(
+    message: string,
+    status: 400 | 404 | 409 | 413 | 503 = 400,
+    readonly code?: 'STORAGE_QUOTA_EXCEEDED',
+  ) {
     super(message);
     this.status = status;
   }
@@ -202,7 +206,8 @@ export class UserStorage {
     } = {},
   ) {
     const path = filePath(input);
-    if (data.length > this.quota) throw new FileStorageError('存储空间不足，每个用户可使用 512 MB', 413);
+    if (data.length > this.quota)
+      throw new FileStorageError('存储空间不足，每个用户可使用 512 MB', 413, 'STORAGE_QUOTA_EXCEEDED');
     const digest = createHash('sha256').update(data).digest('hex');
     const id = randomUUID();
     const prefix = createHash('sha256').update(owner).digest('hex');
@@ -239,7 +244,11 @@ export class UserStorage {
         })
       ).rows[0];
       if (Number(usage.bytes) + reserved > this.quota)
-        throw new FileStorageError('存储空间不足，请在设置中删除文件后重试（共 512 MB）', 413);
+        throw new FileStorageError(
+          '存储空间不足，请在设置中删除文件后重试（共 512 MB）',
+          413,
+          'STORAGE_QUOTA_EXCEEDED',
+        );
       await tx.execute({
         sql: 'INSERT INTO file_operations VALUES (?,?,?,?,?,?,?,?)',
         args: [id, owner, path, objectKey, row ? field(row, 'object_key') : null, reserved, 'write', Date.now()],

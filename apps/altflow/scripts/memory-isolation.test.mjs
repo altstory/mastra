@@ -3,6 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { ALTFLOW_ACCOUNT_RESOURCE_KEY } from '@mastra/altflow-tools';
+import { MASTRA_RESOURCE_ID_KEY } from '@mastra/core/request-context';
 import { Agent } from '@mastra/core/agent';
 import { Mastra } from '@mastra/core/mastra';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
@@ -163,7 +165,11 @@ for (const mode of ['stream', 'generate']) {
       remember({ kind: 'project_agreement', key: 'format', content: '山猫轩十二集互动漫剧', evidence: agreement }),
       remember({ kind: 'story_fact', key: 'siblings', content: '铃木是山田的姐姐', version: 'v1', evidence: fact }),
     ]);
-    assert.equal((await store.read('alice', 'lynx')).filter(entry => entry.status === 'confirmed').length, 3);
+    assert.equal(
+      (await store.read('alice', 'lynx')).filter(entry => entry.status === 'confirmed' && entry.key !== 'user-name')
+        .length,
+      3,
+    );
     assert.ok(!JSON.stringify(first[0].messages).includes('If information might be referenced again - store it!'));
     await run('a', '还没有选方向。', [
       { name: 'updateWorkingMemory', args: { memory: '# 待用户决定\n选择红色结局还是蓝色结局（未确认）' } },
@@ -286,6 +292,33 @@ for (const mode of ['stream', 'generate']) {
       },
     ]);
     assert.equal((await store.read('alice')).find(entry => entry.key === 'feedback').content, undefined);
+    const webRun = async (owner, thread, text, calls = []) => {
+      const start = edge.requests.length;
+      const resource = 'altflow-creator:' + owner;
+      const requestContext = context(owner);
+      requestContext.set(MASTRA_RESOURCE_ID_KEY, resource);
+      requestContext.setRaw(ALTFLOW_ACCOUNT_RESOURCE_KEY, resource);
+      requestContext.setRaw('altflow.creatorGateway', { userId: owner, conversationId: thread.slice(5) });
+      if (calls.length) edge.responses.push({ calls }, { text: 'Done.' });
+      const result = await agent[mode](text, {
+        memory: { thread, resource },
+        requestContext,
+        maxSteps: 3,
+      });
+      await result.text;
+      return JSON.stringify(edge.requests.slice(start));
+    };
+    const declaredName = '我叫青榆';
+    await webRun('alice', 'free:one', declaredName, [
+      remember({ kind: 'author_preference', key: 'user-name', content: '青榆', evidence: declaredName }),
+    ]);
+    assert.match(await webRun('alice', 'free:two', '你记得我的姓名吗？'), /青榆/);
+    assert.doesNotMatch(await webRun('bob', 'free:other', '你记得我的姓名吗？'), /青榆/);
+    await webRun('alice', 'free:one', '这个项目暂定叫松岚。', [
+      remember({ kind: 'project_agreement', key: 'work-name', content: '松岚', evidence: '这个项目暂定叫松岚。' }),
+    ]);
+    assert.doesNotMatch(await webRun('alice', 'free:two', '还记得我在做什么吗？'), /松岚/);
+
     await preferences.write('alice', 'altflow:alice', {
       kind: 'memory',
       id: 'creator-agent',
