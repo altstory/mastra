@@ -100,11 +100,21 @@ const reviewSchema = z.object({
   skipped: z.boolean().optional(),
 });
 
+const reportSectionSchema = z.object({
+  title: z.string(),
+  items: z.array(z.object({ severity: z.enum(['error', 'warn']), text: z.string() })),
+  emptyText: z.string(),
+  notes: z.array(z.string()),
+  skipped: z.boolean(),
+});
+
 const reportSchema = z.object({
   passed: z.boolean(),
   errors: z.number(),
   warnings: z.number(),
   report: z.string(),
+  stats: structureSchema.shape.stats,
+  sections: z.array(reportSectionSchema),
 });
 
 export interface LedgerReader {
@@ -172,7 +182,8 @@ export function createScriptQaWorkflow(review: ReviewFunction, ledger?: LedgerRe
 
   const compose = createStep({
     id: 'compose-report',
-    description: '汇总结构检查和模型审查，提供 project 时对照设定与伏笔台账（未回收的伏笔、已死亡角色再出场），生成《质量检查报告》。',
+    description:
+      '汇总结构检查和模型审查，提供 project 时对照设定与伏笔台账（未回收的伏笔、已死亡角色再出场），生成《质量检查报告》。',
     inputSchema: z.record(z.string(), reviewSchema),
     outputSchema: reportSchema,
     execute: async ({ inputData, getStepResultAsync }) => {
@@ -193,31 +204,44 @@ export function createScriptQaWorkflow(review: ReviewFunction, ledger?: LedgerRe
       const warnings =
         structural.filter(item => item.severity === 'warn').length +
         reviewed.filter(item => item.severity === 'warn').length;
+      const sections = [
+        {
+          title: '结构检查',
+          items: structural,
+          emptyText: '未发现问题。',
+          skipped: false,
+          notes: [
+            ...(checked.ledgerStatus === 'empty' ? ['该项目的台账还是空的，没有做台账检查。'] : []),
+            ...(checked.ledgerStatus === 'checked' && !checked.ledgerIssues.length ? ['台账检查：未发现问题。'] : []),
+          ],
+        },
+        ...reviews.map(item => ({
+          title: `模型审查：${item.title}`,
+          items: item.issues.map(issue => ({
+            severity: issue.severity,
+            text: `${issue.location}：${issue.problem} 建议：${issue.suggestion}`,
+          })),
+          emptyText: item.skipped ? '未提供创作原则，已跳过。' : '未发现问题。',
+          skipped: item.skipped ?? false,
+          notes: [],
+        })),
+      ];
+      const label = (severity: 'error' | 'warn') => (severity === 'error' ? '错误' : '提醒');
       const lines = [
         '# 质量检查报告',
         '',
         `共 ${checked.stats.episodes} 集、${checked.stats.scenes} 个场景、${checked.stats.interactions} 个互动、${checked.stats.endings} 个结局；约 ${checked.stats.pathCount} 条路径，长度 ${checked.stats.minPathScenes} 到 ${checked.stats.maxPathScenes} 个场景。`,
         `结论：${errors === 0 ? (warnings === 0 ? '通过' : '通过，有提醒') : '未通过'}（${errors} 个错误，${warnings} 个提醒）。`,
-        '',
-        '## 结构检查',
-        ...(structural.length
-          ? structural.map(item => `- ${item.severity === 'error' ? '错误' : '提醒'} ${item.text}`)
-          : ['- 未发现问题。']),
+        ...sections.flatMap(section => [
+          '',
+          `## ${section.title}`,
+          ...(section.items.length
+            ? section.items.map(item => `- ${label(item.severity)} ${item.text}`)
+            : [`- ${section.emptyText}`]),
+          ...section.notes.map(note => `- ${note}`),
+        ]),
       ];
-      if (checked.ledgerStatus === 'empty') lines.push('- 该项目的台账还是空的，没有做台账检查。');
-      if (checked.ledgerStatus === 'checked' && !checked.ledgerIssues.length) lines.push('- 台账检查：未发现问题。');
-      for (const item of reviews) {
-        lines.push('', `## 模型审查：${item.title}`);
-        lines.push(
-          ...(item.issues.length
-            ? item.issues.map(
-                issue =>
-                  `- ${issue.severity === 'error' ? '错误' : '提醒'} ${issue.location}：${issue.problem} 建议：${issue.suggestion}`,
-              )
-            : [item.skipped ? '- 未提供创作原则，已跳过。' : '- 未发现问题。']),
-        );
-      }
-      return { passed: errors === 0, errors, warnings, report: lines.join('\n') };
+      return { passed: errors === 0, errors, warnings, report: lines.join('\n'), stats: checked.stats, sections };
     },
   });
 
