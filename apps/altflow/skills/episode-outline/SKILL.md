@@ -75,3 +75,9 @@ description: 编写互动影游的分集大纲：把核心体验金字塔式拆�
 复杂分支可在一集下面按路径或功能继续拆任务：主线场景、互动点、分支场景、合流、结局。复用 task_write/task_update/task_complete 记录，不新建另一套任务系统。
 
 每个任务写明前置已知事实、目标、选择及后果、状态变化、下一场景。共享场景只写一次，分支特有事实不能不加条件进入合流。按集交付的外层粒度不变；只有任务需要时才细分，用户不必手动触发节点分解。
+
+## 可交互的成果展示
+
+人物用 characters，relationships 的 from/to 引用人物 name，label 写关系，tension 写具体矛盾。大纲用 outline，emotion 标情绪，details 放可展开的细节。需要体验选项后果时用 script 展示无状态短样段：start 对应场景 id，blocks 区分 action 与 dialogue，每个场景以 choices 或 ending 收束；目标必须存在，所有场景可达且无环。完整、有状态的互动剧本照常校验交付，不声称短样段能运行全部状态规则。
+
+用户修改意见产生新稿时，用 revision 提供真实 before、after 和 reason，原稿来自实际已有版本。所有结构均可放入 ask_user.preview 等待反馈，或 show_creative_work 单独展示。页面点人物、展开大纲、试玩选择不提交创作意见；只有明确反馈才代表用户的创作决定。

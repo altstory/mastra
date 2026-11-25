@@ -67,3 +67,9 @@ show_creative_work 接收 `{ work }`，按 work.kind 展示 directions（2–4 �
 ask_user 的可选 preview 接收同一结构，在问题上方展示所评阅成果；暂停载荷和成功回答都保留 preview、背景和全部原始选项，刷新后仍可回看当时版本。需要反馈时直接使用 ask_user.preview，不先重复调用展示工具。普通初始问题不必带预览。继续复用原生 suspend/resume，不新增审批机制。
 
 Agent 在新提案、关键取舍和大篇幅扩写前邀请反馈；没有待决定事项时展示后继续，用户明确授权全程自主完成时减少打断。每份新创作文档及重要修订都展示实际内容，相关成果可合并但不能遗漏。流程不固定，不能只问开头、随后连续生成多个文档而不展示实际内容。
+
+## 可交互阅读
+
+characters 可附 relationships（from/to 为现有人物 name），用于关系图和人物切换；outline 可附 emotion、details，用于时间轴展开。script 包含 start 和 scenes，场景以 blocks 区分动作与对白，以 choices 或 ending 收束。输入 schema 拒绝重复 ID、悬空引用、不可达场景、环和同时包含选项与结局的节点。它仅是无状态短样段预览，不代替完整互动剧本格式或状态引擎。
+
+revision 使用真实 before/after 文本和 reason，前端复用既有逐行差异算法，支持改动摘要与全文对照。所有阅读操作均在页面内进行，不调用 ask_user 恢复；创作意见仍由问答提交。

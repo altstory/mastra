@@ -105,3 +105,9 @@ description: 设计互动影游的互动机制：互动维度、选项机制、�
 ## 把选择拿给用户体验
 
 在展开全部变量和分支前，先拿一个代表性互动点示范「情境、选项、即时反馈、后续代价」。可用 ask_user.preview 的 directions 对比不同互动方案，或 excerpt 展示可读的场景试写，再问具体取舍。不要只让用户选择抽象结构名，也不要把完整互动设计悄悄保存后直接写大纲。已有剧本用 show_branch_graph 展示真实分支。已明确授权的细化直接推进，有意义的成果用 show_creative_work 展示。
+
+## 可交互的成果展示
+
+人物用 characters，relationships 的 from/to 引用人物 name，label 写关系，tension 写具体矛盾。大纲用 outline，emotion 标情绪，details 放可展开的细节。需要体验选项后果时用 script 展示无状态短样段：start 对应场景 id，blocks 区分 action 与 dialogue，每个场景以 choices 或 ending 收束；目标必须存在，所有场景可达且无环。完整、有状态的互动剧本照常校验交付，不声称短样段能运行全部状态规则。
+
+用户修改意见产生新稿时，用 revision 提供真实 before、after 和 reason，原稿来自实际已有版本。所有结构均可放入 ask_user.preview 等待反馈，或 show_creative_work 单独展示。页面点人物、展开大纲、试玩选择不提交创作意见；只有明确反馈才代表用户的创作决定。
