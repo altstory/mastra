@@ -400,5 +400,659 @@
     "path": "method/interaction/prototype-production",
     "name": "互动原型与制作预算：设计不等于实现",
     "description": "互动原型、动作规格、制作预算、试玩、工具能力、拖拽、分支成本；把创作想法转成可验证的交付。"
+  },
+  {
+    "file": "script-case-cold-open",
+    "path": "research/script-cases/cold-open",
+    "name": "开场用行动立住人物",
+    "description": "先写一个眼下非办不可的目标。"
+  },
+  {
+    "file": "script-case-episode-cluster",
+    "path": "research/script-cases/episode-cluster",
+    "name": "同一冲突跨集升级",
+    "description": "把跨集事件分为立障碍、换筹码、逼表态、兑现四种动作，按实际节奏选用。"
+  },
+  {
+    "file": "script-case-hook-payoff",
+    "path": "research/script-cases/hook-payoff",
+    "name": "集尾钩子和下集兑现",
+    "description": "钩子可以是新证据、迫在眉睫的行动或人物刚做出的决定。"
+  },
+  {
+    "file": "script-case-relationship-action",
+    "path": "research/script-cases/relationship-action",
+    "name": "用具体行动改变关系",
+    "description": "同一场冲突里给不同人物各自要保护的人、资源或原则。"
+  },
+  {
+    "file": "script-case-character-agency",
+    "path": "research/script-cases/character-agency",
+    "name": "主角用自己的能力推动反击",
+    "description": "把外援写成机会、条件或代价。"
+  },
+  {
+    "file": "script-case-rule-discovery",
+    "path": "research/script-cases/rule-discovery",
+    "name": "让角色在行动中验证世界规则",
+    "description": "写出角色先相信什么、尝试了什么、看见了哪项结果。"
+  },
+  {
+    "file": "script-case-causal-anchor",
+    "path": "research/script-cases/causal-anchor",
+    "name": "用同一证物组织多视角悬疑",
+    "description": "先定一件双方都能观察到的东西，再分别记下每个人看到了什么、为什么解释成不同的事、根据解释做了什么。"
+  },
+  {
+    "file": "script-case-viewpoint-replay",
+    "path": "research/script-cases/viewpoint-replay",
+    "name": "同一事件重写时增加有效信息",
+    "description": "排一张已见动作、未闻对白、观察者推断、真实意图的小表。"
+  },
+  {
+    "file": "script-case-subtext-dialogue",
+    "path": "research/script-cases/subtext-dialogue",
+    "name": "在对白里并行处理眼前事和隐情",
+    "description": "写两件事。"
+  },
+  {
+    "file": "script-case-quiet-payoff",
+    "path": "research/script-cases/quiet-payoff",
+    "name": "把反复出现的动作写成情感兑现",
+    "description": "第一次让道具服务当下动作。"
+  },
+  {
+    "file": "script-case-lean-scene",
+    "path": "research/script-cases/lean-scene",
+    "name": "压缩场景时保住目标和转折",
+    "description": "标出角色进场想办什么、什么阻挡、离场后哪条条件改变。"
+  },
+  {
+    "file": "script-case-adaptation-invariants",
+    "path": "research/script-cases/adaptation-invariants",
+    "name": "改编时保留推动行动的关系与代价",
+    "description": "把原文事实、可迁移的因果、允许自由改写的表层分三栏。"
+  },
+  {
+    "file": "script-case-choice-information",
+    "path": "research/script-cases/choice-information",
+    "name": "把信息差写进互动分支和合流",
+    "description": "每条路线记录三项。"
+  },
+  {
+    "file": "script-case-ending-payoff",
+    "path": "research/script-cases/ending-payoff",
+    "name": "结局用关键动作兑现核心问题",
+    "description": "写作前把结局承诺改成可观察一句话。"
+  },
+  {
+    "file": "script-case-revision-triage",
+    "path": "research/script-cases/revision-triage",
+    "name": "按剧本因果排序返工",
+    "description": "先找最早断裂的动机、因果或知情点。"
+  },
+  {
+    "file": "script-case-parallel-opening",
+    "path": "research/script-cases/parallel-opening",
+    "name": "多线开场先给读者一个可以跟的目标",
+    "description": "先定本集主要追问。"
+  },
+  {
+    "file": "script-case-procedural-scenes",
+    "path": "research/script-cases/procedural-scenes",
+    "name": "用职业行动写出人物和关系",
+    "description": "只写能引出下一步行动的专业细节。"
+  },
+  {
+    "file": "script-case-character-voice",
+    "path": "research/script-cases/character-voice",
+    "name": "人物声音来自处境和说话目的",
+    "description": "给每个人标一下他通常请谁帮忙、碰到压力会先问什么、哪件事一定要含混过去。"
+  },
+  {
+    "file": "script-case-scene-notation",
+    "path": "research/script-cases/scene-notation",
+    "name": "把每个剧情动作写成可读的剧本行",
+    "description": "复用 AltFlow 的场景编号及互动格式。"
+  },
+  {
+    "file": "script-case-scene-end-turn",
+    "path": "research/script-cases/scene-end-turn",
+    "name": "结束一场戏时把压力交给下一场",
+    "description": "先明确这一场必须完成什么，再找结果中自然留下的一项后果。"
+  },
+  {
+    "file": "script-case-public-story-private-truth",
+    "path": "research/script-cases/public-story-private-truth",
+    "name": "先写公众说法，再用私下行动推翻它",
+    "description": "用同一场合中的公开表态和私下行为建立背叛。"
+  },
+  {
+    "file": "script-case-motivated-flashback",
+    "path": "research/script-cases/motivated-flashback",
+    "name": "用当下的刺激引出闪回",
+    "description": "闪回解释眼前动作的压力，回到当下时继续推进。"
+  },
+  {
+    "file": "script-case-asymmetric-suspense",
+    "path": "research/script-cases/asymmetric-suspense",
+    "name": "用知情差维持悬念",
+    "description": "按场记录谁掌握关键信息，并用能失败的行为兑现紧张感。"
+  },
+  {
+    "file": "script-case-escalating-anomalies",
+    "path": "research/script-cases/escalating-anomalies",
+    "name": "把异常写成主角逐步验证的证据",
+    "description": "让异常从容易解释变成可以主动复验，并推动下一次行动。"
+  },
+  {
+    "file": "script-case-parallel-deadlines",
+    "path": "research/script-cases/parallel-deadlines",
+    "name": "用共享时限串起平行行动",
+    "description": "每条线保留独立目标，并用同一个有后果的信号联动。"
+  },
+  {
+    "file": "script-case-parallel-relationships",
+    "path": "research/script-cases/parallel-relationships",
+    "name": "让两条关系线用同一问题给出不同答案",
+    "description": "用两个处境中的相似选择照出差异，靠场景标记交代层次。"
+  },
+  {
+    "file": "script-case-nonlinear-reorientation",
+    "path": "research/script-cases/nonlinear-reorientation",
+    "name": "让非线性场景有可认出的时间和处境",
+    "description": "先让读者辨认所在场景，再逐步解释事件的因果。"
+  },
+  {
+    "file": "theory-creation-theory-map",
+    "path": "theory/drivers/creation-theory-map",
+    "name": "创作理论全景图与人机分工",
+    "description": "梳理造梦创作理论的四层结构、三大支柱与人机分工；诊断问题出在哪一层时使用"
+  },
+  {
+    "file": "theory-audience-dream-orders",
+    "path": "theory/audience/audience-dream-orders",
+    "name": "观众三类梦境订单（掌控者/关系者/逃避者）",
+    "description": "定位目标观众与题材时用：按现实压力把观众分三类，对应各自要的“梦”"
+  },
+  {
+    "file": "theory-dream-safety",
+    "path": "theory/audience/dream-safety",
+    "name": "梦境安全感：消除观众道德负罪感的四种手法",
+    "description": "设计复仇、不劳而获、掠夺类爽文时，让观众心安理得宣泄欲望"
+  },
+  {
+    "file": "theory-dream-efficiency",
+    "path": "theory/audience/dream-efficiency",
+    "name": "梦境高效满足感：压缩铺垫与高频情绪循环",
+    "description": "内容节奏拖沓、观众流失时，用即时满足原则压缩铺垫并提高爽点密度（补充通用爽点规范）"
+  },
+  {
+    "file": "theory-dream-realism",
+    "path": "theory/audience/dream-realism",
+    "name": "梦境强化真实感：用情绪逻辑堵住观众的理性警察",
+    "description": "设定漏洞多、观众出戏吐槽时，用扬情抑理、氛围组反馈、OS强解释维持沉浸"
+  },
+  {
+    "file": "theory-genre-fusion-and-medium",
+    "path": "theory/audience/genre-fusion-and-medium",
+    "name": "题材融合原则与不同媒介的护梦侧重",
+    "description": "做多题材混搭或选择小说/短剧/动漫/真人形式时，判断是否兼容与各自强项"
+  },
+  {
+    "file": "theory-information-gap-three-games",
+    "path": "theory/info-gap/information-gap-three-games",
+    "name": "信息差三种牌局：悬念、悬疑、爽感",
+    "description": "决定一场戏让观众“着急、猜谜还是期待”时，用谁知道什么来设计信息分配"
+  },
+  {
+    "file": "theory-information-card-techniques",
+    "path": "theory/info-gap/information-card-techniques",
+    "name": "安插信息牌的四种手法：台词、动作、道具、旁白",
+    "description": "需要把关键信息悄悄传给观众或角色时，选择台词/动作表情/道具环境/旁白闪回"
+  },
+  {
+    "file": "theory-information-gap-and-cheat-and-payoffs",
+    "path": "theory/info-gap/information-gap-and-cheat-and-payoffs",
+    "name": "信息差解析金手指与九种爽感类型",
+    "description": "设计金手指或判断某种爽点（打脸、扮猪、逆袭等）的信息结构时使用"
+  },
+  {
+    "file": "theory-information-gap-emotion-dialogue",
+    "path": "theory/info-gap/information-gap-emotion-dialogue",
+    "name": "用信息差与台词写虐心和情感宣泄",
+    "description": "写误会错过的虐心戏或真相大白的宣泄戏时，设计信息分布并用台词放大"
+  },
+  {
+    "file": "theory-expectation-pull-four-steps",
+    "path": "theory/pacing/expectation-pull-four-steps",
+    "name": "预期拉扯四步法（主线蓝图）",
+    "description": "设计故事主线、排布靠近/远离事件时用；用现实与期望两根指针搭大纲骨架"
+  },
+  {
+    "file": "theory-expectation-four-cycle",
+    "path": "theory/pacing/expectation-four-cycle",
+    "name": "期待四循环与循环升级六维度",
+    "description": "设计单个事件（细纲）并保证系列事件螺旋上升、不重复时用"
+  },
+  {
+    "file": "theory-expectation-ruler-and-info-gap",
+    "path": "theory/pacing/expectation-ruler-and-info-gap",
+    "name": "预期拉扯尺子与信息差搭档",
+    "description": "判断事件设计是否有效、决定甜虐走向，并把信息差嵌入事件时用"
+  },
+  {
+    "file": "theory-emotion-curve-pacing",
+    "path": "theory/pacing/emotion-curve-pacing",
+    "name": "情感曲线与节奏快慢判断",
+    "description": "判断情节该快写还是慢写、避免流水账或高潮不爽时用"
+  },
+  {
+    "file": "theory-synopsis-four-step-check",
+    "path": "theory/pacing/synopsis-four-step-check",
+    "name": "梗概四步检测法",
+    "description": "动笔写大纲前检验故事梗概的体量、废戏、驱动力和逻辑时用"
+  },
+  {
+    "file": "theory-810-outline-expectation-mapping",
+    "path": "theory/pacing/810-outline-expectation-mapping",
+    "name": "810大纲与预期拉扯的映射及节奏重排",
+    "description": "用810大纲十个序列填预期拉扯四阶段，并按短剧或长篇调整顺序时用"
+  },
+  {
+    "file": "theory-episode-outline-pacing",
+    "path": "theory/pacing/episode-outline-pacing",
+    "name": "分集细纲：期待四循环的节奏分配",
+    "description": "规划单个事件内部各步篇幅，并用情绪回落阻断留住观众时用"
+  },
+  {
+    "file": "theory-golden-triangle-drive-modes",
+    "path": "theory/drivers/golden-triangle-drive-modes",
+    "name": "信息差预期管理节奏黄金三角与驱动模式",
+    "description": "判断故事缺哪一环，并选择情绪驱动、事件驱动或人物驱动的创作重心"
+  },
+  {
+    "file": "theory-three-story-drivers",
+    "path": "theory/drivers/three-story-drivers",
+    "name": "三大故事驱动：人物、事件、情绪",
+    "description": "判断故事靠什么推动读者往下看，拆解人物/事件/情绪驱动的配方与特点"
+  },
+  {
+    "file": "theory-driver-selection",
+    "path": "theory/drivers/driver-selection",
+    "name": "驱动选型与主辅搭配",
+    "description": "按产品形态（长篇/电影/短剧）选主驱动，避免驱动与载体错配"
+  },
+  {
+    "file": "theory-driver-macro-meso-micro",
+    "path": "theory/drivers/driver-macro-meso-micro",
+    "name": "驱动对主题、视角与动笔前准备的影响",
+    "description": "选定驱动后，决定主题方向、叙事视角，以及动笔前先做哪项准备"
+  },
+  {
+    "file": "theory-protagonist-as-bridge",
+    "path": "theory/drivers/protagonist-as-bridge",
+    "name": "主角是观众的桥梁：替代性体验与穿越题材",
+    "description": "判断主角能否让观众代入；解释穿越题材价值与“断桥”风险"
+  },
+  {
+    "file": "theory-four-dimension-character-charm",
+    "path": "theory/drivers/four-dimension-character-charm",
+    "name": "人物魅力四维穿衣法则：外显、内含、矛盾、和谐",
+    "description": "设计有魅力且不崩的主角灵魂，检查标签是否清晰、反差是否成立"
+  },
+  {
+    "file": "theory-conflict-event-generator-and-fates",
+    "path": "theory/drivers/conflict-event-generator-and-fates",
+    "name": "用人物矛盾生成事件与四种人物命运",
+    "description": "不知道情节怎么往下写时，用外显内含冲突生成场景并选定人物结局"
+  },
+  {
+    "file": "theory-character-bio-eight-elements",
+    "path": "theory/drivers/character-bio-eight-elements",
+    "name": "人物小传八要素：身份、欲望、问题、动作、阻碍、结果、正负价值观",
+    "description": "给人物搭骨架，保证主角主动、有压力、有变化，补足八要素缺项"
+  },
+  {
+    "file": "theory-four-dimensions-to-eight-elements",
+    "path": "theory/drivers/four-dimensions-to-eight-elements",
+    "name": "四维灵魂转八要素骨架：人物小传自动生成表",
+    "description": "把外显内含矛盾和谐的设计转成身份欲望等八要素，一张表填完人物小传"
+  },
+  {
+    "file": "theory-character-event-emotion-triangle",
+    "path": "theory/drivers/character-event-emotion-triangle",
+    "name": "人物、事件、情绪三角关系与有效事件三条件",
+    "description": "判断一场戏是否有效，理解人物是动力、事件是舞台、情绪是产品"
+  },
+  {
+    "file": "theory-ten-sequences-eight-elements",
+    "path": "theory/drivers/ten-sequences-eight-elements",
+    "name": "十序列与八要素咬合：用序列功能安排事件",
+    "description": "把人物八要素按十个序列排进事件，控制期待与情绪曲线"
+  },
+  {
+    "file": "theory-antagonist-supporting-extras-by-driver",
+    "path": "theory/drivers/antagonist-supporting-extras-by-driver",
+    "name": "反派、配角、工具人：按驱动模式设计",
+    "description": "配齐主角身边的人，按人物/事件/情绪驱动调整反派配角工具人规格"
+  },
+  {
+    "file": "theory-audience-emotion-preference-validation",
+    "path": "theory/drivers/audience-emotion-preference-validation",
+    "name": "受众情绪偏好假设与验证：征服型与认同型爽点",
+    "description": "为不同受众设计爽点时，列出可能的偏好差异，并用检验问题验证"
+  },
+  {
+    "file": "theory-expression-layer-action-dialogue-visual",
+    "path": "theory/drivers/expression-layer-action-dialogue-visual",
+    "name": "人物外化三要素：动作、台词、画面",
+    "description": "人物写成\"说明书\"、情绪靠旁白硬说时，用三要素外化并排优先级"
+  },
+  {
+    "file": "theory-plot-action-vs-emotion-action",
+    "path": "theory/drivers/plot-action-vs-emotion-action",
+    "name": "动作设计：剧情动作与情绪动作二分法",
+    "description": "动作描写要么拖沓要么空洞时，区分推进流程与暴露内心两类动作"
+  },
+  {
+    "file": "theory-dialogue-three-filters",
+    "path": "theory/drivers/dialogue-three-filters",
+    "name": "台词三层滤网：有效性、潜台词、辨识度",
+    "description": "对白写完后做过滤修改；含三层滤网、语言指纹三维度与沉默用法"
+  },
+  {
+    "file": "theory-inner-monologue-cheat-code",
+    "path": "theory/drivers/inner-monologue-cheat-code",
+    "name": "内心独白作弊码：翻译潜台词与制造爽感",
+    "description": "潜台词被观众误读、主角显得憋屈时，用内心独白直接对观众说话"
+  },
+  {
+    "file": "theory-visual-design-three-lenses",
+    "path": "theory/drivers/visual-design-three-lenses",
+    "name": "画面设计：聚焦法则、移情法则与五感清单",
+    "description": "场景描写空洞像\"装修清单\"时，用特写、主观滤镜和五感写出画面"
+  },
+  {
+    "file": "theory-totem-rule",
+    "path": "theory/drivers/totem-rule",
+    "name": "图腾法则：给主角绑定灵魂道具",
+    "description": "想让人物信念、创伤可视化并贯穿全篇时，设计一个反复出现的关键道具"
+  },
+  {
+    "file": "theory-character-driven-full-workflow",
+    "path": "theory/drivers/character-driven-full-workflow",
+    "name": "人物驱动四步工程总览：魂、骨、肉、皮",
+    "description": "做人物驱动故事时用来串联设计流程和自检每一步产出"
+  },
+  {
+    "file": "theory-event-driven-ten-archetypes-overview",
+    "path": "theory/archetypes/event-driven-ten-archetypes-overview",
+    "name": "事件驱动与十大故事原型总览",
+    "description": "选故事框架前用它判断故事属于哪种物种，并检查必备零件"
+  },
+  {
+    "file": "theory-haunted-house-frame",
+    "path": "theory/archetypes/haunted-house-frame",
+    "name": "鬼屋型框架：封闭空间、怪物与原罪",
+    "description": "写生存、惊悚、末日围困类故事时，用三零件搭建并推演"
+  },
+  {
+    "file": "theory-golden-fleece-frame",
+    "path": "theory/archetypes/golden-fleece-frame",
+    "name": "金羊毛型框架：寻宝之路与成长终点",
+    "description": "写公路/冒险/夺冠类故事时，用路径、团队、成长型终点串起事件"
+  },
+  {
+    "file": "theory-wish-fulfillment-frame",
+    "path": "theory/archetypes/wish-fulfillment-frame",
+    "name": "如愿以偿型框架：馅饼带毒与代价教训",
+    "description": "写超能力、金手指、换身份类先爽后虐的故事时，设计愿望、副作用与教训"
+  },
+  {
+    "file": "theory-dude-with-a-problem-frame",
+    "path": "theory/archetypes/dude-with-a-problem-frame",
+    "name": "家伙遇到麻烦型框架：凡人对抗巨大危机",
+    "description": "写小人物被迫卷入灾难、以弱胜强的故事时，用三零件制造反差与不得不战"
+  },
+  {
+    "file": "theory-rites-of-passage-frame",
+    "path": "theory/archetypes/rites-of-passage-frame",
+    "name": "变迁仪式型框架：成长阵痛与接纳",
+    "description": "写青春、中年危机、丧亲等生命阶段难关的治愈向故事时使用"
+  },
+  {
+    "file": "theory-buddy-love-frame",
+    "path": "theory/archetypes/buddy-love-frame",
+    "name": "伙伴之情型框架：残缺主角与互补搭档",
+    "description": "写爱情、双人搭档、从互嫌到生死与共的故事时，设计反差与鸿沟"
+  },
+  {
+    "file": "theory-whydunit-detective-frame",
+    "path": "theory/archetypes/whydunit-detective-frame",
+    "name": "侦探型框架：必须知道真相的人与黑色秘密",
+    "description": "写悬疑、推理、阴谋类故事时，设计探案动机、离奇事件与真相代价"
+  },
+  {
+    "file": "theory-fool-triumphant-frame",
+    "path": "theory/archetypes/fool-triumphant-frame",
+    "name": "愚者成功型框架：局外人降维打击体制",
+    "description": "写小人物凭朴素智慧击败精英或体制、讽刺类故事时，设计愚者与降维打击"
+  },
+  {
+    "file": "theory-institutionalized-frame",
+    "path": "theory/archetypes/institutionalized-frame",
+    "name": "被制度化型框架：个体与集体的价值权衡",
+    "description": "写个人对抗强大体制、需要在自我与集体间做抉择的故事时使用"
+  },
+  {
+    "file": "theory-superhero-engine-frame",
+    "path": "theory/archetypes/superhero-engine-frame",
+    "name": "超级英雄型框架：外挂、挑衅者与伪装大坝",
+    "description": "写无敌流、龙傲天、扮猪吃虎类爽文短剧时，设计外挂、打脸对象与蓄水机制"
+  },
+  {
+    "file": "theory-ten-sequence-backward-outline",
+    "path": "theory/archetypes/ten-sequence-backward-outline",
+    "name": "定锚点与十里程碑：事件驱动大纲搭建",
+    "description": "从零搭建事件驱动故事大纲时，先选原型再用10里程碑铺骨架"
+  },
+  {
+    "file": "theory-backward-design-protagonist-from-events",
+    "path": "theory/archetypes/backward-design-protagonist-from-events",
+    "name": "从事件倒推主角：逆向招聘法",
+    "description": "已有10序列大纲后设计主角时，用剧情需求反推身份、欲望、问题、动作"
+  },
+  {
+    "file": "theory-possibility-tree-mystery-design",
+    "path": "theory/genre-design/possibility-tree-mystery-design",
+    "name": "悬疑后台设计：从真相逆推可能性树",
+    "description": "设计悬疑谜案时，用四步法从唯一真相生成假象，画出可能性树；区别于通用线索公平揭示"
+  },
+  {
+    "file": "theory-mystery-advance-modes",
+    "path": "theory/genre-design/mystery-advance-modes",
+    "name": "悬疑前台推进：单线撞墙与多线交互",
+    "description": "已有可能性树后，选择单线试错或多线竞争/阻碍/互证来推进悬疑"
+  },
+  {
+    "file": "theory-power-play-resource-board",
+    "path": "theory/genre-design/power-play-resource-board",
+    "name": "权谋后台设计：资源棋盘与逻辑全图",
+    "description": "写权谋/宫斗/商战时，把局拆成目标、支柱、资源状态和兑换关系，避免\"他很聪明\"式空写"
+  },
+  {
+    "file": "theory-power-play-four-modes",
+    "path": "theory/genre-design/power-play-four-modes",
+    "name": "权谋前台展开：抽积木、搭积木、诱饵、双雄局",
+    "description": "资源棋盘画好后，选主角的博弈模式写权谋剧情；解决\"智斗不好看\""
+  },
+  {
+    "file": "theory-worldbuilding-five-steps",
+    "path": "theory/genre-design/worldbuilding-five-steps",
+    "name": "世界观创世五步法：从时间轴推导势力生态",
+    "description": "搭建世界观时用时间轴推导出自转的势力与矛盾；补充世界设定模板的因果推导流程"
+  },
+  {
+    "file": "theory-world-entry-five-stations",
+    "path": "theory/genre-design/world-entry-five-stations",
+    "name": "世界观前台入局：诱饵陷阱困境破局收获",
+    "description": "想让读者随主角逐步发现世界而不是看设定说明时，用误会与冲突分步释放世界观"
+  },
+  {
+    "file": "theory-story-grafting",
+    "path": "theory/genre-design/story-grafting",
+    "name": "故事嫁接：事件嫁接与身份绑定",
+    "description": "把主线剧情与世界观大冲突绑定，避免主角在世界里\"走马观花\"；用于世界观设计之后"
+  },
+  {
+    "file": "theory-language-comedy-five-logics",
+    "path": "theory/genre-design/language-comedy-five-logics",
+    "name": "语言喜剧的五种底层逻辑",
+    "description": "写台词笑点时，用信息错位、逻辑滑坡等五种机制构造笑料，补充喜剧困境与笑点升级"
+  },
+  {
+    "file": "theory-structural-comedy-info-gap",
+    "path": "theory/genre-design/structural-comedy-info-gap",
+    "name": "结构喜剧：信息差的三种玩法",
+    "description": "设计喜剧事件链时，用雪球、骨牌、扮猪三种信息差制造困境；补充喜剧困境与笑点升级"
+  },
+  {
+    "file": "theory-comedy-seed-cultivation",
+    "path": "theory/genre-design/comedy-seed-cultivation",
+    "name": "喜剧种子：抱怨公式与双门筛选",
+    "description": "想不出喜剧点子时，从生活抱怨中提取并筛选可演的喜剧种子；补充喜剧困境与笑点升级的前置步骤"
+  },
+  {
+    "file": "theory-comedy-models-character-setting-game",
+    "path": "theory/genre-design/comedy-models-character-setting-game",
+    "name": "喜剧模型：角色游戏与设定游戏",
+    "description": "有了喜剧种子后，判断荒诞集中在人还是环境，选择怪人入世或常人入怪的结构模型"
+  },
+  {
+    "file": "theory-rule-of-three-plausibility-hypnosis",
+    "path": "theory/genre-design/rule-of-three-plausibility-hypnosis",
+    "name": "三番升级与合理性催眠",
+    "description": "编排喜剧重复与夸张桥段时，用小小大/弱弱强三番节奏让荒诞事件显得合理"
+  },
+  {
+    "file": "theory-fast-narrative-compression",
+    "path": "theory/genre-design/fast-narrative-compression",
+    "name": "快叙事：有戏则长无戏则短的三种压缩技巧",
+    "description": "剧情拖沓、背景交代太多时，用暴力跳剪、结果前置、蒙太奇压缩过场、背景和重复事件"
+  },
+  {
+    "file": "theory-event-driven-design-sop",
+    "path": "theory/genre-design/event-driven-design-sop",
+    "name": "事件驱动故事设计SOP（六步）",
+    "description": "从想法到成稿的完整流程：定位、原型、10序列、倒推角色、模块填充、剪辑执行"
+  },
+  {
+    "file": "theory-emotion-driven-positioning",
+    "path": "theory/emotion/emotion-driven-positioning",
+    "name": "情绪驱动的定位与情绪活性",
+    "description": "判断作品是否该走情绪驱动，并分清情绪、人物、事件、世界观的主次；用于排查故事“平”“不上头”"
+  },
+  {
+    "file": "theory-desire-fulfilled-vs-denied-models",
+    "path": "theory/emotion/desire-fulfilled-vs-denied-models",
+    "name": "情绪需求双模型：求必得与求不得",
+    "description": "判断目标用户要“补偿”还是“宣泄”，选爽/甜/燃或虐/憾/悲；给出叙事操作步骤"
+  },
+  {
+    "file": "theory-negative-plot-trigger",
+    "path": "theory/emotion/negative-plot-trigger",
+    "name": "负面情节：对暗号与造扳机",
+    "description": "开篇让观众快速代入主角的方法：用普遍痛点放大成情节扳机；解决“主角再惨/再爽观众也无感”"
+  },
+  {
+    "file": "theory-expectation-gap-joy-sorrow",
+    "path": "theory/emotion/expectation-gap-joy-sorrow",
+    "name": "信息差制造喜与悲：预期与现实的剪刀差",
+    "description": "用观众与角色的信息差控制甜（喜）或虐（悲）的强度；写暗恋、误会、悲剧预告时用"
+  },
+  {
+    "file": "theory-qdn-model",
+    "path": "theory/emotion/qdn-model",
+    "name": "QDN 情绪化学模型：三个基色与事件扳机",
+    "description": "把情绪拆成 Q/D/N 三个变量并用事件调节；用于精准设计某一场戏要引发的情绪"
+  },
+  {
+    "file": "theory-qdn-basic-emotions",
+    "path": "theory/emotion/qdn-basic-emotions",
+    "name": "QDN 八种基础情绪配方",
+    "description": "乐、悲、怒、惧、惊、怡、怯、安心的 QDN 公式与合成步骤；要精准制造某种单一情绪时查此页"
+  },
+  {
+    "file": "theory-qdn-compound-emotions",
+    "path": "theory/emotion/qdn-compound-emotions",
+    "name": "情绪合成：从基础情绪到复合情感",
+    "description": "把两种基础情绪叠加成激动、酸楚、释然等复杂情感；用于设计五味杂陈的高阶情绪戏"
+  },
+  {
+    "file": "theory-three-emotion-engines",
+    "path": "theory/emotion/three-emotion-engines",
+    "name": "三种情绪发动机：高频爽点、情绪过山车、事件叠加",
+    "description": "按作品目标选择驱动情绪起伏的节奏模型"
+  },
+  {
+    "file": "theory-emotion-leverage-counter-auxiliary",
+    "path": "theory/emotion/emotion-leverage-counter-auxiliary",
+    "name": "情绪放大杠杆：反情绪蓄力与辅助情绪",
+    "description": "在爽点/虐点爆发前后加压和加围观反应，把情绪推到更高；爽点写得“不够炸”时用"
+  },
+  {
+    "file": "theory-emotion-fall-block",
+    "path": "theory/emotion/emotion-fall-block",
+    "name": "情绪回落阻断：在高潮回落前接上更强的刺激",
+    "description": "高潮之后不让观众冷却的节奏技巧，含最佳介入点自检；用于消除高潮后的流失点"
+  },
+  {
+    "file": "theory-four-blocking-weapons",
+    "path": "theory/emotion/four-blocking-weapons",
+    "name": "四种阻断武器：危机、悬念、反转、情感",
+    "description": "选择高潮后阻断事件的类型及其情绪转换（QDN）；写完高潮需要接下一个钩子时用"
+  },
+  {
+    "file": "theory-emotion-tug-amplifier",
+    "path": "theory/emotion/emotion-tug-amplifier",
+    "name": "情绪拉扯放大器：用信息差叠加矛盾情绪",
+    "description": "让观众同时承受两种矛盾情绪，使虐/甜/爽成倍放大；含三种信息差扳手"
+  },
+  {
+    "file": "theory-ending-hook-three-wrenches",
+    "path": "theory/pacing/ending-hook-three-wrenches",
+    "name": "结尾钩子三板斧：势能、动能、裂变",
+    "description": "章节/集尾钩子太平淡、没人追更时，用三种扳手结构化放大结尾"
+  },
+  {
+    "file": "theory-shuang-info-gap-theory",
+    "path": "theory/info-gap/shuang-info-gap-theory",
+    "name": "爽感的底层逻辑与信息差统一场论",
+    "description": "不知该写哪种爽、爽点没劲时，按信息差分配判断打脸/装逼/反转/迪化"
+  },
+  {
+    "file": "theory-shuang-four-stage-ratio",
+    "path": "theory/info-gap/shuang-four-stage-ratio",
+    "name": "爽感四阶段的篇幅配比与写法",
+    "description": "打脸戏节奏失衡、铺垫不足或打完就跑时，按四阶段 30/5/15/50 分配篇幅"
+  },
+  {
+    "file": "theory-shock-three-imbalances",
+    "path": "theory/emotion/shock-three-imbalances",
+    "name": "震撼感三大失衡定律",
+    "description": "想设计高潮或反转的“震撼”、突破打怪升级的平庸时，从认知/能量/价值三维设计"
+  },
+  {
+    "file": "theory-shock-reverse-engineering",
+    "path": "theory/emotion/shock-reverse-engineering",
+    "name": "震撼引爆的逆向工程（长期铺垫+瞬间引爆）",
+    "description": "反转/真相揭晓铺垫不足或泄露太早时，倒推设计假象、伏笔与引爆点"
+  },
+  {
+    "file": "theory-emotion-driven-story-sop",
+    "path": "theory/emotion/emotion-driven-story-sop",
+    "name": "情绪驱动的故事设计四车间流水线与检查表",
+    "description": "从点子到正文缺少系统流程、故事平淡无味时，按四车间九步逐阶段设计与自检"
   }
 ]

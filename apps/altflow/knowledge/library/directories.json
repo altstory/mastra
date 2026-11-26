@@ -58,5 +58,50 @@
     "path": "template",
     "name": "创作档案模板",
     "description": "角色、世界、地点与人物语言档案的参考结构。"
+  },
+  {
+    "path": "research/script-cases",
+    "name": "剧本写作案例",
+    "description": "可用于剧本写作的分集、场景、人物、对白、悬念、改编和互动分支案例。"
+  },
+  {
+    "path": "theory",
+    "name": "创作理论体系",
+    "description": "观众心理、信息差、预期与节奏、驱动与人物、事件原型、情绪工程及各类型设计方法。"
+  },
+  {
+    "path": "theory/audience",
+    "name": "观众与梦境",
+    "description": "观众为什么看、需要什么样的梦，以及安全感、效率与真实感的设计。"
+  },
+  {
+    "path": "theory/info-gap",
+    "name": "信息差与爽感",
+    "description": "信息差玩法、信息牌手法、金手指、爽感类型与四阶段配比。"
+  },
+  {
+    "path": "theory/pacing",
+    "name": "预期、节奏与大纲",
+    "description": "预期拉扯、期待循环、节奏判断、梗概检测、大纲与细纲分配。"
+  },
+  {
+    "path": "theory/drivers",
+    "name": "驱动、人物与表达",
+    "description": "三大驱动选型，人物魅力、小传八要素、台词动作画面与外化。"
+  },
+  {
+    "path": "theory/archetypes",
+    "name": "事件原型与大纲搭建",
+    "description": "十类事件驱动故事原型，锚点与里程碑大纲，从事件倒推主角。"
+  },
+  {
+    "path": "theory/emotion",
+    "name": "情绪工程",
+    "description": "求必得与求不得、QDN 情绪模型、情绪合成、放大与阻断、钩子与震撼。"
+  },
+  {
+    "path": "theory/genre-design",
+    "name": "悬疑、权谋、世界观与喜剧设计",
+    "description": "后台逻辑设计与前台展开：悬疑、权谋、世界观创世、喜剧模型与快叙事。"
   }
 ]
