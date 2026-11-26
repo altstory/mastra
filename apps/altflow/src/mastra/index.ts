@@ -59,6 +59,7 @@ import { createScriptQaWorkflow } from './workflows/script-qa';
 import { conversationToolPolicy } from './tools/conversation-policy';
 import { createDocumentTools } from './tools/read-document';
 import { creatorGatewayRoutes } from './routes/creator-gateway';
+import { creatorMemoryRoutes } from './routes/creator-memory';
 import { creatorLanguagePolicy } from './agents/creator-language';
 import { UserStorage } from './user-storage';
 import { userStorageRoutes } from './user-storage-routes';
@@ -436,6 +437,7 @@ export const mastra = new Mastra({
             subagents: agentTree.runtime,
           })
         : []),
+      ...(creatorGatewayClient ? creatorMemoryRoutes({ accounts, store: creativeMemoryStore }) : []),
       conversationMetricsRoute(storage, accounts, accountsOrigins),
       conversationStatusRoute(() => creatorAgent, accounts, accountsOrigins),
       ...subagentRoutes(
