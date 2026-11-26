@@ -186,7 +186,7 @@ and working-memory recall even when a client sends stale enabled options.
 
 用户正常描述需求，Agent 按当前问题组合已发布的创作技能，用 ask_user 展示一次一题的问答卡片。title/context 提供问题背景，选项支持说明和推荐标记，仍沿用原生暂停与恢复；回答结果保留 question/answer 供聊天历史展示。
 
-需求够用时通过 show_creative_brief 展示已确认、假设和待定事项，并将同一份要求写入当前项目的 00-需求确认.md。质检读取已确认原则传入 script-qa，不机械地要求用户完成全部环节。
+需求够用时通过 show_creative_brief 展示已确认、假设和待定事项，并将同一份要求写入当前项目的 00-需求确认.md。剧本通过格式校验后交付，整体质检工作流暂未启用。
 
 代码维护的技能发布：pnpm --filter @internal/altflow publish:creator-skills。运行代码和已发布技能是两个更新步骤；发布技能保留历史版本，当前对话下一次创建工作区时读取活跃版本。
 

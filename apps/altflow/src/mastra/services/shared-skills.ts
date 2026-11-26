@@ -1,10 +1,13 @@
 import { realpath } from 'node:fs/promises';
-import { relative, isAbsolute, resolve } from 'node:path';
+import { relative, isAbsolute, resolve, sep } from 'node:path';
 import type { MastraCompositeStore } from '@mastra/core/storage';
 import { CompositeVersionedSkillSource, LocalSkillSource } from '@mastra/core/workspace';
 import type { SkillSource, VersionedSkillEntry } from '@mastra/core/workspace';
 
 const isSkillDirectoryName = (id: string) => /^[a-z0-9][a-z0-9_-]*$/i.test(id);
+const disabledCreatorSkills = new Set(['quality-assurance']);
+
+export const creatorLocalSkillSource = (root: string) => new SharedSkillSource(root, disabledCreatorSkills);
 
 export async function resolvePublishedSkills(storage: MastraCompositeStore) {
   const [skills, blobs] = await Promise.all([storage.getStore('skills'), storage.getStore('blobs')]);
@@ -13,7 +16,9 @@ export async function resolvePublishedSkills(storage: MastraCompositeStore) {
   const entries: VersionedSkillEntry[] = [];
   for (let page = 0; ; page++) {
     const result = await skills.list({ page, perPage: 100, status: 'published', visibility: 'public' });
-    const records = result.skills.filter(record => record.activeVersionId && isSkillDirectoryName(record.id));
+    const records = result.skills.filter(
+      record => record.activeVersionId && isSkillDirectoryName(record.id) && !disabledCreatorSkills.has(record.id),
+    );
     const versions = await skills.getVersions(records.flatMap(record => record.activeVersionId ?? []));
     const byId = new Map(versions.map(version => [version.id, version]));
     for (const record of records) {
@@ -31,7 +36,10 @@ export async function resolvePublishedSkills(storage: MastraCompositeStore) {
 /** Shared instructions are read-only and may not resolve outside the skills root. */
 export class SharedSkillSource implements SkillSource {
   private readonly local: LocalSkillSource;
-  constructor(private readonly root: string) {
+  constructor(
+    private readonly root: string,
+    private readonly excluded?: ReadonlySet<string>,
+  ) {
     this.local = new LocalSkillSource({ basePath: root });
   }
   private async checked(path: string) {
@@ -40,6 +48,8 @@ export class SharedSkillSource implements SkillSource {
     const rel = relative(base, target);
     if (rel === '..' || rel.startsWith('../') || isAbsolute(rel))
       throw new Error('Skill path is outside the shared skills directory.');
+    if (this.excluded?.has(rel.split(sep)[0]))
+      throw Object.assign(new Error('Skill is unavailable.'), { code: 'ENOENT' });
     return target;
   }
   async exists(path: string) {
@@ -58,7 +68,10 @@ export class SharedSkillSource implements SkillSource {
     return this.local.readFile(await this.checked(path));
   }
   async readdir(path: string) {
-    return this.local.readdir(await this.checked(path));
+    const entries = await this.local.readdir(await this.checked(path));
+    return this.excluded && resolve(this.root, path) === resolve(this.root)
+      ? entries.filter(entry => !this.excluded!.has(entry.name))
+      : entries;
   }
   async realpath(path: string) {
     return this.checked(path);

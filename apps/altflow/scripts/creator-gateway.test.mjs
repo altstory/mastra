@@ -513,6 +513,30 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.equal(steeredMessages.length, 1);
   await assertStatus(await steer(steering), 200);
   await assertStatus(await steer({ ...steering, steerId: randomUUID() }), 409);
+  const stopOperation = randomUUID();
+  const beforeStop = hub.state.requests.length;
+  hub.state.blocked = true;
+  try {
+    const started = await request('/creator-gateway/send', { method: 'POST', body, operation: stopOperation });
+    await assertStatus(started, 200);
+    const { runId } = await started.json();
+    await until(() => hub.state.requests.length > beforeStop);
+    const stop = expectedRunId =>
+      request('/agents/creator-agent/threads/abort', {
+        method: 'POST',
+        body: { threadId, resourceId, expectedRunId },
+      });
+    assert.deepEqual(await (await stop('different-run')).json(), { aborted: false });
+    const response = await stop(runId);
+    await assertStatus(response, 200);
+    assert.deepEqual(await response.json(), { aborted: true });
+    await until(async () => {
+      const data = await (await request('/creator-gateway/operation', { operation: stopOperation })).json();
+      return data.state === 'cancelled';
+    });
+  } finally {
+    hub.state.blocked = false;
+  }
   hub.state.nextToolCall = modelBody => {
     const lastUser = modelBody.messages.findLastIndex(message => message.role === 'user');
     if (modelBody.messages.slice(lastUser + 1).some(message => message.role === 'tool')) return undefined;

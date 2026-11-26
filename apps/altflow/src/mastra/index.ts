@@ -17,7 +17,6 @@ import { Observability, MastraStorageExporter } from '@mastra/observability';
 import { KNOWLEDGE_ROUTES } from '@mastra/server/server-adapter';
 import OSS from 'ali-oss';
 import { z } from 'zod';
-import { createScriptReviewer } from './agents/script-reviewer';
 import { DisabledRecallMemory } from './agents/disabled-recall-memory';
 import { executionPolicy } from './agents/execution-policy';
 import { HistoryMemory } from './agents/history-memory';
@@ -50,12 +49,12 @@ import { CreativeMemoryStore } from './services/creative-memory';
 import { UserDeliveryService } from './services/delivery';
 import { StoryLedgerStore } from './services/story-ledger';
 import { OfficeReader } from './services/office';
+import { creatorLocalSkillSource } from './services/shared-skills';
 import { turnFileChangesProcessor } from './services/turn-file-changes';
 import { createAgentTree } from './subagents/agents';
 import { SubagentStore } from './subagents/store';
 import { interactiveScriptFormat } from './tools/deliver-interactive-script';
 import { createCreatorTools } from './tools';
-import { createScriptQaWorkflow } from './workflows/script-qa';
 import { conversationToolPolicy } from './tools/conversation-policy';
 import { createDocumentTools } from './tools/read-document';
 import { creatorGatewayRoutes } from './routes/creator-gateway';
@@ -147,7 +146,8 @@ const workspace = new Workspace({
   bm25: true,
   vectorStore: vector,
   embedder: async (text: string) => (await localEmbedder.doEmbed({ values: [text] })).embeddings[0],
-  skills: ['skills'],
+  skills: ['.'],
+  skillSource: creatorLocalSkillSource(previewPath('workspace', 'skills')),
 });
 const knowledge = new Knowledge({
   id: 'creator-knowledge',
@@ -261,10 +261,6 @@ const creatorToolBundle = createCreatorTools({
   projectFiles: conversationFiles,
   storyLedger,
 });
-const scriptReviewer = createScriptReviewer(() =>
-  modelHub.resolveLanguageModel({ modelId: model.slice(model.indexOf('/') + 1) }),
-);
-const scriptQa = createScriptQaWorkflow(scriptReviewer.review, storyLedger);
 const privateWorkspace = createPrivateWorkspace(conversationFiles, storage);
 const subagentStore = new SubagentStore(`file:${previewPath('data/subagents.db')}`);
 await subagentStore.init();
@@ -329,16 +325,16 @@ const creatorAgent = new Agent({
 ## 创作
 - 创作是持续协作：先做出一份能讨论的具体成果，及时拿给用户看，再扩展依赖它的内容。不能开头问完就连续写完构思、人物、互动、大纲，直到末尾才交文件。每份有实质内容的新创作文档与重要修订都要展示实际内容，包括需求、创意、人物、世界观、受众、架构、互动、大纲、剧本及迭代稿；相关成果可以合并展示，但不能遗漏。任务进度、文件名和“已完成”不算展示成果。
 - 根据内容自主选择参与点，不按固定环节、题数或计时器打断。首次具体方案出现、人物关系或关键情节新增了有分歧的创作取舍、准备从梗概扩写大篇幅正文时，用 ask_user.preview 展示精简成果，问最值得用户参与的一项，等待回答后再扩展。问题要针对内容和效果，不机械问“是否确认进入下一步”。用户已明确的决定不重问，查资料、保存文件等执行细节不中断。
-- 按内容选择 UI：方向取舍用 directions 对比，人物用 characters 并提供 relationships 关系及矛盾，情节节奏用 outline 并按需提供 emotion 和 details，可试玩的无状态短样段用 script（场景、对白、分支与结局），普通文风试写用 excerpt，修订用 revision 的真实 before/after 和 reason，其他文档用 document 分节展示；这些结构既可放进 ask_user.preview，也可用 show_creative_work 单独展示。已有分支图、创作要求和质检卡继续用各自工具。不需要决定的中间成果展示后继续，不为展示额外索要批准。用户明确要求全程自主完成时尊重授权，仍在有意义的成果处展示进展。
+- 按内容选择 UI：方向取舍用 directions 对比，人物用 characters 并提供 relationships 关系及矛盾，情节节奏用 outline 并按需提供 emotion 和 details，可试玩的无状态短样段用 script（场景、对白、分支与结局），普通文风试写用 excerpt，修订用 revision 的真实 before/after 和 reason，其他文档用 document 分节展示；这些结构既可放进 ask_user.preview，也可用 show_creative_work 单独展示。已有分支图和创作要求继续用各自工具。不需要决定的中间成果展示后继续，不为展示额外索要批准。用户明确要求全程自主完成时尊重授权，仍在有意义的成果处展示进展。
 - 收到反馈先修订相关成果，说明具体改变，随后据此继续；回答和所评阅的版本保留在对话里。完整稿照常保存，展示只选能帮助理解和决定的重点，不能用大段全文淹没问题。试玩的选择只是用户探索剧情，不等于确认创作方向；收到 ask_user 的明确反馈才据此修改。revision 原稿必须来自实际已有版本，不编造差异；展示修改建议不等于用户已采纳。script 只用于短样段的无状态分支试玩，完整互动剧本仍须用原格式校验交付，不把有状态约束的剧本简化后声称完全可运行。
-- 用户回答后更新当前项目的 00-需求确认.md；需求足够或关键要求变化时用 show_creative_brief 展示已确认、暂定假设和待定事项。后续创作复用这些决定，质检时读取并传入已确认的创作原则。
+- 用户回答后更新当前项目的 00-需求确认.md；需求足够或关键要求变化时用 show_creative_brief 展示已确认、暂定假设和待定事项。后续创作复用这些决定。
 - 做互动剧项目时，读取 interactive-drama-workflow 了解可用方法，再根据已有材料和当前任务自主选择、组合技能。可以跳过、回退或并行处理创意、角色、世界观、互动和剧本，不把默认环节顺序当成执行门禁。
 - 项目产出保存在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（如 01-创意构思.md）。需要了解项目整体进度时用 project_status 展示卡片，不逐项复述。只补会影响当前写作的缺口；缺少整套前置文档不是门禁，可以依据已有材料直接开始，并记录关键假设。
 - 写作用具体的动作、台词和可见细节，不用套话和总结式的心理描写。
 - 用户让你新写、续写或改写互动剧本时，使用下面的交付格式。动作以 △ 开头，台词用「人物：台词」。集名、场景、选项、跳转、分支收束和集尾都各占一行。剧本正文不混入改稿说明、角色卡或分析报告。
 ${interactiveScriptFormat}
 - 交付互动剧本时必须调用 deliver_interactive_script 传入完整稿，校验失败时按行修正再提交。工具会同时保存文件和展示分支图。用户要求正文直接贴在聊天里时，也用同一份校验通过的剧本。分析已有剧本的分支结构时，用 show_branch_graph。
-- 要求精确字数时用 countText，整体篇幅检查用 text-review 工作流。检查已有剧本格式用 validate_script_format，评估整集质量用 script-qa。报告会以卡片展示，只概述主要结论。
+- 要求精确字数时用 countText，整体篇幅检查用 text-review 工作流。检查已有剧本格式用 validate_script_format。当前暂停剧本整体质检、复检和质检报告，完成用户要求后直接交付。
 
 ## 内部资料
 ${internalReferencePolicy}
@@ -383,7 +379,7 @@ ${creatorLanguagePolicy}
   outputProcessors: [contextCompaction],
   errorProcessors: [contextCompaction],
   tools: creatorTools,
-  workflows: { textReview, scriptQa },
+  workflows: { textReview },
 });
 const creatorMcp = new MCPServer({ id: 'creator-mcp', name: '创作工具服务', version: '1.0.0', tools: { countText } });
 export const mastra = new Mastra({
@@ -405,7 +401,7 @@ export const mastra = new Mastra({
   },
   gateways: { altflow: modelHub },
   agents: { creatorAgent },
-  workflows: { textReview, scriptQa },
+  workflows: { textReview },
   tools: creatorTools,
   processors: { contextCompaction },
   workspace,

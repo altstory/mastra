@@ -19,7 +19,6 @@ export const PROJECT_STAGES = [
   { id: '05', title: '互动设计', requiredForScript: true },
   { id: '06', title: '分集大纲', requiredForScript: true },
   { id: '07', title: '互动剧本', requiredForScript: false },
-  { id: '08', title: '质量检查报告', requiredForScript: false },
   { id: '09', title: '迭代优化记录', requiredForScript: false },
 ] as const;
 
@@ -62,7 +61,7 @@ export function createProjectStatusTool(options: { files: ProjectFiles; ledger?:
   return createTool({
     id: 'project_status',
     description:
-      '查看创作项目的进度：各环节的产出文件是否已存在，写剧本前还缺哪些。指定项目时还会给出设定与伏笔台账的条目数和未回收伏笔数。文件仅在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（00 需求确认、01 创意构思、02 世界观设定、03 人物设计、04 故事架构、05 互动设计、06 分集大纲、07 互动剧本、08 质量检查报告、09 迭代优化记录）。不传项目名则只列出当前会话的项目，不读取账号的其他会话。',
+      '查看创作项目的进度：各环节的产出文件是否已存在，写剧本前还缺哪些。指定项目时还会给出设定与伏笔台账的条目数和未回收伏笔数。文件仅在当前会话工作区 projects/<项目名>/ 下，文件名以环节序号开头（00 需求确认、01 创意构思、02 世界观设定、03 人物设计、04 故事架构、05 互动设计、06 分集大纲、07 互动剧本、09 迭代优化记录）。不传项目名则只列出当前会话的项目，不读取账号的其他会话。',
     inputSchema: z.object({ project: z.string().min(1).optional().describe('项目名，即 projects 下的目录名') }),
     outputSchema: z.object({
       projects: z.array(z.string()).optional(),
