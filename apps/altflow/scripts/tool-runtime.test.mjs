@@ -265,7 +265,9 @@ test('ordinary agents apply published references while public responses and hist
   assert.ok(prepare.output.toolSources.skills.includes('skill'));
   const working = spans.find(span => span.entityId === 'working-memory');
   assert.ok(working.output.systemMessages.some(message => message.content.includes(workingMemory)));
-  const recall = spans.find(span => span.name === 'memory:recall' || span.entityName === 'MessageHistory');
+  const recall = spans.find(
+    span => span.entityName === 'MessageHistory' && span.attributes?.operationType === 'recall',
+  );
   assert.ok(
     recall.attributes.messageListMutations.some(
       change =>

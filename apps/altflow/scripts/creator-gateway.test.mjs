@@ -403,6 +403,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   });
   await assertStatus(upload, 200);
   const { id } = await upload.json();
+  await assertStatus(await request('/creator-gateway/file/update?id=' + id, { method: 'POST', body: 'replace' }), 415);
   assert.equal(await (await request('/creator-gateway/file?id=' + id)).text(), 'Private notes');
   await assertStatus(await request('/creator-gateway/file?id=' + id, { conversation: other }), 404);
 
@@ -549,6 +550,19 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.equal(script.path, '/projects/测试/剧本.md');
   const downloaded = await request('/creator-gateway/file?id=' + script.id);
   assert.equal(await downloaded.text(), interactiveScriptFormat + '\n');
+  const editPath = '/creator-gateway/file/update?id=' + script.id;
+  const editedText = '第01集 灯塔\n△灯亮了。\n程漪：走吧。\n';
+  const edit = (options = {}) => request(editPath, { method: 'POST', body: editedText, ...options });
+  await assertStatus(await edit({ signed: false }), 401);
+  await assertStatus(await edit({ conversation: other }), 409);
+  await assertStatus(await edit({ user: 'bob' }), 409);
+  const saved = await edit();
+  await assertStatus(saved, 200);
+  const newVersion = await saved.json();
+  assert.equal(newVersion.path, script.path);
+  assert.notEqual(newVersion.id, script.id);
+  await assertStatus(await edit({ body: 'stale' }), 409);
+  assert.equal(await (await request('/creator-gateway/file?id=' + newVersion.id)).text(), editedText);
   const updated = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');
   assert.match(await updated.text(), /"delivered":true.*"pathCount":2/);
   const actorContext = context(account);

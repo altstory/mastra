@@ -49,6 +49,7 @@ export async function modelHubFixture() {
     unavailable: false,
     toolCallText: undefined,
     toolCall: undefined,
+    replyParts: undefined,
     blocked: false,
     summaryText: '## Primary Request and Intent\n- Preserve original task.\n## Current Work\n- Continue the task.',
     summaryFinish: 'stop',
@@ -103,7 +104,7 @@ export async function modelHubFixture() {
               },
             ],
           }
-        : { role: 'assistant', content: summarizing ? state.summaryText : 'verified' };
+        : { role: 'assistant', content: summarizing ? state.summaryText : (state.replyParts?.join('') ?? 'verified') };
       const finishReason = summarizing ? state.summaryFinish : callTool ? 'tool_calls' : 'stop';
       const usage =
         state.usage ??
@@ -130,7 +131,11 @@ export async function modelHubFixture() {
               tool_calls: message.tool_calls.map(tool => ({ index: 0, ...tool })),
             }
           : message;
-        response.write('data: ' + JSON.stringify(chunk(delta)) + '\n\n');
+        for (const part of callTool || summarizing || !state.replyParts
+          ? [delta]
+          : state.replyParts.map(content => ({ role: 'assistant', content }))) {
+          response.write('data: ' + JSON.stringify(chunk(part)) + '\n\n');
+        }
         response.write(
           'data: ' +
             JSON.stringify({

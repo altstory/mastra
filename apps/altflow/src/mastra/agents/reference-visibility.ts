@@ -5,9 +5,9 @@ import type { Middleware } from '@mastra/core/server';
 import type { AltFlowUser } from '../altflow-auth';
 import { creatorGatewayContextKey } from '../creator-gateway-auth';
 
-const privateReferenceTool = /^(?:knowledge_|skill(?:_|$))/;
+export const isPrivateReferenceTool = (name: string) => /^(?:knowledge_|skill(?:_|$))/.test(name);
 const internalTool = /^(?:read_tool_result|recall|session_search|updateWorkingMemory|remember|forget_memory)$/;
-const isInternalTool = (name: string) => privateReferenceTool.test(name) || internalTool.test(name);
+const isInternalTool = (name: string) => isPrivateReferenceTool(name) || internalTool.test(name);
 const pinnedKnowledgeTags = new Set(['pinned-knowledge', 'pinned-knowledge-update']);
 const pinnedKnowledgeBlock = /^\s*<(pinned-knowledge(?:-update)?)(?:\s[^>]*)?>[\s\S]*<\/\1>\s*$/;
 

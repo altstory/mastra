@@ -151,7 +151,7 @@ const displaySchema = z.object({ work: creativeWorkSchema });
 export const creativeWorkTool = createTool({
   id: 'show_creative_work',
   description:
-    '把刚生成的实际创作成果及时展示在对话里。按内容选择 directions 方案对比、characters 人物及 relationships 关系图、outline 可展开的情节时间轴（emotion 与 details）、script 可试玩的无状态分支样段、revision 修改前后对照（真实 before/after 与 reason）、excerpt 普通试写片段、document 其他文档的分节摘要（如世界观、受众、创作原则或修订）；每份新创作文档与重要修订都应有实际内容展示，不能只展示其中一份。只放当前可讨论的精简成果，不放执行日志或内部资料。无需用户决定时展示后可继续；需要反馈时改用 ask_user.preview 携带同一结构并等待回答，不重复展示两遍。展示不等于用户确认，也不替代文件保存。',
+    '把刚生成的实际创作成果及时展示在对话里。按内容选择 directions 方案对比、characters 人物及 relationships 关系图、outline 可展开的情节时间轴（emotion 与 details）、script 可试玩的无状态分支样段、revision 修改前后对照（真实 before/after 与 reason）、excerpt 普通试写片段（剧本里的场景、每个 △ 动作、每位人物的每次发言、每个选项及跳转都各占一行）、document 其他文档的分节摘要（如世界观、受众、创作原则或修订）；每份新创作文档与重要修订都应有实际内容展示，不能只展示其中一份。只放当前可讨论的精简成果，不放执行日志或内部资料。无需用户决定时展示后可继续；需要反馈时改用 ask_user.preview 携带同一结构并等待回答，不重复展示两遍。展示不等于用户确认，也不替代文件保存。',
   inputSchema: displaySchema,
   outputSchema: displaySchema,
   execute: async input => input,

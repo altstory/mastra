@@ -99,6 +99,7 @@ Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、�
 - 附件先保存再发送消息。文本/其他文档通过工作区文件工具读取，图片和 PDF 同时保留原生模型输入。Agent 的文件工具、`project_status`、`read_document` 和 `present` 只访问当前会话文件；同一会话的子 Agent 共享该范围。不同会话写入同名路径不会覆盖彼此，容量仍按账号累计。生成文件在设置的存储页可下载。
 - 新上传的文件只有随用户消息明确附加后，才进入该会话。旧文件只根据唯一会话的写入记录和当前内容版本恢复归属；归属不明确的文件保留在账号存储页，不自动开放给 Agent。编辑旧文件或附件会生成当前会话副本，原件保留。
 - 会话文件面板通过 `/storage?thread=<会话 ID>` 获取隔离列表，并校验会话所有权；账号存储管理仍可查看自己的全部文件。逻辑路径用于 Agent 读写，`storagePath` 用于已有的鉴权预览和下载接口。
+- Web 自由创作的会话文件面板支持下载和编辑 Agent 生成的文本文件，最大可编辑大小为 10 MiB。保存前校验文件版本，冲突时保留用户草稿。
 - `/storage`、`/storage/upload`、`/storage/download`、`/storage/file` 每次复用 Go 身份验证；Cookie 写请求校验 Origin，下载无公共 OSS URL。页面支持容量条、文件/图像分类、搜索、下载、删除确认和错误恢复。
 - 当前身份需有桶内 `users/*` 的 `oss:PutObject`、`oss:GetObject`、`oss:DeleteObject` 权限。验证前缀 `integration-tests/*` 用于独立连通性检查。删除权限缺失时页面会报错，不会伪造删除成功。
 - `node --import tsx scripts/import-legacy-files.mjs` 可恢复历史会话中的原始文本附件和内联文件，按会话账本归属写入用户空间。旧 `creator-agent` 资源必须有明确的 `ALTFLOW_LEGACY_OWNER_ID`；不推断归属、不下载历史外部 URL、不改写会话，重复执行不会重复占用空间。

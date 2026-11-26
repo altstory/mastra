@@ -42,7 +42,7 @@ export function createDeliverInteractiveScriptTool(files: Pick<WorkspaceFiles, '
       }),
       z.object({
         delivered: z.literal(true),
-        file: z.object({ id: z.string(), name: z.string() }),
+        file: z.object({ id: z.string(), name: z.string(), path: z.string() }),
         graph: branchGraphOutputSchema,
       }),
     ]),
@@ -66,7 +66,7 @@ export function createDeliverInteractiveScriptTool(files: Pick<WorkspaceFiles, '
       const stored = await files.write(userId, path, Buffer.from(script + '\n'));
       return {
         delivered: true as const,
-        file: { id: creatorFileId(stored.path, stored.updatedAt), name: stored.name },
+        file: { id: creatorFileId(stored.path, stored.updatedAt), name: stored.name, path: stored.path },
         graph,
       };
     },

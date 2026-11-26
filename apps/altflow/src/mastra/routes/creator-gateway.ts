@@ -25,12 +25,27 @@ import {
 import { creatorFileId as fileId } from '../creator-file-id';
 import { defaultConversationModel } from '../model-policy';
 import type { ConversationFiles } from '../services/conversation-files';
-import { FileStorageError } from '../user-storage';
+import { FileStorageError, type UserFile } from '../user-storage';
 import { SubagentError, type SubagentRuntime } from '../subagents/runtime';
 import { projectConversation } from '../agents/reference-visibility';
 
 const attachmentId = z.string().regex(/^[a-f0-9]{64}$/);
 const uploadIdSchema = z.uuid();
+
+const editableFileLimit = 10 * 1024 * 1024;
+const editableFile = /\.(md|markdown|mdx|txt|csv|json|log|ya?ml)$/i;
+
+function creatorFileEntry(file: UserFile) {
+  const uploadId = /^\/uploads\/([^/]+)\/[^/]+$/.exec(file.path)?.[1];
+  return {
+    id: fileId(file.path, String(file.updatedAt)),
+    name: file.name,
+    size: file.size,
+    path: file.path,
+    ...(uploadIdSchema.safeParse(uploadId).success ? { uploadId } : {}),
+    editable: file.source === 'generated' && file.size <= editableFileLimit && editableFile.test(file.name),
+  };
+}
 const nativeImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const messageSchema = z
   .strictObject({
@@ -386,19 +401,7 @@ export async function creatorGatewayRoutes({
     }),
     route('files', 'GET', async ({ claims, thread }) => {
       const entries = await files.run({ owner: claims.userId, root: thread }, () => files.list(claims.userId));
-      return Response.json(
-        entries.map(file => {
-          const name = file.path.split('/').at(-1);
-          const uploadId = /^\/uploads\/([^/]+)\/[^/]+$/.exec(file.path)?.[1];
-          return {
-            id: fileId(file.path, String(file.updatedAt)),
-            name,
-            size: file.size,
-            path: file.path,
-            ...(uploadIdSchema.safeParse(uploadId).success ? { uploadId } : {}),
-          };
-        }),
-      );
+      return Response.json(entries.map(creatorFileEntry));
     }),
     route('file', 'GET', async ({ request, claims, thread }) => {
       const id = new URL(request.url).searchParams.get('id');
@@ -414,6 +417,27 @@ export async function creatorGatewayRoutes({
             'X-Content-Type-Options': 'nosniff',
           },
         });
+      });
+    }),
+    route('file/update', 'POST', async ({ request, claims, thread }) => {
+      const id = attachmentId.safeParse(new URL(request.url).searchParams.get('id'));
+      if (!id.success) return new Response(null, { status: 400 });
+      const data = Buffer.from(await request.arrayBuffer());
+      if (data.length > editableFileLimit) return new Response(null, { status: 413 });
+      if (!Buffer.from(data.toString('utf8')).equals(data)) return new Response(null, { status: 400 });
+      return files.run({ owner: claims.userId, root: thread }, async () => {
+        const entry = (await files.list(claims.userId)).find(
+          file => fileId(file.path, String(file.updatedAt)) === id.data,
+        );
+        if (!entry) return new Response(null, { status: 409 });
+        if (!creatorFileEntry(entry).editable) return new Response(null, { status: 415 });
+        const saved = await files.write(claims.userId, entry.path, data, {
+          expectedMtime: new Date(entry.updatedAt),
+          mimeType: entry.mimeType,
+          source: entry.source,
+          overwrite: true,
+        });
+        return Response.json(creatorFileEntry(saved));
       });
     }),
     route('file', 'POST', async ({ request, claims, thread }) => {

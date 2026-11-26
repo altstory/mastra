@@ -3,6 +3,7 @@ import { MastraModelGateway } from '@mastra/core/llm';
 import type { ProviderConfig } from '@mastra/core/llm';
 import { resolveCurrentSpan, SpanType } from '@mastra/core/observability';
 import { z } from 'zod';
+import { referenceOutputGuard } from './agents/reference-output';
 import { creatorMeterContext, fetchMeteredCreatorModel } from './creator-meter';
 import { contextPolicy } from './context-policy.ts';
 
@@ -353,10 +354,14 @@ export class ModelHubGateway extends MastraModelGateway {
       provider: model.provider,
       modelId: model.modelId,
       supportedUrls: model.supportedUrls,
-      doGenerate: (options: Parameters<ChatModel['doGenerate']>[0]) =>
-        model.doGenerate({ ...options, prompt: nativeToolImages(options.prompt) }),
-      doStream: (options: Parameters<ChatModel['doStream']>[0]) =>
-        model.doStream({ ...options, prompt: nativeToolImages(options.prompt) }),
+      doGenerate: async (options: Parameters<ChatModel['doGenerate']>[0]) => {
+        const result = await model.doGenerate({ ...options, prompt: nativeToolImages(options.prompt) });
+        return (purpose === 'chat' && referenceOutputGuard(options.prompt)?.generate(result)) || result;
+      },
+      doStream: async (options: Parameters<ChatModel['doStream']>[0]) => {
+        const result = await model.doStream({ ...options, prompt: nativeToolImages(options.prompt) });
+        return (purpose === 'chat' && referenceOutputGuard(options.prompt)?.stream(result)) || result;
+      },
     };
   }
 }
