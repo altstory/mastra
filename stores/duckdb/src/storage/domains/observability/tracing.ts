@@ -115,16 +115,18 @@ const COLUMNS = [
 const COLUMNS_SQL = COLUMNS.join(', ');
 
 const PAYLOAD_COLUMN_SET: ReadonlySet<string> = new Set(SPAN_PAYLOAD_COLUMNS);
+const SPAN_EVENT_ORDER =
+  "struct_pack(at := timestamp, completed := eventType = 'end', sequence := coalesce(cursorId, 0))";
 
 /**
- * Reconstruction query uses `arg_max(field, timestamp) FILTER (WHERE field IS NOT NULL)`
- * so that the final end event supplies the terminal span fields without wiping
+ * Prefer end events when timestamps tie, and use insertion order within
+ * the same phase. Missing values never wipe
  * stable values emitted on the start event. Payload columns also skip the JSON
  * `null` placeholder, which stands in for a missing value.
  */
 function argMaxNonNull(col: string): string {
   const placeholder = PAYLOAD_COLUMN_SET.has(col) ? ` AND ${col} <> '${JSON_NULL_PLACEHOLDER}'` : '';
-  return `arg_max(${col}, timestamp) FILTER (WHERE ${col} IS NOT NULL${placeholder}) as ${col}`;
+  return `arg_max(${col}, ${SPAN_EVENT_ORDER}) FILTER (WHERE ${col} IS NOT NULL${placeholder}) as ${col}`;
 }
 
 /** The payload column each stored preview column describes, and its payload-presence flag. */
@@ -143,7 +145,7 @@ const PREVIEW_PAYLOADS = [
  */
 const RECONSTRUCT_PREVIEWS_SQL = PREVIEW_PAYLOADS.map(
   ([preview, , present]) =>
-    `(coalesce(arg_max(struct_pack(value := ${preview}), timestamp) FILTER (WHERE coalesce(${present}, true) OR ${preview} <> ''), arg_max(struct_pack(value := ${preview}), timestamp))).value as ${preview}`,
+    `(coalesce(arg_max(struct_pack(value := ${preview}), ${SPAN_EVENT_ORDER}) FILTER (WHERE coalesce(${present}, true) OR ${preview} <> ''), arg_max(struct_pack(value := ${preview}), ${SPAN_EVENT_ORDER}))).value as ${preview}`,
 ).join(',\n    ');
 
 const SPAN_RECONSTRUCT_SELECT = `
@@ -1023,7 +1025,7 @@ export async function getSpan(db: DuckDBConnection, args: GetSpanArgs): Promise<
 /** Reconstruct the root span (no parent) for a trace. */
 export async function getRootSpan(db: DuckDBConnection, args: GetRootSpanArgs): Promise<GetRootSpanResponse | null> {
   const rows = await db.query(
-    `${SPAN_RECONSTRUCT_SELECT} WHERE traceId = ? GROUP BY traceId, spanId HAVING arg_max(parentSpanId, timestamp) IS NULL LIMIT 1`,
+    `${SPAN_RECONSTRUCT_SELECT} WHERE traceId = ? GROUP BY traceId, spanId HAVING arg_max(parentSpanId, ${SPAN_EVENT_ORDER}) IS NULL LIMIT 1`,
     [args.traceId],
   );
   if (rows.length === 0) return null;

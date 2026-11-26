@@ -93,6 +93,18 @@ describe('DuckDB stored previews', () => {
     ]);
   });
 
+  it('returns the completed span attributes when start and end share a timestamp', async () => {
+    const attributes = { operationType: 'recall' };
+    const messageListMutations = [{ type: 'add', source: 'memory', count: 1 }];
+    await storage.batchCreateSpans({ records: [span({ endedAt: null, attributes })] });
+    await storage.batchCreateSpans({
+      records: [span({ endedAt: startedAt, attributes: { ...attributes, messageListMutations } })],
+    });
+
+    const trace = await storage.getTrace({ traceId: 'trace-rows' });
+    expect(trace?.spans[0]?.attributes).toEqual({ ...attributes, messageListMutations });
+  });
+
   it('keeps the older payload preview when an upgraded end row carries no payload', async () => {
     await storage.batchCreateSpans({ records: [span({ endedAt: null })] });
     await clearPreviews('trace-rows', 'root-rows');
