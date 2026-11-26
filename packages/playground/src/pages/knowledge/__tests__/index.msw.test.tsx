@@ -1,4 +1,4 @@
-import type { KnowledgeLinkCountsResponse } from '@mastra/client-js';
+import type { KnowledgeLinkCountsResponse, KnowledgeTreeResponse } from '@mastra/client-js';
 import { TooltipProvider } from '@mastra/playground-ui/components/Tooltip';
 import { LinkComponentProvider } from '@mastra/playground-ui/lib/framework';
 
@@ -10,6 +10,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import KnowledgePage from '..';
 import {
   emptyKnowledgeGraph,
+  nestedKnowledgeGraph,
+  nestedKnowledgeTreeLevel,
   knowledgeGraph,
   knowledgeGraphWithGrants,
   knowledgeInstances,
@@ -101,6 +103,58 @@ function withChangeStream() {
 }
 
 describe('Knowledge page', () => {
+  describe('when the library has nested directories', () => {
+    it('shows every descendant with a name without opening its parent', async () => {
+      withInstance(nestedKnowledgeGraph);
+      server.use(
+        http.get(`${api}/main/tree`, ({ request }) =>
+          HttpResponse.json(nestedKnowledgeTreeLevel(new URL(request.url).searchParams.get('parentId'))),
+        ),
+        http.get(`${api}/main/link-counts`, () =>
+          HttpResponse.json({ counts: {} } satisfies KnowledgeLinkCountsResponse),
+        ),
+      );
+      renderPage('/knowledge?view=graph');
+      await waitFor(() => {
+        const nodes = screen.getAllByTestId('knowledge-page-node');
+        expect(nodes.map(node => node.getAttribute('data-page-id')).sort()).toEqual(
+          nestedKnowledgeGraph.pages.map(page => page.id).sort(),
+        );
+        expect(nodes.find(node => node.getAttribute('data-page-id') === 'deep-page')?.textContent).toContain(
+          '动作与反馈',
+        );
+      });
+    });
+  });
+
+  describe('when the graph response is truncated and a directory spans multiple pages', () => {
+    it('loads later batches and their descendants into the labelled graph', async () => {
+      withInstance({ ...nestedKnowledgeGraph, pages: nestedKnowledgeGraph.pages.slice(0, 1), truncated: true });
+      server.use(
+        http.get(`${api}/main/tree`, ({ request }) => {
+          const params = new URL(request.url).searchParams;
+          const parentId = params.get('parentId');
+          if (parentId === 'page-payments' && !params.get('cursor')) {
+            return HttpResponse.json({ pages: [], nextCursor: 'next-batch' } satisfies KnowledgeTreeResponse);
+          }
+          return HttpResponse.json(nestedKnowledgeTreeLevel(parentId));
+        }),
+        http.get(`${api}/main/link-counts`, () =>
+          HttpResponse.json({ counts: {} } satisfies KnowledgeLinkCountsResponse),
+        ),
+      );
+      renderPage('/knowledge?view=graph');
+      await waitFor(() => {
+        const nodes = screen.getAllByTestId('knowledge-page-node');
+        expect(nodes.map(node => node.getAttribute('data-page-id')).sort()).toEqual(
+          nestedKnowledgeGraph.pages.map(page => page.id).sort(),
+        );
+        expect(nodes.find(node => node.getAttribute('data-page-id') === 'deep-page')?.textContent).toContain(
+          '动作与反馈',
+        );
+      });
+    });
+  });
   describe('when the server has no Knowledge instances', () => {
     it('explains how to register one', async () => {
       server.use(http.get(api, () => HttpResponse.json({ instances: [] })));

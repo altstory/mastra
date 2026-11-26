@@ -84,6 +84,37 @@ export const emptyKnowledgeGraph: KnowledgeGraphResponse = {
   truncated: false,
 };
 
+export const nestedKnowledgeGraph: KnowledgeGraphResponse = {
+  ...knowledgeGraph,
+  pages: [
+    { ...orgScope, childCount: 1 },
+    { ...paymentsPage, childCount: 1 },
+    page({
+      id: 'guide',
+      scopeId: orgScope.id,
+      parentId: paymentsPage.id,
+      isScope: false,
+      name: '操作指南',
+      position: 'a0',
+      childCount: 1,
+    }),
+    page({
+      id: 'deep-page',
+      scopeId: orgScope.id,
+      parentId: 'guide',
+      isScope: false,
+      name: '动作与反馈',
+      position: 'a0',
+      childCount: 0,
+    }),
+  ],
+  edges: [],
+};
+
+export const nestedKnowledgeTreeLevel = (parentId: string | null): KnowledgeTreeResponse => ({
+  pages: nestedKnowledgeGraph.pages.filter(page => page.parentId === parentId),
+});
+
 export const paymentsPageView: KnowledgePageResponse = {
   page: paymentsPage,
   ancestors: [orgScope],

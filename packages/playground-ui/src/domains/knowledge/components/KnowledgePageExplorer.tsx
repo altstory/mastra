@@ -170,6 +170,8 @@ export interface KnowledgePageExplorerProps {
   flush?: boolean;
   /** Let the graph fill the explorer behind the toolbar. */
   fullBleedGraph?: boolean;
+  /** Show every supplied page with its label instead of a bounded neighbourhood. */
+  fullHierarchy?: boolean;
 }
 
 const MIN_SEARCH_LENGTH = 2;
@@ -975,6 +977,7 @@ export function KnowledgePageExplorer({
   toolbarEnd,
   flush = false,
   fullBleedGraph = false,
+  fullHierarchy = false,
 }: KnowledgePageExplorerProps) {
   useLocale();
   const narrow = useIsMobile(1024);
@@ -996,7 +999,7 @@ export function KnowledgePageExplorer({
   // it, never the whole instance. Without them it draws the host's bounded graph as it is.
   const drawnGraph = useMemo(
     () =>
-      lazyMode
+      lazyMode && !fullHierarchy
         ? lazyGraph({
             // The host's bounded graph fills in pages a level's first chunk didn't reach; tree levels win.
             pages: [...new Map([...graph.pages, ...lazy.pages].map(page => [page.id, page])).values()],
@@ -1013,7 +1016,7 @@ export function KnowledgePageExplorer({
             wanted: [],
             hub: null,
           },
-    [lazyMode, lazy.pages, lazy.loaded, selectedPageId, openGroups, revealed, moreRoots, graph.pages],
+    [lazyMode, fullHierarchy, lazy.pages, lazy.loaded, selectedPageId, openGroups, revealed, moreRoots, graph.pages],
   );
   // The pages the focus needs are in (or failed to load): only then does the graph move to the new focus.
   const graphSettled = !lazyMode || drawnGraph.wanted.every(id => lazy.loaded.has(id) || lazy.failed.has(id));
@@ -1569,6 +1572,7 @@ export function KnowledgePageExplorer({
               ) : null}
               {graphShown && !pageOverGraph ? (
                 <KnowledgePageGraph
+                  fullHierarchy={fullHierarchy}
                   pages={graphPages}
                   edges={linkEdges}
                   pinnedIds={graph.pinnedIds}

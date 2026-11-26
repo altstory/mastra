@@ -42,7 +42,7 @@ import { linkCountsText } from '../lib/linkCountsText';
 import { pagePath, pageRef, scopeTitle } from '../lib/pageAddress';
 import type { PageFlowEdge, PageFlowNode } from '../lib/pageGraph';
 import { KNOWLEDGE_PAGE_SIZE, grantGraph, pageGraphEdges, pageNeighbourIds, toPageFlow } from '../lib/pageGraph';
-import { childCountLabel } from '../lib/pageTree';
+import { buildPageTree, childCountLabel, visiblePageRows } from '../lib/pageTree';
 import { chooseTooltipSide } from '../lib/tooltipSide';
 import type { Box, TooltipPlacementInput, TooltipSide } from '../lib/tooltipSide';
 import { KNOWLEDGE_GRAPH_TRANSITION_MS, prefersMotion, useLeavingNodes } from '../lib/useLeavingNodes';
@@ -76,6 +76,13 @@ const SCOPE_STYLE: CircleStyle = {
   background: 'color-mix(in oklab, var(--chart-blue) 16%, var(--card))',
 };
 const PAGE_STYLE: CircleStyle = { '--knowledge-color': 'var(--border-strong)' };
+const HIERARCHY_COLORS = ['blue', 'purple', 'cyan', 'amber', 'pink', 'green'];
+
+function hierarchyStyle(depth: number): CircleStyle {
+  const color = `var(--chart-${HIERARCHY_COLORS[depth % HIERARCHY_COLORS.length]})`;
+  return { '--knowledge-color': color, background: `color-mix(in oklab, ${color} 14%, var(--card))` };
+}
+
 /** A farther page drawn as a named circle: the legend's "Page in another branch" dot grown, same solid grey fill, name in the page background colour to read on it. */
 const FAR_FILL = 'var(--muted-foreground)';
 const FAR_STYLE: CircleStyle = { '--knowledge-color': FAR_FILL, background: FAR_FILL };
@@ -136,6 +143,7 @@ function pinBadgeStyle(size: number) {
 
 type PageNodeData = PageFlowNode['data'] & {
   pinned: boolean;
+  hierarchyDepth?: number;
   form: GraphNodeForm;
   /** A dot's colour: its branch around the focus. */
   color?: string;
@@ -271,6 +279,7 @@ function PageNodeComponent({ data }: NodeProps<PageFlowNode & { data: PageNodeDa
                 : page.isScope
                   ? SCOPE_STYLE
                   : PAGE_STYLE),
+            ...(data.hierarchyDepth === undefined ? {} : hierarchyStyle(data.hierarchyDepth)),
             paddingInline: size * ((1 - CIRCLE_TEXT_SHARE) / 2),
           }}
         >
@@ -481,9 +490,11 @@ function GraphLegend({
   focused,
   levels,
   branches,
+  hierarchyDepths = [],
   collapsible,
 }: {
   collapsible?: boolean;
+  hierarchyDepths?: number[];
   /** The line styles on screen right now; the legend explains those and only those. */
   drawn: ReadonlySet<EdgeStyleKey>;
   /** Some circle carries an in/out link badge. */
@@ -537,6 +548,16 @@ function GraphLegend({
             {studioT('Scope')}
           </Txt>
         </li>
+        {hierarchyDepths
+          .filter(depth => depth > 0)
+          .map(depth => (
+            <li key={depth} className="flex items-center gap-2">
+              <span className={LEGEND_SWATCH} style={hierarchyStyle(depth)} aria-hidden />
+              <Txt as="span" variant="meta" tone="muted">
+                {studioT('Level')} {depth}
+              </Txt>
+            </li>
+          ))}
         {levels.includes('scope') ? (
           <li className="flex items-center gap-2" data-testid="knowledge-legend-level-scope">
             <IconLayersTwo aria-hidden className="size-icon-xs shrink-0 text-muted-foreground" />
@@ -791,6 +812,8 @@ export interface KnowledgePageGraphProps {
   /** Scroll pans by default. Set to false to use scroll to zoom. */
   panOnScroll?: boolean;
   collapsibleLegend?: boolean;
+  /** Keep all supplied pages labelled at every depth. */
+  fullHierarchy?: boolean;
   /** Exact links into and out of pages, from the store; they replace the counts taken from `knownLinks`. */
   exactLinkCounts?: ReadonlyMap<string, { in: number; out: number }>;
   /** Links fetched for the page under the pointer: drawn on hover, never counted or laid out. */
@@ -898,6 +921,7 @@ function KnowledgePageGraphInner({
   insets = NO_PANE_INSETS,
   panOnScroll = true,
   collapsibleLegend,
+  fullHierarchy = false,
 }: KnowledgePageGraphProps) {
   useLocale();
   // Grants add placeholder circles for declared principals with no scope page yet, and their own lines.
@@ -946,11 +970,24 @@ function KnowledgePageGraphInner({
   // farther out are dots on outer rings, inside their branch's slice. A last overlap pass is the only force.
   const laidOut = useMemo(() => {
     const shape = graphShape(graphPages, selectedPageId ?? centerId ?? null, nearIds);
+    if (fullHierarchy) {
+      for (const page of graphPages) {
+        if (!isChildPlaceholder(page)) shape.form.set(page.id, 'full');
+      }
+    }
+    const hierarchyDepths = new Map(
+      visiblePageRows(buildPageTree(graphPages), new Set(graphPages.map(page => page.id))).map(row => [
+        row.page.id,
+        row.depth,
+      ]),
+    );
     const colors = branchColors(graphPages, shape);
     const flow = toPageFlow(graphPages, allEdges);
     for (const node of flow.nodes) {
       // With counts on, only a dot that has a count grows to fit it; the rest stay small, so linked pages stand out.
-      if (shape.form.get(node.id) === 'dot') {
+      if (fullHierarchy && !isChildPlaceholder(node.data.page)) {
+        node.data.size = Math.max(88, 168 - (hierarchyDepths.get(node.id) ?? 0) * 24);
+      } else if (shape.form.get(node.id) === 'dot') {
         const links = linkCounts.get(node.id);
         const counted = showCounts && !isChildPlaceholder(node.data.page) && !!links && links.in + links.out > 0;
         node.data.size = counted ? KNOWLEDGE_COUNTED_DOT_SIZE : KNOWLEDGE_DOT_SIZE;
@@ -961,7 +998,7 @@ function KnowledgePageGraphInner({
     // A page with dozens of children draws them smaller, so the ring stays a size that can be read and fitted.
     const ring = flow.nodes.filter(node => shape.depth.get(node.id) === 1 && shape.form.get(node.id) === 'full');
     const crowd = crowdScale(ring.length);
-    if (crowd < 1) for (const node of ring) node.data.size = Math.round(node.data.size * crowd);
+    if (!fullHierarchy && crowd < 1) for (const node of ring) node.data.size = Math.round(node.data.size * crowd);
     const sizes = new Map(flow.nodes.map(node => [node.id, node.data.size]));
     const radial = radialLayout(graphPages, shape, page => sizes.get(page.id) ?? KNOWLEDGE_DOT_SIZE, nearIds);
     const positions = runLayout(
@@ -974,8 +1011,8 @@ function KnowledgePageGraphInner({
       [],
       { ticks: 0 },
     );
-    return { nodes: flow.nodes, edges: flow.edges, positions, shape, colors };
-  }, [graphPages, allEdges, selectedPageId, centerId, linkCounts, showCounts, nearIds]);
+    return { nodes: flow.nodes, edges: flow.edges, positions, shape, colors, hierarchyDepths };
+  }, [graphPages, allEdges, selectedPageId, centerId, linkCounts, showCounts, nearIds, fullHierarchy]);
   const pageById = useMemo(() => new Map(graphPages.map(page => [page.id, page])), [graphPages]);
   // The page above whatever the graph is centred on, if it is drawn.
   const focusParentId = useMemo(() => {
@@ -1052,7 +1089,8 @@ function KnowledgePageGraphInner({
     }
     return Math.max(0, total.in + total.out - pairs.size);
   }, [hoveredId, linkCounts, laidOut, hoverExtra]);
-  const emphasisId = hoveredId && laidOut.positions.has(hoveredId) ? hoveredId : (selectedPageId ?? null);
+  const emphasisId =
+    hoveredId && laidOut.positions.has(hoveredId) ? hoveredId : fullHierarchy ? null : (selectedPageId ?? null);
   // With a page selected or hovered, everything more than one line away fades so its neighbourhood reads at a glance.
   const neighbours = useMemo(
     () =>
@@ -1093,6 +1131,7 @@ function KnowledgePageGraphInner({
             ...node.data,
             selected: node.id === selectedPageId,
             pinned: pinned.has(node.id),
+            hierarchyDepth: fullHierarchy ? laidOut.hierarchyDepths.get(node.id) : undefined,
             form: laidOut.shape.form.get(node.id) ?? 'full',
             color: laidOut.colors.get(laidOut.shape.branch.get(node.id) ?? ''),
             badge: childrenUndrawn.has(node.id) ? childCountLabel(node.data.page) : undefined,
@@ -1103,11 +1142,22 @@ function KnowledgePageGraphInner({
             showCount: showCounts,
             level: laidOut.shape.form.get(node.id) === 'full' ? laidOut.shape.level.get(node.id) : undefined,
             isParent: node.id === focusParentId,
-            far: laidOut.shape.linked.has(node.id) || undefined,
+            far: (!fullHierarchy && laidOut.shape.linked.has(node.id)) || undefined,
           },
         };
       }),
-    [laidOut, selectedPageId, pinned, childrenUndrawn, pageById, hiddenLinks, linkCounts, showCounts, focusParentId],
+    [
+      laidOut,
+      selectedPageId,
+      pinned,
+      childrenUndrawn,
+      pageById,
+      hiddenLinks,
+      linkCounts,
+      showCounts,
+      focusParentId,
+      fullHierarchy,
+    ],
   );
   const { flowEdges: builtEdges, drawnEdgeStyles } = useMemo(() => {
     const drawn = new Set<EdgeStyleKey>();
@@ -1451,6 +1501,9 @@ function KnowledgePageGraphInner({
       <GraphLegend
         collapsible={collapsibleLegend}
         branches={dotBranches}
+        hierarchyDepths={
+          fullHierarchy ? [...new Set(laidOut.hierarchyDepths.values())].sort((a, b) => a - b) : undefined
+        }
         levels={drawnLevels}
         focused={!!selectedPageId && laidOut.positions.has(selectedPageId)}
         dots={[...laidOut.shape.form.values()].includes('dot')}

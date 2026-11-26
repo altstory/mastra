@@ -12,6 +12,7 @@ import type { KnowledgeExplorerTreeRequest } from '@mastra/playground-ui/domains
 import { useMastraClient } from '@mastra/react';
 import { keepPreviousData, skipToken, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { loadCompleteGraph } from './load-complete-graph';
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -112,13 +113,14 @@ export function useKnowledgeInstances() {
   });
 }
 
-/** The bounded page graph across every root scope; its pages also feed the tree. */
+/** Every page across the readable root scopes; its pages also feed the tree. */
 export function useKnowledgePageGraph(knowledgeKey: string | undefined, live: boolean) {
   const client = useMastraClient();
   return useQuery({
     queryKey: ['knowledge', knowledgeKey, 'graph'],
     queryFn: knowledgeKey
-      ? async (): Promise<KnowledgeGraphResponse> => client.getKnowledge(knowledgeKey).graph()
+      ? async ({ signal }): Promise<KnowledgeGraphResponse> =>
+          loadCompleteGraph(client.getKnowledge(knowledgeKey), signal)
       : skipToken,
     refetchInterval: pollUnless(live),
   });

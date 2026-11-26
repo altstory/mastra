@@ -43,6 +43,8 @@ The routes mount under your server's API prefix, `/api/knowledge` by default, an
 - **Activity**: each page's history of creates, edits, moves, merges, notes and pins, with the author and time of each.
 - **Search**: over page names, descriptions, bodies and note text.
 
+The graph shows named nodes at every directory depth in a radial layout. Colors distinguish hierarchy levels, with smaller nodes for deeper pages. You don't need to expand the tree to load descendants. When the initial graph response reaches its page limit, Studio follows the paginated tree routes to load the remaining pages. Mention links can still be bounded by the server's limits. Use the zoom controls to inspect a large library.
+
 On narrow screens the tree and graph share one panel, with a toggle between them that keeps the selected page.
 
 When an agent writes, the tree, graph and open page update as it happens, without a reload. Studio follows writes made through the Knowledge instance registered with Mastra. Writes from another process or another instance on the same storage show up after a reload.
@@ -53,7 +55,7 @@ Hover over or select a page in the graph to draw its links: solid green lines fo
 
 ![A page selected in the graph, with a tooltip reading "2 links in, 2 links out", and its links drawn to the pages they connect.](/img/knowledge/studio-graph-links.png)
 
-Focus a page to see only it, its parent and its child pages.
+Select a page to inspect its details while keeping the complete hierarchy visible. Select a scope in the tree to limit the graph to that scope and its descendants.
 
 ![The graph focused on a Research page: its parent scope above it, four child pages below it, and one incoming link from another branch.](/img/knowledge/studio-graph-focus.png)
 

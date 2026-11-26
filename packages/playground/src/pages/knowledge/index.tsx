@@ -102,6 +102,7 @@ function Explorer({
   };
   return (
     <KnowledgePageExplorer
+      fullHierarchy
       graph={graph}
       source={source}
       selectedPageId={selectedPageId}
