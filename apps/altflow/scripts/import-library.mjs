@@ -16,6 +16,7 @@ const root = resolve(process.env.ALTFLOW_RUNTIME_ROOT ?? process.env.MASTRA_PREV
 const sourceDir = resolve(appRoot, 'knowledge/library');
 const SCOPE = 'library:creator';
 const PAGES = JSON.parse(await readFile(resolve(sourceDir, 'manifest.json'), 'utf8'));
+const DIRECTORIES = JSON.parse(await readFile(resolve(sourceDir, 'directories.json'), 'utf8'));
 
 const storage = new MastraCompositeStore({
   id: 'creator-preview-storage',
@@ -45,8 +46,20 @@ const knowledge = new Knowledge({
   },
 });
 
-for (const page of PAGES) {
+for (const directory of DIRECTORIES) {
+  const result = await knowledge.upsertPage({ scope: SCOPE, ...directory, author: 'library-import' });
+  console.log(result.status.padEnd(9), directory.path);
+}
+
+for (const page of process.argv.includes('--directories-only') ? [] : PAGES) {
   const body = await readFile(resolve(sourceDir, `${page.file}.md`), 'utf8');
-  const result = await knowledge.upsertPage({ scope: SCOPE, path: page.path, name: page.name, description: page.description, body, author: 'library-import' });
+  const result = await knowledge.upsertPage({
+    scope: SCOPE,
+    path: page.path,
+    name: page.name,
+    description: page.description,
+    body,
+    author: 'library-import',
+  });
   console.log(result.status.padEnd(9), page.path);
 }

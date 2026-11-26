@@ -27,13 +27,13 @@
     "file": "interaction-experiences",
     "path": "method/interaction-experiences",
     "name": "四类主互动体验设计要点",
-    "description": "情感抉择、命运逆转、权谋博弈、生存闯关四类主互动体验的口径、状态、选项数量、反馈与钩子倾向。"
+    "description": "四类常见互动体验的局部参考，可与探索、动作、表达、照料和协作组合；状态与数量均为可选示例。"
   },
   {
     "file": "interaction-dimensions",
     "path": "method/interaction-dimensions",
     "name": "互动设计四维度问题清单",
-    "description": "节奏、钩子、选择机制、状态与反馈四个维度的问题，按四类体验分别改写，以及风险校验。"
+    "description": "节奏、参与动机、动作方式、状态与反馈的问题清单，覆盖探索、制作、协作与选择，不限于四类体验。"
   },
   {
     "file": "relationship-choice-prototypes",
@@ -45,7 +45,7 @@
     "file": "node-type-groups",
     "path": "method/node-type-groups",
     "name": "互动节点类型组",
-    "description": "按题材与互动重心划分的四组互动节点类型，含默认占比与每集上限。"
+    "description": "可跨组组合的选择型节点样例，区分叙事目的与操作方式，不设全作单一类型或每集固定配额。"
   },
   {
     "file": "meaningful-choices",
@@ -57,7 +57,7 @@
     "file": "experience-balance",
     "path": "method/experience-balance",
     "name": "互动体验平衡",
-    "description": "不同路径之间在长度、深度、难度、奖励上的平衡，以及调整策略和验证流程。"
+    "description": "检查各路线和动作是否兑现承诺、反馈和可访问性，允许有意的长短与难度差异，不使用统一百分比。"
   },
   {
     "file": "player-psychology",
@@ -99,7 +99,7 @@
     "file": "writing-requirements",
     "path": "craft/writing-requirements",
     "name": "写作要求速查",
-    "description": "五类常见写作要求：无毒点、强情绪、严肃文学、甜文、虐文，各自的核心理念和具体要求。"
+    "description": "按用户目标审读人物、情绪、关系和类型承诺，区分真实质量问题与风格取舍，避免固定高潮或甜虐配额。"
   },
   {
     "file": "genre-revenge",
@@ -196,5 +196,209 @@
     "path": "method/state-variables",
     "name": "状态变量设计规范",
     "description": "状态变量的类型、命名、可见性与设计要点，以及与剧本的衔接。"
+  },
+  {
+    "file": "screenwriting-premise-theme",
+    "path": "craft/screenwriting/premise-theme",
+    "name": "一句话故事与主题",
+    "description": "故事只有设定、主角目标模糊，或主题靠旁白说明时，检查行动、代价和结尾选择。"
+  },
+  {
+    "file": "screenwriting-character-conflict",
+    "path": "craft/screenwriting/character-conflict",
+    "name": "人物动机与冲突升级",
+    "description": "主角被剧情推着走、配角态度突变或对手只会阻挠时，设计角色的行动空间与升级路径。"
+  },
+  {
+    "file": "screenwriting-character-bio",
+    "path": "craft/screenwriting/character-bio",
+    "name": "人物小传与剧本对账",
+    "description": "整理人物表、给角色补背景、检查行为连续性时，区分创作笔记、交付小传和客串角色。"
+  },
+  {
+    "file": "screenwriting-dialogue-subtext",
+    "path": "craft/screenwriting/dialogue-subtext",
+    "name": "对白潜台词与人物声音",
+    "description": "对白像在交代资料、谁说都一样、角色反复说出情绪时，检查每句的行动与听者反应。"
+  },
+  {
+    "file": "screenwriting-scene-dramatic-turn",
+    "path": "craft/screenwriting/scene-dramatic-turn",
+    "name": "单场戏的行动与转折",
+    "description": "场景信息不少却显得拖沓，或人物谈完话局面照旧时，定位场内真正发生变化的时刻。"
+  },
+  {
+    "file": "screenwriting-story-structure-options",
+    "path": "craft/screenwriting/story-structure-options",
+    "name": "故事结构选型与中段诊断",
+    "description": "电影、短剧或互动大纲出现中段松散、转折生硬、结局脱节时，从因果、人物和观众预期三处诊断。"
+  },
+  {
+    "file": "screenwriting-genre-promise",
+    "path": "craft/screenwriting/genre-promise",
+    "name": "类型承诺与混合类型",
+    "description": "选题缺少辨识度、类型混合失焦，或结尾没有兑现开篇预期时，明确主要期待与辅线功能。"
+  },
+  {
+    "file": "screenwriting-adaptation-decisions",
+    "path": "craft/screenwriting/adaptation-decisions",
+    "name": "原作改编与视角取舍",
+    "description": "小说或现有剧本改成短剧、漫剧或互动作品时，选择保留的体验、可视化的行动和需要重写的情节。"
+  },
+  {
+    "file": "screenwriting-series-engine",
+    "path": "craft/screenwriting/series-engine",
+    "name": "连载剧集如何持续产出新故事",
+    "description": "一个点子能撑首集但后续只能拖延或重复时，用人物、场域和冲突设计能持续变化的剧集引擎。"
+  },
+  {
+    "file": "screenwriting-episode-season-structure",
+    "path": "craft/screenwriting/episode-season-structure",
+    "name": "单集兑现与季线推进",
+    "description": "集纲断点生硬、每集都靠未完待续、支线抢走短剧篇幅时，检查本集收益与跨集变化。"
+  },
+  {
+    "file": "screenwriting-comedy-predicament",
+    "path": "craft/screenwriting/comedy-predicament",
+    "name": "喜剧困境与笑点升级",
+    "description": "喜剧靠塞段子、误会反复，或角色为掩饰无知而把麻烦越闹越大时，检查他每次补救如何升级局面。"
+  },
+  {
+    "file": "screenwriting-revision-triage",
+    "path": "craft/screenwriting/revision-triage",
+    "name": "剧本审读与修改排序",
+    "description": "收到了互相矛盾的意见、剧本返工多，或改了对白却没修好故事时，区分症状、原因和验收标准。"
+  },
+  {
+    "file": "research-audience-needs",
+    "path": "research/audience-needs",
+    "name": "受众研究：从男频女频标签到观看需求",
+    "description": "男频女频、女性观众、熟龄用户、题材空缺、受众画像。按情绪需求、场景、主动程度分群，避免用性别替代用户研究。"
+  },
+  {
+    "file": "research-female-agency",
+    "path": "craft/audience/female-agency",
+    "name": "女性主角的主体性与多元人生",
+    "description": "女性成长、女频、独立目标、事业、友情、自我发现；避免把女性主体性写成被选择或全能大女主。"
+  },
+  {
+    "file": "research-romance-trust",
+    "path": "craft/relationships/romance-trust",
+    "name": "亲密关系：吸引、边界与信任修复",
+    "description": "爱情、言情、成年恋爱、双向奔赴、亲密边界、破镜重圆；从行动建立关系，不靠固定撒糖配额。"
+  },
+  {
+    "file": "research-family-care",
+    "path": "craft/relationships/family-care",
+    "name": "家庭与代际叙事：照料、边界和传承",
+    "description": "母女父子、家庭情感、熟龄角色、照护劳动、代际冲突、移民文化和家庭记忆。"
+  },
+  {
+    "file": "research-work-ethics",
+    "path": "craft/social/work-and-ethics",
+    "name": "职业与现实题材：专业行动和利益冲突",
+    "description": "职场、事业成长、职业伦理、女性职业线、专业剧；把专业任务写成故事，不只靠上司压迫与身份翻盘。"
+  },
+  {
+    "file": "research-ensemble-friendship",
+    "path": "craft/relationships/ensemble-friendship",
+    "name": "友情与群像：共同任务、不同立场",
+    "description": "友情、女性群像、团队、互助、选择的家人、多视角；区分多人出场与真正相互影响的群像。"
+  },
+  {
+    "file": "research-coming-of-age",
+    "path": "craft/audience/coming-of-age",
+    "name": "青春与成长：具体处境中的身份探索",
+    "description": "青春、校园、成年过渡、归属感、身份探索、友情与家庭；从生活细节写成长，不只靠恋爱或逆袭。"
+  },
+  {
+    "file": "research-mystery-evidence",
+    "path": "craft/genre/mystery-evidence",
+    "name": "悬疑调查：线索、解释与公平揭示",
+    "description": "悬疑、女性悬疑、社会派、侦探、证据链、线索公平性；看到线索不等于得出结论。"
+  },
+  {
+    "file": "research-horror-uncertainty",
+    "path": "craft/genre/horror-uncertainty",
+    "name": "恐怖与惊悚：不确定性、控制感和缓冲",
+    "description": "恐怖、惊悚、民俗、未知、潜行、风险预兆；不把恐怖等同死亡惩罚或连续惊吓。"
+  },
+  {
+    "file": "research-cozy-grief",
+    "path": "craft/genre/cozy-grief",
+    "name": "温柔日常与告别：低对抗也能推进故事",
+    "description": "治愈、日常、陪伴、丧失、告别、熟龄生活；不强加打脸高潮，不把痛苦必须痊愈当作终点。"
+  },
+  {
+    "file": "research-verbs-feedback",
+    "path": "method/interaction/verbs-feedback",
+    "name": "互动动词与行动反馈：不止按钮选择",
+    "description": "动作互动、玩家动词、点击拖拽、观察探索、动作反馈、机制叙事；从用户实际做什么开始设计。"
+  },
+  {
+    "file": "research-physical-action",
+    "path": "method/interaction/physical-action",
+    "name": "动作与物件操作：力度、时机、空间",
+    "description": "QTE、动作、物件拖拽、滑动、按住、节奏、空间操作；动作失败、误触、无障碍替代。"
+  },
+  {
+    "file": "research-exploration",
+    "path": "method/interaction/exploration",
+    "name": "探索与环境叙事：地点、痕迹和好奇心",
+    "description": "探索互动、观察、环境叙事、空间、可选顺序、线索回访；让发现驱动下一步而不是清单打卡。"
+  },
+  {
+    "file": "research-investigation-input",
+    "path": "method/interaction/investigation-input",
+    "name": "搜索、解谜与证据操作的互动设计",
+    "description": "解谜、输入关键词、调查、证据拼接、自由搜索、非线性叙事；从发现到推论再到验证。"
+  },
+  {
+    "file": "research-conversation-actions",
+    "path": "method/interaction/conversation-actions",
+    "name": "对话中的行动：倾听、节奏、姿态与表达",
+    "description": "对话互动、卡牌、倾听、沉默、表达方式、关系反馈；把对话机制与实际说了什么分开设计。"
+  },
+  {
+    "file": "research-resources-time",
+    "path": "method/interaction/resources-time",
+    "name": "时间与资源分配：行动安排带来叙事后果",
+    "description": "时间管理、资源、行程、调度、有限机会、机会成本；不把所有互动压成好感分数。"
+  },
+  {
+    "file": "research-care-routines",
+    "path": "method/interaction/care-routines",
+    "name": "照料、制作与日常仪式的互动",
+    "description": "烹饪、修补、整理、种植、照料、日常动作、记忆；重复动作怎样承载关系变化。"
+  },
+  {
+    "file": "research-cooperation",
+    "path": "method/interaction/cooperation",
+    "name": "协作与非对称互动：共同动作而非轮流投票",
+    "description": "双人、多角色、合作、非对称信息、任务分工、协商、共同操控；联机需求与单人替代明确区分。"
+  },
+  {
+    "file": "research-failure-forward",
+    "path": "method/interaction/failure-forward",
+    "name": "失败、部分成功与继续推进",
+    "description": "动作失败、部分成功、失败推进、代价、重试、无输入；区分剧情失误与系统错误。"
+  },
+  {
+    "file": "research-events-beliefs",
+    "path": "method/interaction/events-beliefs",
+    "name": "世界事实、行动历史与角色认知",
+    "description": "系统叙事、事件状态、角色记忆、信息差、信念、状态继承、非线性行动；事实发生不等于所有人都知道。"
+  },
+  {
+    "file": "research-accessibility",
+    "path": "method/interaction/accessibility",
+    "name": "互动可访问性与节奏：让更多人能参与",
+    "description": "无障碍、输入重映射、操作替代、阅读时间、计时、字幕、动作难度；设计可访问性不等于取消挑战。"
+  },
+  {
+    "file": "research-prototype-production",
+    "path": "method/interaction/prototype-production",
+    "name": "互动原型与制作预算：设计不等于实现",
+    "description": "互动原型、动作规格、制作预算、试玩、工具能力、拖拽、分支成本；把创作想法转成可验证的交付。"
   }
 ]

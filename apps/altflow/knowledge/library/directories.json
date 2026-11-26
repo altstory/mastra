@@ -1,0 +1,62 @@
+[
+  {
+    "path": "research",
+    "name": "受众与案例研究",
+    "description": "受众需求、观看动机、短剧案例与类型研究；人口标签仅作背景。"
+  },
+  {
+    "path": "method",
+    "name": "互动叙事与体验",
+    "description": "选择、动作、探索、表达与协作的叙事设计，以及反馈、状态和分支结构。"
+  },
+  {
+    "path": "method/interaction",
+    "name": "动作、探索与系统互动",
+    "description": "从玩家动词到操作反馈、解谜、照料、协作、可访问性和原型制作。"
+  },
+  {
+    "path": "craft",
+    "name": "编剧方法与人物",
+    "description": "故事构思、人物、场景、对白、结构、改编与剧本审读。"
+  },
+  {
+    "path": "craft/screenwriting",
+    "name": "故事开发与剧本改编",
+    "description": "从一句话故事到人物动机、单场戏、剧集结构、改编取舍和修改排序。"
+  },
+  {
+    "path": "craft/audience",
+    "name": "人物成长与主体性",
+    "description": "女性主角、青春成长和身份探索中的具体目标、行动空间与处境。"
+  },
+  {
+    "path": "craft/relationships",
+    "name": "情感关系与群像",
+    "description": "亲密关系、家庭代际、友情与共同任务中的相互影响。"
+  },
+  {
+    "path": "craft/social",
+    "name": "职业与社会处境",
+    "description": "职业行动、现实生活、专业伦理与利益冲突。"
+  },
+  {
+    "path": "craft/genre",
+    "name": "悬疑、惊悚与日常叙事",
+    "description": "证据与揭示、不确定性与控制感、低对抗叙事与告别。"
+  },
+  {
+    "path": "genre",
+    "name": "类型创作指南",
+    "description": "复仇、言情、悬疑、历史、武侠与奇幻的类型参考，可组合使用。"
+  },
+  {
+    "path": "style",
+    "name": "语言与叙述风格",
+    "description": "自然人声、网文、古风、文学与极简等可选表达方式。"
+  },
+  {
+    "path": "template",
+    "name": "创作档案模板",
+    "description": "角色、世界、地点与人物语言档案的参考结构。"
+  }
+]
