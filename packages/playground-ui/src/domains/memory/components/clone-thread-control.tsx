@@ -21,8 +21,8 @@ export function CloneThreadControl({ isCloning = false, disabled = false, onClon
             {studioT('Create a copy of this conversation')}
           </Txt>
         </div>
-        <Button onClick={onClone} disabled={isCloning || disabled} icon={<IconFork />}>
-          {isCloning ? studioT('Cloning...') : studioT('Clone')}
+        <Button onClick={onClone} disabled={disabled} icon={<IconFork />} loading={isCloning}>
+          {studioT('Clone')}
         </Button>
       </div>
     </div>

@@ -78,6 +78,7 @@ export function CopySkillDialog({
           <AlertDialog.Cancel disabled={isPending}>{studioT('Cancel')}</AlertDialog.Cancel>
           <AlertDialog.Action
             disabled={!canSubmit}
+            loading={isPending}
             onClick={e => {
               if (!canSubmit) {
                 e.preventDefault();
@@ -87,7 +88,7 @@ export function CopySkillDialog({
             }}
             data-testid="copy-skill-confirm"
           >
-            {isPending ? studioT('Copying...') : studioT('Copy skill')}
+            {studioT('Copy skill')}
           </AlertDialog.Action>
         </AlertDialog.Footer>
       </AlertDialog.Content>

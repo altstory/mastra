@@ -154,8 +154,9 @@ function DeadRepositoryRow({
           aria-label={studioT('Remove {value0}', { value0: UNAVAILABLE_LABEL })}
           disabled={disabled}
           onClick={onRemove}
+          loading={removing}
         >
-          {removing ? studioT('Removing…') : studioT('Remove')}
+          {studioT('Remove')}
         </Button>
       </SettingsItem>
       {removeError && <Notice variant="destructive">{removeError}</Notice>}
@@ -260,8 +261,9 @@ function RepositoryRow({
           aria-label={studioT('Remove {value0}', { value0: label })}
           disabled={disabled}
           onClick={onRemove}
+          loading={removing}
         >
-          {removing ? studioT('Removing…') : studioT('Remove')}
+          {studioT('Remove')}
         </Button>
       </SettingsItem>
       {removeError && <Notice variant="destructive">{removeError}</Notice>}

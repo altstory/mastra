@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatDate,
   formatMessageClock,
+  formatLogLineTimestamp,
   formatMoment,
   formatShortDate,
   formatTimestampPrecise,
@@ -208,5 +209,37 @@ describe('chat message clocks', () => {
   });
   it('omits invalid dates', () => {
     expect(formatMessageClock('invalid')).toBeUndefined();
+  });
+});
+
+describe('formatLogLineTimestamp', () => {
+  const at = '2026-11-24T23:25:51.256Z';
+
+  it('splits a log time into its day, its 24-hour time and its hundredths of a second', () => {
+    expect(formatLogLineTimestamp(at, { locale: 'en-US', timeZone: 'UTC' })).toEqual({
+      day: 'Nov 24',
+      time: '23:25:51',
+      fraction: '.25',
+    });
+  });
+
+  it('keeps the locale order and separators', () => {
+    expect(formatLogLineTimestamp(at, { locale: 'de-DE', timeZone: 'UTC' })).toEqual({
+      day: '24. Nov.',
+      time: '23:25:51',
+      fraction: ',25',
+    });
+  });
+
+  it('returns undefined for a value that is not a date', () => {
+    expect(formatLogLineTimestamp('not-a-date')).toBeUndefined();
+  });
+
+  it('shows as many digits after the seconds as asked', () => {
+    expect(formatLogLineTimestamp(at, { locale: 'en-US', timeZone: 'UTC', fractionDigits: 3 })?.fraction).toBe('.256');
+    expect(formatLogLineTimestamp(at, { locale: 'en-US', timeZone: 'UTC', fractionDigits: 1 })?.fraction).toBe('.2');
+    expect(formatTimestampPrecise(at, { locale: 'en-US', timeZone: 'UTC', withDate: false, fractionDigits: 2 })).toBe(
+      '11:25:51.25 PM',
+    );
   });
 });

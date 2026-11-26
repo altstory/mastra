@@ -1,8 +1,6 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { PageLayout } from '@mastra/playground-ui/components/PageLayout';
-import { Spinner } from '@mastra/playground-ui/components/Spinner';
 import { IconCheckmark2Medium } from '@mastra/playground-ui/icons/central/IconCheckmark2Medium';
-import { Icon } from '@mastra/playground-ui/icons/Icon';
 import { useLinkComponent } from '@mastra/playground-ui/lib/framework';
 
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
@@ -33,20 +31,15 @@ function CreateLayoutWrapper() {
   });
 
   const actions = (
-    <Button variant="primary" size="sm" onClick={() => void handlePublish()} disabled={isSubmitting || !canPublish}>
-      {isSubmitting ? (
-        <>
-          <Spinner className="h-4 w-4" />
-          {studioT('Creating...')}
-        </>
-      ) : (
-        <>
-          <Icon>
-            <IconCheckmark2Medium />
-          </Icon>
-          {studioT('Create agent')}
-        </>
-      )}
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={() => void handlePublish()}
+      disabled={!canPublish}
+      icon={<IconCheckmark2Medium />}
+      loading={isSubmitting}
+    >
+      {studioT('Create agent')}
     </Button>
   );
 

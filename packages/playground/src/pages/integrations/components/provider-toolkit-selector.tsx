@@ -94,9 +94,10 @@ export function ProviderToolkitSelector({
         type="button"
         variant="primary"
         onClick={onConnect}
-        disabled={!providerId || !toolkit || authorizePending}
+        disabled={!providerId || !toolkit}
+        loading={authorizePending}
       >
-        {authorizePending ? studioT('Authorizing…') : studioT('Connect')}
+        {studioT('Connect')}
       </Button>
 
       {authorizeError ? (

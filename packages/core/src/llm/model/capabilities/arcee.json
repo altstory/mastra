@@ -25,7 +25,19 @@
     "zai-org/glm-5.3-flash"
   ],
   "reasoning": {
+    "deepseek/deepseek-v4-pro": [
+      {
+        "type": "effort",
+        "values": ["high", "max"]
+      }
+    ],
     "deepseek/deepseek-v4-flash-latest": [
+      {
+        "type": "effort",
+        "values": ["high", "max"]
+      }
+    ],
+    "deepseek/deepseek-v4-pro-0813": [
       {
         "type": "effort",
         "values": ["high", "max"]
@@ -38,18 +50,6 @@
       }
     ],
     "deepseek/deepseek-v4.1-flash": [
-      {
-        "type": "effort",
-        "values": ["high", "max"]
-      }
-    ],
-    "deepseek/deepseek-v4-pro-0813": [
-      {
-        "type": "effort",
-        "values": ["high", "max"]
-      }
-    ],
-    "deepseek/deepseek-v4-pro": [
       {
         "type": "effort",
         "values": ["high", "max"]

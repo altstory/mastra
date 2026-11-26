@@ -166,7 +166,8 @@ export const ToolkitConnectionControl = ({
 
   // Any selected tool in this toolkit means the toolkit's connections are used.
   const providerConfig = useWatch({ name: `toolProviders.${providerId}` }) as
-    ToolProvidersFormValue[string] | undefined;
+    | ToolProvidersFormValue[string]
+    | undefined;
   const hasSelectedTool = useMemo(
     () => Object.values(providerConfig?.tools ?? {}).some(tool => tool?.toolkit === toolkit),
     [providerConfig?.tools, toolkit],
@@ -231,10 +232,11 @@ export const ToolkitConnectionControl = ({
         type="button"
         size="sm"
         onClick={handleConnect}
-        disabled={disabled || authorize.isPending}
+        disabled={disabled}
         data-testid={`toolkit-connect-${testIdSuffix}`}
+        loading={authorize.isPending}
       >
-        {authorize.isPending ? studioT('Connecting…') : studioT('Connect')}
+        {studioT('Connect')}
       </Button>
     );
   }

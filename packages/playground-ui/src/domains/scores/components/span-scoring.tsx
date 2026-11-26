@@ -133,8 +133,8 @@ export function SpanScoring({
       </DialogBody>
       <DialogFooter>
         <DialogCancel disabled={isPending}>{studioT('Cancel')}</DialogCancel>
-        <DialogAction disabled={!selectedScorer || isWaiting} onConfirm={handleStartScoring}>
-          {isPending ? studioT('Starting...') : studioT('Start scoring')}
+        <DialogAction disabled={!selectedScorer || isWaiting} onConfirm={handleStartScoring} loading={isPending}>
+          {studioT('Start scoring')}
         </DialogAction>
       </DialogFooter>
     </>

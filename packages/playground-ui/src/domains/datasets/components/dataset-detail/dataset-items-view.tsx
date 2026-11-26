@@ -190,8 +190,8 @@ export function DatasetItemsView({
           </AlertDialog.Header>
           <AlertDialog.Footer>
             <AlertDialog.Cancel>{studioT('Cancel')}</AlertDialog.Cancel>
-            <AlertDialog.Action onClick={handleBulkDeleteConfirm}>
-              {deleteItems.isPending ? studioT('Deleting...') : studioT('Delete')}
+            <AlertDialog.Action onClick={handleBulkDeleteConfirm} loading={deleteItems.isPending}>
+              {studioT('Delete')}
             </AlertDialog.Action>
           </AlertDialog.Footer>
         </AlertDialog.Content>

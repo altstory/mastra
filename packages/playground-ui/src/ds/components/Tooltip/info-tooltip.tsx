@@ -63,7 +63,7 @@ function IllustratedInfoTooltip({ children, side, align, variant = 'illustrated'
             aria-describedby={descriptionId}
             // A step quieter than the placeholder grey at rest, so it reads as a hint, not a control.
             className={cn(
-              'relative flex shrink-0 cursor-default items-center rounded-full text-placeholder/80 hover:text-muted-foreground focus-visible:text-muted-foreground',
+              'relative flex shrink-0 cursor-default items-center rounded-full text-subtle-foreground hover:text-muted-foreground focus-visible:text-muted-foreground',
               "pointer-coarse:before:absolute pointer-coarse:before:-inset-1.5 pointer-coarse:before:content-['']",
               controlStateColorTransition,
               focusRing,

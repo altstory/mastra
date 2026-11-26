@@ -121,20 +121,11 @@ export default function SchedulePage() {
                     onError: error => toast.error(error.message),
                   });
                 }}
-                disabled={toggle.isPending}
+                icon={schedule.status === 'active' ? <IconPause /> : <IconPlay />}
+                loading={toggle.isPending}
                 data-testid="schedule-toggle-button"
               >
-                {schedule.status === 'active' ? (
-                  <>
-                    <IconPause />
-                    {studioT('Pause')}
-                  </>
-                ) : (
-                  <>
-                    <IconPlay />
-                    {studioT('Resume')}
-                  </>
-                )}
+                {schedule.status === 'active' ? studioT('Pause') : studioT('Resume')}
               </Button>
             ) : null}
           </ActionRow.End>

@@ -30,8 +30,7 @@ export function LiveKitRecordingReview({ traceId, spans }: { traceId: string; sp
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <IconVoiceSimple />
+      <Button icon={<IconVoiceSimple />} size="sm" onClick={() => setOpen(true)}>
         {studioT('Review audio')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

@@ -283,7 +283,7 @@ export function KnowledgePageTree({
                 <span
                   data-testid="knowledge-tree-count"
                   aria-label={studioT('{value0} below', { value0: childCountLabel(row.page) })}
-                  className="shrink-0 text-caption text-placeholder tabular-nums"
+                  className="shrink-0 text-caption text-subtle-foreground tabular-nums"
                 >
                   {childCountLabel(row.page)}
                 </span>

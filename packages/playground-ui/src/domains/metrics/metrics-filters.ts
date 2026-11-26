@@ -47,6 +47,12 @@ export const METRICS_ROOT_ENTITY_TYPE_OPTIONS = [
     },
     entityType: 'classifier',
   },
+  {
+    get label() {
+      return studioT('MCP Server');
+    },
+    entityType: 'mcp_server',
+  },
 ] as const satisfies readonly { label: string; entityType: EntityTypeValue }[];
 
 /** Field IDs that live in dedicated URL params (not the generic `filterX` set). */

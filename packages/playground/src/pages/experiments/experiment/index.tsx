@@ -213,7 +213,7 @@ function ExperimentPage() {
         >
           <h1 className="sr-only">{experimentId}</h1>
           {isSettled ? (
-            <div className="grid content-start gap-4">
+            <div className="grid content-start gap-6">
               <ExperimentKpis
                 experiment={experiment}
                 metrics={experimentMetrics}

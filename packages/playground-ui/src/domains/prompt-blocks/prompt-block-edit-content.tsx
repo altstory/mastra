@@ -204,9 +204,10 @@ export function PromptBlockEditContent({
               variant="default"
               size="sm"
               onClick={handlePublishVersion}
-              disabled={selectedVersionId === activeVersionId || isSubmitting}
+              disabled={selectedVersionId === activeVersionId}
+              loading={isSubmitting}
             >
-              {isSubmitting ? studioT('Publishing...') : studioT('Publish this version')}
+              {studioT('Publish this version')}
             </Button>
           </div>
         </Notice>

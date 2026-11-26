@@ -3,14 +3,10 @@ import { Field, FieldError, FieldLabel, Fieldset, FieldsetLegend } from '@mastra
 import { Input } from '@mastra/playground-ui/components/Input';
 import { ScrollArea } from '@mastra/playground-ui/components/ScrollArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@mastra/playground-ui/components/Select';
-import { Spinner } from '@mastra/playground-ui/components/Spinner';
 import { Textarea } from '@mastra/playground-ui/components/Textarea';
 import { IconCheckmark2Medium } from '@mastra/playground-ui/icons/central/IconCheckmark2Medium';
 import { IconCrossMedium } from '@mastra/playground-ui/icons/central/IconCrossMedium';
 import { IconPlusMedium } from '@mastra/playground-ui/icons/central/IconPlusMedium';
-
-import { Icon } from '@mastra/playground-ui/icons/Icon';
-
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import { Controller, useWatch } from 'react-hook-form';
 import type { UseFormReturn } from 'react-hook-form';
@@ -242,43 +238,29 @@ export function MCPClientFormSidebar({
                     : undefined;
 
               return tooltipContent ? (
-                <Button onClick={onTryConnect} disabled={isDisabled} className="w-full" tooltip={tooltipContent}>
-                  {isTryingConnect ? (
-                    <>
-                      <Spinner className="h-4 w-4" />
-                      {studioT('Connecting...')}
-                    </>
-                  ) : (
-                    studioT('Try to connect')
-                  )}
+                <Button
+                  onClick={onTryConnect}
+                  disabled={isDisabled}
+                  className="w-full"
+                  tooltip={tooltipContent}
+                  loading={isTryingConnect}
+                >
+                  {studioT('Try to connect')}
                 </Button>
               ) : (
-                <Button onClick={onTryConnect} disabled={isDisabled} className="w-full">
-                  {isTryingConnect ? (
-                    <>
-                      <Spinner className="h-4 w-4" />
-                      {studioT('Connecting...')}
-                    </>
-                  ) : (
-                    studioT('Try to connect')
-                  )}
+                <Button onClick={onTryConnect} disabled={isDisabled} className="w-full" loading={isTryingConnect}>
+                  {studioT('Try to connect')}
                 </Button>
               );
             })()}
-          <Button variant="primary" onClick={onPublish} disabled={isSubmitting} className="w-full">
-            {isSubmitting ? (
-              <>
-                <Spinner className="h-4 w-4" />
-                {studioT('Creating...')}
-              </>
-            ) : (
-              <>
-                <Icon>
-                  <IconCheckmark2Medium />
-                </Icon>
-                {submitLabel}
-              </>
-            )}
+          <Button
+            variant="primary"
+            onClick={onPublish}
+            className="w-full"
+            icon={<IconCheckmark2Medium />}
+            loading={isSubmitting}
+          >
+            {submitLabel}
           </Button>
         </div>
       )}

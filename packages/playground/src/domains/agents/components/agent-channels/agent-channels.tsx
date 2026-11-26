@@ -108,14 +108,14 @@ function ChannelRow({ platform, agentId }: ChannelRowProps) {
           size="sm"
           variant="ghost"
           onClick={handleDisconnect}
-          disabled={isDisconnecting}
           className="shrink-0"
+          loading={isDisconnecting}
         >
-          {isDisconnecting ? studioT('Removing...') : studioT('Remove')}
+          {studioT('Remove')}
         </Button>
       ) : platform.isConfigured ? (
-        <Button icon={<IconPlugin1 />} size="sm" variant="default" onClick={handleConnect} disabled={isConnecting}>
-          {isConnecting ? studioT('Connecting...') : studioT('Connect')}
+        <Button icon={<IconPlugin1 />} size="sm" variant="default" onClick={handleConnect} loading={isConnecting}>
+          {studioT('Connect')}
         </Button>
       ) : null}
     </li>

@@ -286,7 +286,7 @@ function MarkdownCodeBlock({
       code={fenced.code}
       lang={fenced.language}
       overflow="scroll"
-      className={cn('my-3 bg-sidebar', className)}
+      className={cn('my-3 bg-nested', className)}
       copyMessage={studioT('Copied code to clipboard')}
     />
   );

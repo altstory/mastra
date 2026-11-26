@@ -1,10 +1,11 @@
-import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import type { LogRecord } from '../types';
+import { LogDetailsSection } from './log-data-panel-sections/log-details-section';
+import { LogMessageSection } from './log-data-panel-sections/log-message-section';
+import { LogValuesSection } from './log-data-panel-sections/log-values-section';
 import { Button } from '@/ds/components/Button';
 import { ButtonsGroup } from '@/ds/components/ButtonsGroup';
 import { CopyButton } from '@/ds/components/CopyButton';
-import { DataKeysAndValues } from '@/ds/components/DataKeysAndValues';
 import { DataPanel } from '@/ds/components/DataPanel';
 import { Txt } from '@/ds/components/Txt';
 import { IconArrowRight } from '@/ds/icons/central/IconArrowRight';
@@ -66,47 +67,10 @@ export function LogDataPanel({
 
           <DataPanel.Content>
             <div className="grid gap-6 p-2">
-              <DataKeysAndValues>
-                {log.entityType && (
-                  <>
-                    <DataKeysAndValues.Key>{studioT('Entity Type')}</DataKeysAndValues.Key>
-                    <DataKeysAndValues.Value>{log.entityType}</DataKeysAndValues.Value>
-                  </>
-                )}
-                {log.entityName && (
-                  <>
-                    <DataKeysAndValues.Key>{studioT('Entity Name')}</DataKeysAndValues.Key>
-                    <DataKeysAndValues.Value>{log.entityName}</DataKeysAndValues.Value>
-                  </>
-                )}
-                {log.serviceName && (
-                  <>
-                    <DataKeysAndValues.Key>{studioT('Service')}</DataKeysAndValues.Key>
-                    <DataKeysAndValues.Value>{log.serviceName}</DataKeysAndValues.Value>
-                  </>
-                )}
-                {log.environment && (
-                  <>
-                    <DataKeysAndValues.Key>{studioT('Environment')}</DataKeysAndValues.Key>
-                    <DataKeysAndValues.Value>{log.environment}</DataKeysAndValues.Value>
-                  </>
-                )}
-                {log.source && (
-                  <>
-                    <DataKeysAndValues.Key>{studioT('Source')}</DataKeysAndValues.Key>
-                    <DataKeysAndValues.Value>{log.source}</DataKeysAndValues.Value>
-                  </>
-                )}
-                {log.metadata &&
-                  Object.entries(log.metadata).map(([key, value]) => (
-                    <Fragment key={key}>
-                      <DataKeysAndValues.Key>{key}</DataKeysAndValues.Key>
-                      <DataKeysAndValues.Value>{String(value)}</DataKeysAndValues.Value>
-                    </Fragment>
-                  ))}
-              </DataKeysAndValues>
-
-              <DataPanel.CodeSection title={studioT('Message')} codeStr={log.message} simplified />
+              <LogDetailsSection log={log} />
+              <LogMessageSection message={log.message} />
+              <LogValuesSection title={studioT('Fields')} values={log.data} />
+              <LogValuesSection title={studioT('Metadata')} values={log.metadata} />
 
               {(log.traceId || log.spanId) && (
                 <div className="grid gap-2">
@@ -142,10 +106,6 @@ export function LogDataPanel({
                     </ButtonsGroup>
                   )}
                 </div>
-              )}
-
-              {log.data && Object.keys(log.data).length > 0 && (
-                <DataPanel.CodeSection title={studioT('Data')} codeStr={JSON.stringify(log.data, null, 2)} />
               )}
             </div>
           </DataPanel.Content>

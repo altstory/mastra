@@ -104,6 +104,12 @@ export const ROOT_ENTITY_TYPE_OPTIONS = [
     },
     entityType: ROOT_ENTITY_TYPES.CLASSIFIER,
   },
+  {
+    get label() {
+      return studioT('MCP Server');
+    },
+    entityType: ROOT_ENTITY_TYPES.MCP_SERVER,
+  },
 ] as const satisfies readonly EntityOptions[];
 
 export type TraceStatusFilter = 'running' | 'success' | 'error';
@@ -877,8 +883,9 @@ export function filterBarExpressionToTraceFilters(expression: FilterBarExpressio
 }
 
 function filterBarGroupToTraceGroup(group: FilterBarGroup): TraceFilterGroup {
-  const nodes = group.nodes.map((node): TraceFilterNode =>
-    isFilterBarGroup(node) ? filterBarGroupToTraceGroup(node) : { id: node.id, ...filterBarItemToTraceToken(node) },
+  const nodes = group.nodes.map(
+    (node): TraceFilterNode =>
+      isFilterBarGroup(node) ? filterBarGroupToTraceGroup(node) : { id: node.id, ...filterBarItemToTraceToken(node) },
   );
   // Empty groups are kept: "Advanced filter…" emits one and opens its editor, and the
   // FilterBar prunes it itself when the popover closes without any condition.

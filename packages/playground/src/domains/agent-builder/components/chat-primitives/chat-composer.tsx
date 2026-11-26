@@ -1,7 +1,5 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { IconArrowUp } from '@mastra/playground-ui/icons/central/IconArrowUp';
-import { IconLoadingCircle } from '@mastra/playground-ui/icons/central/IconLoadingCircle';
-
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
@@ -76,8 +74,9 @@ export const ChatComposer = ({
             tooltip={isRunning ? studioT('Generating…') : studioT('Send')}
             disabled={!canSubmit}
             data-testid={submitTestId}
+            loading={isRunning}
           >
-            {isRunning ? <IconLoadingCircle className="animate-spin" /> : <IconArrowUp />}
+            <IconArrowUp />
           </Button>
         </div>
       </div>

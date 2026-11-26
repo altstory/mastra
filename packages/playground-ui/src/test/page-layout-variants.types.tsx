@@ -21,7 +21,7 @@ export const pageLayoutVariantChecks = (
       <p />
     </PageLayout>
     {/* @ts-expect-error every page names its variant */}
-    <PageLayout variant="page" breadcrumbs={<span />}>
+    <PageLayout breadcrumbs={<span />}>
       <p />
     </PageLayout>
   </>

@@ -365,7 +365,7 @@ function SandboxEnvDialog({
         <DialogFooter>
           <DialogCancel>{studioT('Cancel')}</DialogCancel>
           <DialogAction disabled={!canSave} onConfirm={save}>
-            {pending ? studioT('Saving…') : studioT('Save')}
+            {studioT('Save')}
           </DialogAction>
         </DialogFooter>
       </DialogContent>

@@ -18,6 +18,7 @@ export const LOGS_ROOT_ENTITY_TYPES = {
   SCORER: 'scorer',
   INGEST: 'rag_ingestion',
   CLASSIFIER: 'classifier',
+  MCP_SERVER: 'mcp_server',
 } as const satisfies Record<string, EntityTypeValue>;
 
 export const LOGS_ROOT_ENTITY_TYPE_OPTIONS = [
@@ -50,6 +51,12 @@ export const LOGS_ROOT_ENTITY_TYPE_OPTIONS = [
       return studioT('Classifier');
     },
     entityType: LOGS_ROOT_ENTITY_TYPES.CLASSIFIER,
+  },
+  {
+    get label() {
+      return studioT('MCP Server');
+    },
+    entityType: LOGS_ROOT_ENTITY_TYPES.MCP_SERVER,
   },
 ] as const satisfies readonly LogsEntityOptions[];
 

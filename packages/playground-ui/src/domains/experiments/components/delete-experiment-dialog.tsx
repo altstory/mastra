@@ -61,8 +61,8 @@ export function DeleteExperimentDialog({
         </AlertDialog.Header>
         <AlertDialog.Footer>
           <AlertDialog.Cancel>{studioT('Cancel')}</AlertDialog.Cancel>
-          <Button icon={<TrashIcon />} variant="primary" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? studioT('Deleting...') : studioT('Delete')}
+          <Button icon={<TrashIcon />} variant="primary" onClick={handleDelete} loading={isDeleting}>
+            {studioT('Delete')}
           </Button>
         </AlertDialog.Footer>
       </AlertDialog.Content>

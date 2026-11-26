@@ -3,7 +3,6 @@ import { Button } from '@mastra/playground-ui/components/Button';
 import { EmptyState } from '@mastra/playground-ui/components/EmptyState';
 import { Notice } from '@mastra/playground-ui/components/Notice';
 import { PageLayout } from '@mastra/playground-ui/components/PageLayout';
-import { Spinner } from '@mastra/playground-ui/components/Spinner';
 import { useEntityRequestContext } from '@mastra/playground-ui/domains/request-context/hooks/use-entity-request-context';
 import { IconArrowInbox } from '@mastra/playground-ui/icons/central/IconArrowInbox';
 import { IconCheckmark2Medium } from '@mastra/playground-ui/icons/central/IconCheckmark2Medium';
@@ -284,6 +283,7 @@ function EditLayoutWrapper() {
               {studioT('Download JSON')}
             </Button>
             <Button
+              icon={<IconPullRequest />}
               variant="primary"
               size="sm"
               disabled={!canOpenPr || isSavingDraft || isSubmitting}
@@ -296,7 +296,6 @@ function EditLayoutWrapper() {
                 });
               }}
             >
-              <IconPullRequest />
               {studioT('Open PR')}
             </Button>
           </>
@@ -307,19 +306,11 @@ function EditLayoutWrapper() {
             variant="ghost"
             size="sm"
             onClick={() => void handleSaveDraft()}
-            disabled={!isDirty || isSavingDraft || isSubmitting}
+            disabled={!isDirty || isSubmitting}
+            icon={<IconFloppyDisk1 />}
+            loading={isSavingDraft}
           >
-            {isSavingDraft ? (
-              <>
-                <Spinner className="h-4 w-4" />
-                {studioT('Saving...')}
-              </>
-            ) : (
-              <>
-                <IconFloppyDisk1 />
-                {studioT('Save')}
-              </>
-            )}
+            {studioT('Save')}
           </Button>
           <Button
             variant="primary"
@@ -330,18 +321,10 @@ function EditLayoutWrapper() {
                 ? selectedVersionId === activeVersionId || isSubmitting || isSavingDraft
                 : !hasDraft || isSubmitting || isSavingDraft
             }
+            icon={<IconCheckmark2Medium />}
+            loading={isSubmitting}
           >
-            {isSubmitting ? (
-              <>
-                <Spinner className="h-4 w-4" />
-                {studioT('Publishing...')}
-              </>
-            ) : (
-              <>
-                <IconCheckmark2Medium />
-                {isViewingPreviousVersion ? studioT('Publish this version') : studioT('Publish')}
-              </>
-            )}
+            {isViewingPreviousVersion ? studioT('Publish this version') : studioT('Publish')}
           </Button>
         </>
       )}

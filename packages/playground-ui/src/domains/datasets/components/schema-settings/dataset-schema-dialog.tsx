@@ -150,8 +150,8 @@ function DatasetSchemaForm({ dataset, updateDataset, onSaved }: DatasetSchemaFor
       </DialogBody>
       <DialogFooter>
         <DialogCancel>{studioT('Cancel')}</DialogCancel>
-        <DialogAction onConfirm={onSave} disabled={hasInvalidSchema || updateDataset.isPending}>
-          {updateDataset.isPending ? studioT('Saving...') : studioT('Save schema')}
+        <DialogAction onConfirm={onSave} disabled={hasInvalidSchema}>
+          {studioT('Save schema')}
         </DialogAction>
       </DialogFooter>
     </>

@@ -98,6 +98,11 @@ export function findHardcodedCopy(file, source) {
   }
   function copyExpression(node) {
     // These labels are dispatch keys or chart modes, translated only at display boundaries.
+    if (
+      (file.endsWith('/ds/tokens/colors.ts') && node.text === 'var(--placeholder)') ||
+      (file.endsWith('/LogStream/log-level-styles.ts') && node.text === 'before:bg-info-indicator')
+    )
+      return false;
     if (file.endsWith('/tool-styles.ts') || file.endsWith('/ds/primitives/text.ts')) return false;
     if (ts.isBindingElement(node.parent) && node.parent.name.getText(sf) === 'xLabels') return false;
     if (

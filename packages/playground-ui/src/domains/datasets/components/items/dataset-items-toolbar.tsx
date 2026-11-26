@@ -107,9 +107,8 @@ export function DatasetItemsToolbar({
   const selectionDropdown = selectedCount > 0 && (
     <DropdownMenu>
       <DropdownMenu.Trigger asChild>
-        <Button>
-          {selectedCount} {' ' + studioT('selected') + ' '}
-          <IconChevronDownMedium />
+        <Button iconEnd={<IconChevronDownMedium />}>
+          {selectedCount} {studioT('selected')}
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end" className="w-72">

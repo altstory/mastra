@@ -131,7 +131,7 @@ const SaveAsPromptBlockDialog = ({
           <DialogFooter>
             <DialogCancel>{studioT('Cancel')}</DialogCancel>
             <DialogAction type="submit" disabled={!name.trim()}>
-              {isPending ? studioT('Saving...') : studioT('Save')}
+              {studioT('Save')}
             </DialogAction>
           </DialogFooter>
         </Form>

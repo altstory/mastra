@@ -361,8 +361,8 @@ export function FeedbackThread({
           )}
           <AlertDialog.Footer>
             <AlertDialog.Cancel disabled={isDeleting}>{studioT('Cancel')}</AlertDialog.Cancel>
-            <Button icon={<TrashIcon />} variant="primary" disabled={isDeleting} onClick={handleDeleteConfirm}>
-              {isDeleting ? studioT('Deleting…') : studioT('Delete')}
+            <Button icon={<TrashIcon />} variant="primary" onClick={handleDeleteConfirm} loading={isDeleting}>
+              {studioT('Delete')}
             </Button>
           </AlertDialog.Footer>
         </AlertDialog.Content>

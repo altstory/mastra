@@ -95,7 +95,7 @@ export function SavedViewPicker<TSettings>({
             {studioT('Reset')}
           </Button>
           {editable && (
-            <Button type="button" variant="default" size="sm" disabled={views.pending} onClick={views.save}>
+            <Button type="button" variant="default" size="sm" loading={views.pending} onClick={views.save}>
               {studioT('Save changes')}
             </Button>
           )}
@@ -312,7 +312,7 @@ function ViewNameForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           {studioT('Cancel')}
         </Button>
-        <Button type="submit" variant="default" size="sm" disabled={pending || !name.trim()}>
+        <Button type="submit" variant="default" size="sm" disabled={!name.trim()} loading={pending}>
           {submitLabel}
         </Button>
       </div>

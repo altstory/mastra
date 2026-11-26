@@ -18,8 +18,6 @@ import {
 } from '@/ds/components/Dialog';
 import { InlineCode } from '@/ds/components/InlineCode';
 import { Metadata } from '@/ds/components/Metadata';
-import { Spinner } from '@/ds/components/Spinner';
-
 import { Txt } from '@/ds/components/Txt';
 import { t as studioT, useLocale } from '@/lib/i18n';
 import { Trans } from '@/lib/i18n/trans';
@@ -186,7 +184,6 @@ export function JSONImportDialog({ datasetId, datasetName, open, onOpenChange, o
           <JSONImportStatus validation={validation} />
           <DialogCancel>{studioT('Cancel')}</DialogCancel>
           <DialogAction onConfirm={handleImport} disabled={validation.status !== 'ready'}>
-            {isImporting && <Spinner />}
             {validation.status === 'ready'
               ? studioT('Import {value0} item{value1}', {
                   value0: validation.total,

@@ -151,20 +151,11 @@ export function TemplateForm({
               '[&_svg]:h-[1.1em] [&_svg]:text-foreground [&>svg]:w-[1.1em]',
             )}
             onClick={handleInstallTemplate}
-            disabled={
-              !selectedProvider || !defaultModelProvider || !defaultModelId || errors.length > 0 || isInstalling
-            }
+            disabled={!selectedProvider || !defaultModelProvider || !defaultModelId || errors.length > 0}
+            iconEnd={<IconArrowRight />}
+            loading={isInstalling}
           >
-            {isInstalling ? (
-              <>
-                <Spinner className="h-4 w-4" /> {' ' + studioT('Installing...')}
-              </>
-            ) : (
-              <>
-                {studioT('Install') + ' '}
-                <IconArrowRight />
-              </>
-            )}
+            {studioT('Install')}
           </Button>
         )}
       </div>

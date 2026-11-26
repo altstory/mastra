@@ -11,13 +11,11 @@ import { Input } from '@/ds/components/Input';
 import { JSONSchemaForm, jsonSchemaToFields } from '@/ds/components/JSONSchemaForm';
 import type { SchemaField } from '@/ds/components/JSONSchemaForm';
 import { ScrollArea } from '@/ds/components/ScrollArea';
-import { Spinner } from '@/ds/components/Spinner';
 import { Textarea } from '@/ds/components/Textarea';
 
 import { Txt } from '@/ds/components/Txt';
 import { IconCheckmark2Medium } from '@/ds/icons/central/IconCheckmark2Medium';
 import { IconFloppyDisk1 } from '@/ds/icons/central/IconFloppyDisk1';
-import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { useLinkComponent } from '@/lib/framework';
 import { t as studioT, useLocale } from '@/lib/i18n';
 import type { JsonSchema } from '@/utils/json-schema';
@@ -63,7 +61,6 @@ function RecursiveFieldRenderer({
             )}
           </JSONSchemaForm.FieldList>
           <JSONSchemaForm.AddField className="mt-2" size="sm">
-            <IconPlusMedium />
             {studioT('Add nested variable')}
           </JSONSchemaForm.AddField>
         </JSONSchemaForm.NestedFields>
@@ -175,10 +172,7 @@ export function PromptBlockEditSidebar({
             </JSONSchemaForm.FieldList>
 
             <div className="p-2">
-              <JSONSchemaForm.AddField>
-                <IconPlusMedium />
-                {studioT('Add variable')}
-              </JSONSchemaForm.AddField>
+              <JSONSchemaForm.AddField>{studioT('Add variable')}</JSONSchemaForm.AddField>
             </div>
           </JSONSchemaForm.Root>
         </div>
@@ -213,51 +207,35 @@ export function PromptBlockEditSidebar({
       <div className="shrink-0 p-4">
         {mode === 'edit' && onSaveDraft ? (
           <div className="flex gap-2">
-            <Button onClick={onSaveDraft} disabled={!isDirty || isSavingDraft || isSubmitting} className="flex-1">
-              {isSavingDraft ? (
-                <>
-                  <Spinner className="size-4" />
-                  {studioT('Saving...')}
-                </>
-              ) : (
-                <>
-                  <IconFloppyDisk1 />
-                  {studioT('Save')}
-                </>
-              )}
+            <Button
+              onClick={onSaveDraft}
+              disabled={!isDirty || isSubmitting}
+              className="flex-1"
+              icon={<IconFloppyDisk1 />}
+              loading={isSavingDraft}
+            >
+              {studioT('Save')}
             </Button>
             <Button
               variant="primary"
               onClick={onPublish}
-              disabled={(!hasDraft && !isDirty) || isSubmitting || isSavingDraft}
+              disabled={(!hasDraft && !isDirty) || isSavingDraft}
               className="flex-1"
+              icon={<IconCheckmark2Medium />}
+              loading={isSubmitting}
             >
-              {isSubmitting ? (
-                <>
-                  <Spinner className="size-4" />
-                  {studioT('Publishing...')}
-                </>
-              ) : (
-                <>
-                  <IconCheckmark2Medium />
-                  {studioT('Publish')}
-                </>
-              )}
+              {studioT('Publish')}
             </Button>
           </div>
         ) : (
-          <Button variant="primary" onClick={onPublish} disabled={isSubmitting} className="w-full">
-            {isSubmitting ? (
-              <>
-                <Spinner className="size-4" />
-                {studioT('Creating...')}
-              </>
-            ) : (
-              <>
-                <IconCheckmark2Medium />
-                {studioT('Create prompt block')}
-              </>
-            )}
+          <Button
+            variant="primary"
+            onClick={onPublish}
+            className="w-full"
+            icon={<IconCheckmark2Medium />}
+            loading={isSubmitting}
+          >
+            {studioT('Create prompt block')}
           </Button>
         )}
       </div>

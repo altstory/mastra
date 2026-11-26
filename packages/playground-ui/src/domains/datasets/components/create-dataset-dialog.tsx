@@ -125,7 +125,7 @@ function CreateDatasetDialogForm({ createDataset, targetType, targetIds, onCreat
       <DialogFooter>
         <DialogCancel>{studioT('Cancel')}</DialogCancel>
         <DialogAction type="submit" disabled={!name.trim()}>
-          {createDataset.isPending ? studioT('Creating...') : studioT('Create dataset')}
+          {studioT('Create dataset')}
         </DialogAction>
       </DialogFooter>
     </Form>

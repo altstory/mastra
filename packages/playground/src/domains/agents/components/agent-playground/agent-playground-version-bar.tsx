@@ -17,7 +17,6 @@ import {
 import { DropdownMenu } from '@mastra/playground-ui/components/DropdownMenu';
 import { Field, FieldLabel } from '@mastra/playground-ui/components/Field';
 import { Input } from '@mastra/playground-ui/components/Input';
-import { Spinner } from '@mastra/playground-ui/components/Spinner';
 import { InfoTooltip } from '@mastra/playground-ui/components/Tooltip';
 import { Txt } from '@mastra/playground-ui/components/Txt';
 import { IconArrowInbox } from '@mastra/playground-ui/icons/central/IconArrowInbox';
@@ -191,40 +190,24 @@ export function AgentPlaygroundVersionBar({
                 size="md"
                 onClick={() => void (isDirty ? onSaveDraft() : onPublish())}
                 disabled={codeSaveDisabled}
+                icon={<IconFloppyDisk1 />}
+                loading={isSavingDraft}
               >
-                {isSavingDraft ? (
-                  <>
-                    <Spinner className="size-3.5" />
-                    {studioT('Saving…')}
-                  </>
-                ) : (
-                  <>
-                    <Icon size="xs">
-                      <IconFloppyDisk1 />
-                    </Icon>
-                    {studioT('Save to filesystem')}
-                  </>
-                )}
+                {studioT('Save to filesystem')}
               </Button>
             )}
           </div>
         ) : readOnly && !isViewingPreviousVersion ? null : (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <ButtonsGroup>
-              <Button variant="default" onClick={() => onSaveDraft()} disabled={saveDisabled}>
-                {isSavingDraft ? (
-                  <>
-                    <Spinner className="size-3.5" />
-                    {studioT('Saving…')}
-                  </>
-                ) : (
-                  <>
-                    <Icon size="xs">
-                      <IconFloppyDisk1 />
-                    </Icon>
-                    {studioT('Save new version')}
-                  </>
-                )}
+              <Button
+                variant="default"
+                onClick={() => onSaveDraft()}
+                disabled={saveDisabled}
+                icon={<IconFloppyDisk1 />}
+                loading={isSavingDraft}
+              >
+                {studioT('Save new version')}
               </Button>
               <DropdownMenu>
                 <DropdownMenu.Trigger asChild>
@@ -257,20 +240,10 @@ export function AgentPlaygroundVersionBar({
                   ? selectedVersionId === activeVersionId || isPublishing || isSavingDraft
                   : readOnly || !hasDraft || isPublishing || isSavingDraft
               }
+              icon={<IconCheckmark2Medium />}
+              loading={isPublishing}
             >
-              {isPublishing ? (
-                <>
-                  <Spinner className="size-3.5" />
-                  {studioT('Publishing…')}
-                </>
-              ) : (
-                <>
-                  <Icon size="xs">
-                    <IconCheckmark2Medium />
-                  </Icon>
-                  {isViewingPreviousVersion ? studioT('Publish this version') : studioT('Publish')}
-                </>
-              )}
+              {isViewingPreviousVersion ? studioT('Publish this version') : studioT('Publish')}
             </Button>
           </div>
         )}

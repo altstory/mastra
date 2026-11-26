@@ -212,9 +212,7 @@ export function CreateDatasetFromItemsDialog({
               {studioT('Cancel')}
             </DialogCancel>
             <DialogAction type="submit" disabled={!name.trim()}>
-              {isCreating
-                ? studioT('Creating... ({value0}/{value1})', { value0: progress, value1: items.length })
-                : studioT('Create dataset')}
+              {studioT('Create dataset')}
             </DialogAction>
           </DialogFooter>
         </Form>

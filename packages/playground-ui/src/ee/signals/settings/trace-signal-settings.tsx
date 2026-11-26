@@ -194,9 +194,8 @@ function TraceSignalSettingsContent() {
                   icon={<IconArchive />}
                   size="sm"
                   variant="ghost"
-                  disabled={
-                    !canManage || (mutations.archive.isPending && mutations.archive.variables === definition.id)
-                  }
+                  disabled={!canManage}
+                  loading={mutations.archive.isPending && mutations.archive.variables === definition.id}
                   onClick={() => void runAction(() => mutations.archive.mutateAsync(definition.id))}
                 >
                   {studioT('Archive')}
@@ -241,11 +240,8 @@ function TraceSignalSettingsContent() {
                   icon={<IconUnarchiv />}
                   size="sm"
                   variant="ghost"
-                  disabled={
-                    !canManage ||
-                    atLimit ||
-                    (mutations.restore.isPending && mutations.restore.variables === definition.id)
-                  }
+                  disabled={!canManage || atLimit}
+                  loading={mutations.restore.isPending && mutations.restore.variables === definition.id}
                   onClick={() => void runAction(() => mutations.restore.mutateAsync(definition.id))}
                 >
                   {studioT('Restore')}

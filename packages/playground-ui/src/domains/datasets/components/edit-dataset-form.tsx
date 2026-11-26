@@ -190,9 +190,10 @@ export function EditDatasetForm({ dataset, onSuccess, onCancel }: EditDatasetFor
           icon={<IconCheckmark2Medium />}
           type="submit"
           variant="primary"
-          disabled={updateDataset.isPending || !formState.name.trim()}
+          disabled={!formState.name.trim()}
+          loading={updateDataset.isPending}
         >
-          {updateDataset.isPending ? studioT('Saving...') : studioT('Save changes')}
+          {studioT('Save changes')}
         </Button>
       </div>
     </Form>

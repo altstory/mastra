@@ -42,7 +42,7 @@ export function ShowMore({
         </button>
       )}
       {left > 0 && (
-        <span className="ml-auto pr-2 text-body-sm text-placeholder tabular-nums">
+        <span className="ml-auto pr-2 text-body-sm text-subtle-foreground tabular-nums">
           <Trans id="{part0} of {part1}" values={{ part0: n.format(shown), part1: n.format(total) }} />
         </span>
       )}

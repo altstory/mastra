@@ -1,8 +1,6 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { IconArrowRight } from '@mastra/playground-ui/icons/central/IconArrowRight';
-import { Icon } from '@mastra/playground-ui/icons/Icon';
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
-
 import { AgentStepContainer } from './agent-step-container';
 import { Skills } from './skills';
 import { useEditPage } from '@/domains/agent-builder/contexts/edit-page-context';
@@ -26,11 +24,8 @@ export const AgentProfileSkillsStep = () => {
     <AgentStepContainer
       title={studioT('Skills')}
       cta={
-        <Button onClick={handleContinue} disabled={isStreaming}>
-          {studioT('Continue')}{' '}
-          <Icon>
-            <IconArrowRight />
-          </Icon>
+        <Button iconEnd={<IconArrowRight />} onClick={handleContinue} disabled={isStreaming}>
+          {studioT('Continue')}
         </Button>
       }
     >

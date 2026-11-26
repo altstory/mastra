@@ -175,7 +175,7 @@ function InstructionsDiffView({ previousBlocks, currentBlocks }: { previousBlock
 
     if (oldStr === newStr) {
       return (
-        <div className="relative rounded-md border border-border bg-background p-3">
+        <div className="relative rounded-md bg-nested p-3">
           {block && (
             <div className="absolute top-2 right-2">
               <BlockCopyButton block={block} />
@@ -208,7 +208,7 @@ function InstructionsDiffView({ previousBlocks, currentBlocks }: { previousBlock
               line.type === 'added' && 'bg-success-subtle text-success-subtle-foreground',
             )}
           >
-            <span className="mr-2 inline-block w-4 shrink-0 text-muted-foreground/50 select-none">
+            <span className="mr-2 inline-block w-4 shrink-0 text-subtle-foreground select-none">
               {line.type === 'removed' ? '−' : line.type === 'added' ? '+' : ' '}
             </span>
             {line.text || '\u00A0'}
@@ -259,7 +259,7 @@ function InstructionsDiffView({ previousBlocks, currentBlocks }: { previousBlock
 
         if (oldStr === newStr) {
           return (
-            <div key={idx} className="relative rounded-md border border-border bg-background p-3">
+            <div key={idx} className="relative rounded-md bg-nested p-3">
               {prevBlock && (
                 <div className="absolute top-2 right-2">
                   <BlockCopyButton block={prevBlock} />
@@ -292,7 +292,7 @@ function InstructionsDiffView({ previousBlocks, currentBlocks }: { previousBlock
                   line.type === 'added' && 'bg-success-subtle text-success-subtle-foreground',
                 )}
               >
-                <span className="mr-2 inline-block w-4 shrink-0 text-muted-foreground/50 select-none">
+                <span className="mr-2 inline-block w-4 shrink-0 text-subtle-foreground select-none">
                   {line.type === 'removed' ? '−' : line.type === 'added' ? '+' : ' '}
                 </span>
                 {line.text || '\u00A0'}
@@ -322,7 +322,7 @@ function RefBlockPreview({ promptBlockId }: { promptBlockId: string }) {
 
   const content = promptBlock?.content ?? '';
   return (
-    <div className="relative rounded-md border border-border bg-background p-3">
+    <div className="relative rounded-md bg-nested p-3">
       {content && (
         <div className="absolute top-2 right-2">
           <CopyButton content={content} tooltip={studioT('Copy prompt block text')} />
@@ -362,7 +362,7 @@ function ReadOnlyInstructions({ blocks }: { blocks: unknown }) {
 
         const content = typeof block.content === 'string' ? block.content : '';
         return (
-          <div key={(block.id as string) ?? idx} className="relative rounded-md border border-border bg-background p-3">
+          <div key={(block.id as string) ?? idx} className="relative rounded-md bg-nested p-3">
             {content && (
               <div className="absolute top-2 right-2">
                 <CopyButton content={content} tooltip={studioT('Copy prompt text')} />
@@ -454,7 +454,7 @@ function ReadOnlyTools({ tools }: { tools: Record<string, unknown> | undefined }
   return (
     <div className="flex flex-col gap-1.5">
       {entries.map(([id, config]) => (
-        <div key={id} className="rounded-md border border-border bg-background px-3 py-1.5">
+        <div key={id} className="rounded-md bg-nested px-3 py-1.5">
           <Txt variant="caption" tone="ink" font="mono">
             {id}
           </Txt>
@@ -556,7 +556,7 @@ function ReadOnlyVariables({ variables }: { variables: JsonSchema | undefined })
   return (
     <div className="flex flex-col gap-1.5">
       {entries.map(([name, schema]) => (
-        <div key={name} className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5">
+        <div key={name} className="flex items-center gap-2 rounded-md bg-nested px-3 py-1.5">
           <Txt variant="caption" tone="ink" font="mono">
             {`{{${name}}}`}
           </Txt>

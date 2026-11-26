@@ -51,7 +51,8 @@ export function SavedViewEditor<TSettings>({
                 type="button"
                 variant="primary"
                 size="sm"
-                disabled={!views.unsaved || views.pending}
+                disabled={!views.unsaved}
+                loading={views.pending}
                 onClick={views.save}
               >
                 {creating ? studioT('Save view') : studioT('Save changes')}

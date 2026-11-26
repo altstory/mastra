@@ -93,8 +93,8 @@ export function AddRepositoryDrawerContent({
             className="min-w-0 flex-1"
           />
           {onRefresh && (
-            <Button variant="ghost" size="icon-md" aria-label={refreshLabel} disabled={refreshing} onClick={onRefresh}>
-              <IconArrowRotateClockwise className={refreshing ? 'motion-safe:animate-spin' : undefined} />
+            <Button variant="ghost" size="icon-md" aria-label={refreshLabel} onClick={onRefresh} loading={refreshing}>
+              <IconArrowRotateClockwise />
             </Button>
           )}
         </div>
@@ -138,8 +138,9 @@ export function AddRepositoryDrawerContent({
                   aria-label={studioT('Add {value0}', { value0: repo.fullName })}
                   disabled={adding}
                   onClick={() => onAdd(repo)}
+                  loading={addingKey === repo.key}
                 >
-                  {addingKey === repo.key ? studioT('Adding…') : studioT('Add')}
+                  {studioT('Add')}
                 </Button>
               </SettingsItem>
             ))}

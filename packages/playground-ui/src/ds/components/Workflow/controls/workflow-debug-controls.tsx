@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Badge } from '@/ds/components/Badge';
 import { Button } from '@/ds/components/Button';
 import { Txt } from '@/ds/components/Txt';
-import { IconLoadingCircle } from '@/ds/icons/central/IconLoadingCircle';
 import { IconPause } from '@/ds/icons/central/IconPause';
 import { IconPlay } from '@/ds/icons/central/IconPlay';
 import { IconStepForwards } from '@/ds/icons/central/IconStepForwards';
@@ -54,9 +53,10 @@ export function WorkflowDebugControls({
           aria-label={studioT('Run next step')}
           onClick={onRunNextStep}
           disabled={actionsDisabled}
-          icon={isStreaming ? <IconLoadingCircle className="motion-safe:animate-spin" /> : <IconStepForwards />}
+          icon={<IconStepForwards />}
+          loading={isStreaming}
         >
-          {isStreaming ? studioT('Running step…') : studioT('Run next step')}
+          {studioT('Run next step')}
         </Button>
 
         <Button

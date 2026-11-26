@@ -38,8 +38,8 @@ export function SessionExpired({ variant }: SessionExpiredProps) {
       titleSlot={studioT('Session Expired')}
       descriptionSlot={studioT('Your session has expired. Please log in again to continue.')}
       actionSlot={
-        <Button icon={<IconArrowBoxRight />} variant="default" onClick={logIn} disabled={isRedirecting}>
-          {isRedirecting ? studioT('Redirecting...') : studioT('Log in')}
+        <Button icon={<IconArrowBoxRight />} variant="default" onClick={logIn} loading={isRedirecting}>
+          {studioT('Log in')}
         </Button>
       }
     />

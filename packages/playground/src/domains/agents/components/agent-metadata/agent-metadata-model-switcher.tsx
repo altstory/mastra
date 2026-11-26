@@ -236,7 +236,7 @@ export const AgentMetadataModelSwitcher = ({
           variant="default"
           size="icon-md"
           onClick={handleReset}
-          disabled={loading}
+          loading={loading}
           tooltip={studioT('Reset to original model')}
         >
           <IconArrowRotateCounterClockwise />

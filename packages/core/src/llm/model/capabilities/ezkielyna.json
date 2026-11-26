@@ -9,7 +9,7 @@
         "values": ["low", "high", "max"]
       }
     ],
-    "deepseek-v4.1-flash": [
+    "deepseek-v4-pro": [
       {
         "type": "toggle"
       },
@@ -24,16 +24,16 @@
         "values": ["low", "medium", "high"]
       }
     ],
-    "glm-5.3": [
+    "deepseek-v4.1-flash": [
+      {
+        "type": "toggle"
+      },
       {
         "type": "effort",
         "values": ["low", "high", "max"]
       }
     ],
-    "deepseek-v4-pro": [
-      {
-        "type": "toggle"
-      },
+    "glm-5.3": [
       {
         "type": "effort",
         "values": ["low", "high", "max"]

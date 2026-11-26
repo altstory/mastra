@@ -134,8 +134,8 @@ export function EditModeContent({
         </Field>
 
         <div className="flex gap-2 pt-4">
-          <Button icon={<IconCheckmark2Medium />} variant="primary" onClick={onSave} disabled={isSaving}>
-            {isSaving ? studioT('Saving...') : studioT('Save changes')}
+          <Button icon={<IconCheckmark2Medium />} variant="primary" onClick={onSave} loading={isSaving}>
+            {studioT('Save changes')}
           </Button>
           <Button icon={<IconCrossMedium />} onClick={onCancel} disabled={isSaving}>
             {studioT('Cancel')}

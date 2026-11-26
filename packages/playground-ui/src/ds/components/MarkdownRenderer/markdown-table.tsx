@@ -22,6 +22,7 @@ export function MarkdownTable({ node, children }: ComponentProps<'table'> & Extr
       <div className="flex justify-end">
         <ButtonsGroup size="sm" aria-label={studioT('Table actions')}>
           <Button
+            icon={isCopied ? <IconCheckmark2Medium /> : <IconSquareBehindSquare1 />}
             type="button"
             variant="ghost"
             disabled={typeof markdown !== 'string'}
@@ -30,7 +31,6 @@ export function MarkdownTable({ node, children }: ComponentProps<'table'> & Extr
             }}
             aria-label={studioT('Copy table as markdown')}
           >
-            {isCopied ? <IconCheckmark2Medium /> : <IconSquareBehindSquare1 />}
             {isCopied ? studioT('Copied!') : studioT('Copy table as markdown')}
           </Button>
           <DropdownMenu>

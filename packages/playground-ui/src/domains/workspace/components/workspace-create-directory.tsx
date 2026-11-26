@@ -77,7 +77,7 @@ export function WorkspaceCreateDirectory({ labeled = false }: { labeled?: boolea
             </DialogBody>
             <DialogFooter>
               <DialogCancel>{studioT('Cancel')}</DialogCancel>
-              <Button type="submit" variant="primary" disabled={!trimmed || pending}>
+              <Button type="submit" variant="primary" disabled={!trimmed} loading={pending}>
                 {studioT('Create')}
               </Button>
             </DialogFooter>

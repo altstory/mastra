@@ -195,16 +195,13 @@ export function DatasetItemVersionsPage({
       breadcrumbs={crumbs}
       headerActions={
         canDiff && (
-          <Button variant="ghost" size="sm" onClick={() => setParam('view', isDiffView ? null : 'diff')}>
-            {isDiffView ? (
-              <>
-                <IconColumns3 /> {' ' + studioT('Default view')}
-              </>
-            ) : (
-              <>
-                <IconChanges /> {' ' + studioT('Diff view')}
-              </>
-            )}
+          <Button
+            icon={isDiffView ? <IconColumns3 /> : <IconChanges />}
+            variant="ghost"
+            size="sm"
+            onClick={() => setParam('view', isDiffView ? null : 'diff')}
+          >
+            {isDiffView ? studioT('Default view') : studioT('Diff view')}
           </Button>
         )
       }

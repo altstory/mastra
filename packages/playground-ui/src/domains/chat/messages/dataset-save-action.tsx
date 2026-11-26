@@ -164,7 +164,7 @@ function DatasetSaveDialog({
         <DialogFooter>
           <DialogCancel>{studioT('Cancel')}</DialogCancel>
           <DialogAction onConfirm={handleSubmit} disabled={!selectedDatasetId || datasets.length === 0}>
-            {addItem.isPending ? studioT('Saving...') : studioT('Save item')}
+            {studioT('Save item')}
           </DialogAction>
         </DialogFooter>
       </DialogContent>

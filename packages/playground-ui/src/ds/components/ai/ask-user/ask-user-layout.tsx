@@ -66,6 +66,7 @@ export interface AskUserOptionRowProps extends Omit<FieldLabelProps, 'children'>
   control: ReactNode;
   label: ReactNode;
   description?: string;
+  recommended?: boolean;
   disabled?: boolean;
 }
 
@@ -73,6 +74,7 @@ export const AskUserOptionRow = ({
   control,
   label,
   description,
+  recommended = false,
   disabled = false,
   className,
   ...props
@@ -86,9 +88,16 @@ export const AskUserOptionRow = ({
     >
       {control}
       <span className="grid gap-0.5">
-        <Txt as="span" variant="body" tone="ink">
-          {label}
-        </Txt>
+        <span className="flex flex-wrap items-center gap-2">
+          <Txt as="span" variant="body" tone="ink">
+            {label}
+          </Txt>
+          {recommended ? (
+            <Badge variant="info" emphasis="subtle" size="sm">
+              {studioT('Recommended')}
+            </Badge>
+          ) : null}
+        </span>
         {description ? (
           <Txt as="span" variant="caption" tone="muted">
             {description}

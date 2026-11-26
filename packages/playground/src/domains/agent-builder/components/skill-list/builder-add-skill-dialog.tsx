@@ -353,11 +353,7 @@ export function BuilderAddSkillDialog({
             disabled={!parsedSource || isSelectedInstalled}
             data-testid="builder-install-skill-button"
           >
-            {installMutation.isPending
-              ? studioT('Installing...')
-              : isSelectedInstalled
-                ? studioT('Already installed')
-                : studioT('Install')}
+            {isSelectedInstalled ? studioT('Already installed') : studioT('Install')}
           </DialogAction>
         </DialogFooter>
       </DialogContent>

@@ -86,14 +86,12 @@ export function ConnectChannelMessage({ platformId, agentId }: ConnectChannelMes
             size="sm"
             variant="default"
             onClick={handleConnect}
-            disabled={isConnecting}
             data-testid={`agent-builder-chat-connect-channel-${platformId}-button`}
+            loading={isConnecting}
           >
-            {isConnecting
-              ? studioT('Connecting…')
-              : platformId === 'slack'
-                ? studioT('Continue with Slack')
-                : studioT('Connect {value0}', { value0: platform.name })}
+            {platformId === 'slack'
+              ? studioT('Continue with Slack')
+              : studioT('Connect {value0}', { value0: platform.name })}
           </Button>
         )}
       </div>

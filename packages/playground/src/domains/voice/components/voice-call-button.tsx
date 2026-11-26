@@ -1,9 +1,7 @@
 import { Button } from '@mastra/playground-ui/components/Button';
 import { IconCall } from '@mastra/playground-ui/icons/central/IconCall';
 import { IconCallCancel } from '@mastra/playground-ui/icons/central/IconCallCancel';
-import { IconLoadingCircle } from '@mastra/playground-ui/icons/central/IconLoadingCircle';
 import { t as studioT, useLocale } from '@mastra/playground-ui/lib/i18n';
-
 import type { VoiceCallControls } from '../types';
 
 export interface VoiceCallButtonProps {
@@ -36,13 +34,14 @@ export const VoiceCallButton = ({ voiceCall }: VoiceCallButtonProps) => {
   if (voiceCall.status === 'connecting') {
     return (
       <Button
+        loading
         variant="ghost"
         size="icon-md"
         type="button"
         tooltip={studioT('Connecting…')}
         data-testid="voice-call-button"
       >
-        <IconLoadingCircle className="animate-spin" />
+        <IconCall />
       </Button>
     );
   }

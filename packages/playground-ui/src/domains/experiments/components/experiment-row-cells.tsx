@@ -114,7 +114,7 @@ function MetricCell({ value, format }: { value?: number; format: (value: number)
   const formatted = value === undefined ? undefined : format(value);
   return (
     <DataList.TextCell className="text-center tabular-nums">
-      {formatted ?? <span className="text-placeholder">—</span>}
+      {formatted ?? <span className="text-subtle-foreground">—</span>}
     </DataList.TextCell>
   );
 }
@@ -137,16 +137,16 @@ function ExperimentTargetCell({
           <TargetIcon />
         </span>
       )}
-      <span className={targetType ? 'truncate' : 'truncate text-placeholder'}>{name}</span>
+      <span className={targetType ? 'truncate' : 'truncate text-subtle-foreground'}>{name}</span>
     </span>
   );
 }
 
 function ExperimentReviewCell({ review }: { review?: ExperimentReviewSummary }) {
   useLocale();
-  if (!review) return <span className="text-placeholder">—</span>;
+  if (!review) return <span className="text-subtle-foreground">—</span>;
   const inPipeline = review.needsReview + review.complete;
-  if (inPipeline === 0) return <span className="text-placeholder">—</span>;
+  if (inPipeline === 0) return <span className="text-subtle-foreground">—</span>;
   if (review.needsReview > 0) {
     return (
       <Badge size="xs" variant="warning">

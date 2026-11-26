@@ -344,13 +344,10 @@ export function SaveAsDatasetItemDialog({
               icon={<IconCheckmark2Medium />}
               type="submit"
               variant="default"
-              disabled={addItem.isPending || trajectoryLoading || !isSelectedDatasetListed}
+              disabled={!isSelectedDatasetListed}
+              loading={addItem.isPending || trajectoryLoading}
             >
-              {addItem.isPending
-                ? studioT('Saving...')
-                : trajectoryLoading
-                  ? studioT('Loading...')
-                  : studioT('Save item')}
+              {studioT('Save item')}
             </Button>
           </div>
         </Form>

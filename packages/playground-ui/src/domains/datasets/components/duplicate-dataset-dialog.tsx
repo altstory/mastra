@@ -203,7 +203,7 @@ export function DuplicateDatasetDialog({
           <DialogFooter>
             <DialogCancel>{studioT('Cancel')}</DialogCancel>
             <DialogAction type="submit" disabled={!name.trim()}>
-              {isDuplicating ? studioT('Duplicating...') : studioT('Duplicate dataset')}
+              {studioT('Duplicate dataset')}
             </DialogAction>
           </DialogFooter>
         </Form>

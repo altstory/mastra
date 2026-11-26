@@ -34,7 +34,7 @@ export function TraceScoresTabView({
   if (isLoading) {
     return (
       <div className="flex justify-center py-6">
-        <Spinner size="md" variant="pulse" className="text-placeholder" />
+        <Spinner size="md" variant="pulse" className="text-subtle-foreground" />
       </div>
     );
   }

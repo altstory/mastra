@@ -3,9 +3,7 @@ import type { ZodSchema } from 'zod';
 import { WorkflowInputData } from './workflow-input-data';
 import { Button } from '@/ds/components/Button';
 
-import { IconLoadingCircle } from '@/ds/icons/central/IconLoadingCircle';
 import { IconPlay } from '@/ds/icons/central/IconPlay';
-import { Icon } from '@/ds/icons/Icon';
 import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface WorkflowTriggerFormProps {
@@ -49,11 +47,7 @@ export function WorkflowTriggerForm({
         submitButtonLabel={submitButtonLabel}
         inputTypeLabel={studioT('Next run input')}
         submitButtonVariant="primary"
-        submitButtonIcon={
-          <Icon>
-            <IconPlay />
-          </Icon>
-        }
+        submitButtonIcon={<IconPlay />}
         onSubmit={onExecute}
         isProcessorWorkflow={isProcessorWorkflow}
         submitActions={submitActions}
@@ -71,16 +65,7 @@ export function WorkflowTriggerForm({
         {leftActions ?? <div />}
         <div className="flex items-center gap-1">
           {submitActions}
-          <Button variant="primary" disabled={isStreaming} onClick={() => onExecute(null)}>
-            {isStreaming ? (
-              <Icon>
-                <IconLoadingCircle className="animate-spin" />
-              </Icon>
-            ) : (
-              <Icon>
-                <IconPlay />
-              </Icon>
-            )}
+          <Button variant="primary" onClick={() => onExecute(null)} icon={<IconPlay />} loading={isStreaming}>
             {submitButtonLabel}
           </Button>
         </div>

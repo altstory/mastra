@@ -16,7 +16,6 @@ import { IconArrowInbox } from '@/ds/icons/central/IconArrowInbox';
 import { IconChainLink3 } from '@/ds/icons/central/IconChainLink3';
 import { IconFloppyDisk1 } from '@/ds/icons/central/IconFloppyDisk1';
 import { IconGauge } from '@/ds/icons/central/IconGauge';
-import { IconLoadingCircle } from '@/ds/icons/central/IconLoadingCircle';
 import { TraceIcon } from '@/ds/icons/TraceIcon';
 
 export interface TracePanelHeaderProps {
@@ -130,10 +129,10 @@ export function TracePanelDownloadButton({ onDownload, isPending = false }: Trac
       size="icon-sm"
       variant="ghost"
       tooltip={studioT('Download trace JSON')}
-      disabled={isPending}
       onClick={() => onDownload(traceId)}
+      loading={isPending}
     >
-      {isPending ? <IconLoadingCircle className="animate-spin" /> : <IconArrowInbox />}
+      <IconArrowInbox />
     </Button>
   );
 }
@@ -143,15 +142,17 @@ export interface TracePanelDatasetButtonProps {
   onSaveAsDatasetItem: (args: { traceId: string; rootSpanId: string | undefined }) => void;
 }
 
+/** "Add to dataset", waiting for the root span the dataset item is built from. */
 export function TracePanelDatasetButton({ onSaveAsDatasetItem }: TracePanelDatasetButtonProps) {
   const { traceId, rootSpan } = useTracePanel();
   return (
     <Button
+      icon={<IconFloppyDisk1 />}
       size="sm"
       tooltip={studioT('Add the full trace to a dataset')}
       onClick={() => onSaveAsDatasetItem({ traceId, rootSpanId: rootSpan?.spanId })}
+      disabled={!rootSpan}
     >
-      <IconFloppyDisk1 />
       {studioT('Add to dataset')}
     </Button>
   );
@@ -166,8 +167,13 @@ export interface TracePanelScoreButtonProps {
 export function TracePanelScoreButton({ onClick }: TracePanelScoreButtonProps) {
   const { rootSpan, setScoring } = useTracePanel();
   return (
-    <Button variant="primary" size="sm" onClick={onClick ?? (() => setScoring(true))} disabled={!rootSpan}>
-      <IconGauge />
+    <Button
+      icon={<IconGauge />}
+      variant="primary"
+      size="sm"
+      onClick={onClick ?? (() => setScoring(true))}
+      disabled={!rootSpan}
+    >
       {studioT('Score trace')}
     </Button>
   );

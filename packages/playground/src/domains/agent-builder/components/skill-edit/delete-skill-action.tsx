@@ -46,41 +46,36 @@ interface DeleteSkillDialogProps {
   onConfirm: () => void;
 }
 
-const DeleteSkillDialog = ({ open, onOpenChange, skillName, isPending, onConfirm }: DeleteSkillDialogProps) => {
-  useLocale();
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialog.Content data-testid="skill-builder-delete-skill-dialog">
-        <AlertDialog.Header>
-          <AlertDialog.Title>{studioT('Delete skill?')}</AlertDialog.Title>
-          <AlertDialog.Description>
-            {studioT('This permanently deletes "')}
-            {skillName}
-            {studioT('". This cannot be undone.')}
-          </AlertDialog.Description>
-        </AlertDialog.Header>
-        <AlertDialog.Footer>
-          <AlertDialog.Cancel data-testid="skill-builder-delete-skill-cancel" disabled={isPending}>
-            {studioT('Cancel')}
-          </AlertDialog.Cancel>
-          <Button
-            icon={<TrashIcon />}
-            variant="destructive"
-            data-testid="skill-builder-delete-skill-confirm"
-            disabled={isPending}
-            onClick={() => {
-              // Use a plain button (not AlertDialog.Close) so the dialog stays
-              // open while the request is in flight and on error.
-              onConfirm();
-            }}
-          >
-            {isPending ? studioT('Deleting…') : studioT('Delete skill')}
-          </Button>
-        </AlertDialog.Footer>
-      </AlertDialog.Content>
-    </AlertDialog>
-  );
-};
+const DeleteSkillDialog = ({ open, onOpenChange, skillName, isPending, onConfirm }: DeleteSkillDialogProps) => (
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog.Content data-testid="skill-builder-delete-skill-dialog">
+      <AlertDialog.Header>
+        <AlertDialog.Title>{studioT('Delete skill?')}</AlertDialog.Title>
+        <AlertDialog.Description>
+          {studioT('This permanently deletes "{skillName}". This cannot be undone.', { skillName })}
+        </AlertDialog.Description>
+      </AlertDialog.Header>
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel data-testid="skill-builder-delete-skill-cancel" disabled={isPending}>
+          {studioT('Cancel')}
+        </AlertDialog.Cancel>
+        <Button
+          icon={<TrashIcon />}
+          variant="destructive"
+          data-testid="skill-builder-delete-skill-confirm"
+          onClick={() => {
+            // Use a plain button (not AlertDialog.Close) so the dialog stays
+            // open while the request is in flight and on error.
+            onConfirm();
+          }}
+          loading={isPending}
+        >
+          {studioT('Delete skill')}
+        </Button>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog>
+);
 
 interface DeleteSkillEntryProps {
   skillId: string;

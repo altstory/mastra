@@ -197,8 +197,8 @@ export function McpServerTasksList({ server }: { server: McpServerInfo }) {
 
       {hasNextPage && (
         <div className="flex items-center gap-3">
-          <Button variant="default" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? studioT('Loading…') : studioT('Load more')}
+          <Button variant="default" size="sm" onClick={() => fetchNextPage()} loading={isFetchingNextPage}>
+            {studioT('Load more')}
           </Button>
           <Txt variant="caption" tone="muted">
             <Trans
@@ -308,7 +308,7 @@ function FindTaskById({ serverId }: { serverId: string }) {
         aria-invalid={find.isError || undefined}
         className="w-56 font-mono"
       />
-      <Button type="submit" size="sm" variant="default" disabled={!taskId.trim() || find.isPending}>
+      <Button type="submit" size="sm" variant="default" disabled={!taskId.trim()} loading={find.isPending}>
         {studioT('Find')}
       </Button>
       {find.isError && (

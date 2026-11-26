@@ -33,7 +33,7 @@ export function AgentProviderDetails({ agentName, provider, modelId }: AgentProv
             aria-label={studioT('Show model details for {value0}', { value0: agentName })}
           >
             <span aria-hidden="true">
-              <ProviderLogo providerId={provider} className="dark:invert" />
+              <ProviderLogo providerId={provider} />
             </span>
           </Button>
         }
@@ -49,7 +49,7 @@ export function AgentProviderDetails({ agentName, provider, modelId }: AgentProv
           <CardTitle id={titleId}>{studioT('Model')}</CardTitle>
           <TextAndIcon className="text-foreground">
             <span aria-hidden="true">
-              <ProviderLogo providerId={provider} className="dark:invert" />
+              <ProviderLogo providerId={provider} />
             </span>
             <span className="overflow-wrap-anywhere min-w-0">{provider}</span>
           </TextAndIcon>

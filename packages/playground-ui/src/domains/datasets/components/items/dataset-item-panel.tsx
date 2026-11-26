@@ -382,8 +382,8 @@ function DatasetItemPanelBody({ datasetId, item, items, onItemChange, onClose }:
           </AlertDialog.Header>
           <AlertDialog.Footer>
             <AlertDialog.Cancel>{studioT('Cancel')}</AlertDialog.Cancel>
-            <AlertDialog.Action onClick={handleDeleteConfirm}>
-              {deleteItem.isPending ? studioT('Deleting...') : studioT('Yes, delete')}
+            <AlertDialog.Action onClick={handleDeleteConfirm} loading={deleteItem.isPending}>
+              {studioT('Yes, delete')}
             </AlertDialog.Action>
           </AlertDialog.Footer>
         </AlertDialog.Content>
