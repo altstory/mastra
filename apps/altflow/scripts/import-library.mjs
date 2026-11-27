@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { Knowledge, knowledgeMemoryScopes } from '@mastra/core/knowledge';
 import { MastraCompositeStore } from '@mastra/core/storage';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
-import { localEmbedder } from '../src/mastra/embedding.ts';
-import './environment.mjs';
+import { createModelHubEmbedder } from '../src/mastra/embedding.ts';
+import { modelCredential } from './environment.mjs';
 
 // Same data-root rule as the server (src/mastra/index.ts) and its launchers, so this writes the
 // databases the running service reads. The page sources ship with the app, not with the data.
@@ -29,7 +29,7 @@ const knowledge = new Knowledge({
   description: '创作方法、素材和作者偏好。',
   storage,
   vector,
-  embedder: localEmbedder,
+  embedder: createModelHubEmbedder({ apiKey: modelCredential(), baseURL: process.env.ALTFLOW_MODELHUB_BASE_URL }),
   tools: true,
   pinnedContext: true,
   scopes: {

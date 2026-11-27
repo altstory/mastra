@@ -34,7 +34,7 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 ### 已有数据
 
-源码合并不移动现有安装的数据库、环境文件、上传资料或工作区。切换服务前，停止旧进程并备份数据；通过 `ALTFLOW_RUNTIME_ROOT` 指向原有数据根目录，即可沿用原目录下的 `src/mastra/public/preview.db`、`data/`、`workspace/` 和 `.cache/embeddings/`。`MASTRA_PREVIEW_ROOT` 作为旧配置别名继续兼容。不要让两个进程同时打开同一个 DuckDB 文件。
+源码合并不移动现有安装的数据库、环境文件、上传资料或工作区。切换服务前，停止旧进程并备份数据；通过 `ALTFLOW_RUNTIME_ROOT` 指向原有数据根目录，即可沿用原目录下的 `src/mastra/public/preview.db`、`data/`和 `workspace/`。`MASTRA_PREVIEW_ROOT` 作为旧配置别名继续兼容。不要让两个进程同时打开同一个 DuckDB 文件。
 
 ### OSS 增量备份和 Trace 保留
 
@@ -93,9 +93,11 @@ Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、�
 - 与 DSH 一样，触发压缩的内部压力会使用提供方真实输入用量加后续消息增量；尚无用量时采用固定密度计价。UI 占用只显示提供方实际 input tokens，不把内部压力估算当作实际 token 数。
 - “轮”是至少完成一个主模型步骤的用户执行；“步”是已结束的主模型调用。工具执行、标题、压缩和子 Agent 调用不额外算作主 Agent 步数，辅助调用费用仍计入总用量。
 
-`workspace/` 是本机文件区，初始为空。自定义稿件和技能按需放入，不随源码提交。首次启动创建共享创作指南，不覆盖已有资料。语义向量使用本地多语言 MiniLM（384 维），首次下载约 144 MB，缓存到 `.cache/embeddings/`。
+`workspace/` 是本机文件区，初始为空。自定义稿件和技能按需放入，不随源码提交。首次启动创建共享创作指南，不覆盖已有资料。知识库、工作区和会话的语义检索统一使用 ModelHub 的 `qwen3.7-text-embedding-flash-openai`，向量为 1024 维。配置沿用 `ALTFLOW_MODELHUB_API_KEY` 和 `ALTFLOW_MODELHUB_BASE_URL`，启动和检索无需下载本地模型。
 
 `src/mastra/public/preview.db` 保存会话、知识、工作流和编辑器配置；`data/vectors.db` 保存向量，`data/observability.duckdb` 保存追踪等数据。数据库、环境文件、缓存、工作区都不纳入 Git，部署时须单独持久化和备份。
+
+从本地 MiniLM 升级时，先停止 Agent，然后对原来的 `ALTFLOW_RUNTIME_ROOT` 执行 `pnpm --filter @internal/altflow rebuild:embeddings`。命令从知识库和会话原文重建向量，并用工作区索引保存的原文重建工作区向量。全部成功后才替换 `data/vectors.db`。
 
 ## 验证
 

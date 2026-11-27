@@ -7,6 +7,7 @@
     "start:prebuilt": "node start-built.mjs --skip-build",
     "build:deps": "node scripts/build-deps.mjs",
     "dev": "node start-local.mjs",
+    "rebuild:embeddings": "node --import tsx scripts/rebuild-embeddings.mjs",
     "backup": "node --import tsx scripts/backup.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "publish:creator-skills": "node --import tsx scripts/publish-creator-skills.mjs",
@@ -18,7 +19,6 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.88",
     "@deepseek-ai/libreoffice-kit": "0.2.3",
-    "@huggingface/transformers": "3.8.1",
     "@libsql/client": "^0.18.0",
     "@mastra/altflow-tools": "workspace:*",
     "@mastra/core": "workspace:*",

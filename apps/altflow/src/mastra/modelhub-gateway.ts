@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { referenceOutputGuard } from './agents/reference-output';
 import { creatorMeterContext, fetchMeteredCreatorModel } from './creator-meter';
 import { contextPolicy } from './context-policy.ts';
+import { modelHubBaseURL } from './modelhub-url';
 
 type ChatModel = ReturnType<ReturnType<typeof createOpenAICompatible>['chatModel']>;
 type ChatPrompt = Parameters<ChatModel['doGenerate']>[0]['prompt'];
@@ -113,22 +114,11 @@ export class ModelHubGateway extends MastraModelGateway {
     defaultReasoningLevel?: string;
   }) {
     super();
-    const url = new URL(options.baseURL ?? 'https://modelhub.altflow.cn/v1');
-    if (
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash ||
-      (url.protocol !== 'https:' &&
-        !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)))
-    ) {
-      throw new Error('ModelHub requires HTTPS or an explicit loopback test server');
-    }
     if (!options.apiKey) throw new Error('ModelHub credential is not configured');
     this.#apiKey = options.apiKey;
     this.#allowedModels = options.allowedModels;
     this.#defaultReasoningLevel = options.defaultReasoningLevel;
-    this.#baseURL = url.href.replace(/\/$/, '');
+    this.#baseURL = modelHubBaseURL(options.baseURL);
   }
   handlesModel(id: string) {
     return id.startsWith('altflow/');

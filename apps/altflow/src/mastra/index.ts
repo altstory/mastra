@@ -35,7 +35,7 @@ import { backupConfig, startBackups } from './backup/service';
 import { ossBackupObjects } from './backup/objects';
 import { ContextCompaction } from './context-compaction';
 import { CONTEXT_MEMORY_OPTIONS, CREATOR_MEMORY_OPTIONS } from './context-memory';
-import { localEmbedder } from './embedding';
+import { createModelHubEmbedder, EMBEDDING_DIMENSION, embedTextBatch } from './embedding';
 import { conversationModels, defaultConversationModel, defaultReasoningLevel } from './model-policy';
 import { ModelHubGateway } from './modelhub-gateway';
 import { accountPreferenceRoutes } from './routes/account-preferences';
@@ -88,6 +88,7 @@ const accounts = createAltFlowAuth({
 });
 const apiKey = process.env.ALTFLOW_MODELHUB_API_KEY;
 if (!apiKey) throw new Error('AltFlow gateway credential is not configured');
+const embedder = createModelHubEmbedder({ apiKey, baseURL: process.env.ALTFLOW_MODELHUB_BASE_URL });
 const modelHub = new ModelHubGateway({
   apiKey,
   baseURL: process.env.ALTFLOW_MODELHUB_BASE_URL,
@@ -123,6 +124,11 @@ await conversationProjects.init();
 const accountPreferences = new AccountPreferences(`file:${previewPath('data/account-preferences.db')}`, projectMemory);
 await accountPreferences.init();
 const vector = new LibSQLVector({ id: 'creator-vectors', url: `file:${previewPath('data/vectors.db')}` });
+for (const indexName of await vector.listIndexes()) {
+  if ((await vector.describeIndex({ indexName })).dimension !== EMBEDDING_DIMENSION) {
+    throw new Error('AltFlow vector indexes must be rebuilt with pnpm --filter @internal/altflow rebuild:embeddings');
+  }
+}
 await mkdir(previewPath('data'), { recursive: true });
 const ossKey = process.env.ALTFLOW_OSS_ACCESS_KEY_ID;
 const ossSecret = process.env.ALTFLOW_OSS_ACCESS_KEY_SECRET;
@@ -152,7 +158,10 @@ const workspace = new Workspace({
   filesystem: new LocalFilesystem({ basePath: previewPath('workspace') }),
   bm25: true,
   vectorStore: vector,
-  embedder: async (text: string) => (await localEmbedder.doEmbed({ values: [text] })).embeddings[0],
+  embedder: Object.assign((texts: string[]) => embedTextBatch(embedder, texts), {
+    batch: true as const,
+    maxBatchSize: embedder.maxEmbeddingsPerCall,
+  }),
   skills: ['.'],
   skillSource: creatorLocalSkillSource(previewPath('workspace', 'skills')),
 });
@@ -162,7 +171,7 @@ const knowledge = new Knowledge({
   description: '创作方法、素材和作者偏好。',
   storage,
   vector,
-  embedder: localEmbedder,
+  embedder,
   tools: true,
   pinnedContext: true,
   instructions: false,
@@ -233,7 +242,7 @@ const titleGeneration = {
 const creatorMemory = new CreatorMemory({
   storage,
   vector,
-  embedder: localEmbedder,
+  embedder,
   options: {
     ...CREATOR_MEMORY_OPTIONS,
     generateTitle: titleGeneration,

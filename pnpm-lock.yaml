@@ -513,9 +513,6 @@ importers:
       '@deepseek-ai/libreoffice-kit':
         specifier: 0.2.3
         version: 0.2.3
-      '@huggingface/transformers':
-        specifier: 3.8.1
-        version: 3.8.1(@types/node@22.19.15)
       '@libsql/client':
         specifier: ^0.18.0
         version: 0.18.0(bufferutil@4.1.0)
