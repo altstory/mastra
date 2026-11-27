@@ -53,7 +53,11 @@ async function compactDatabase(root, source, before, automatic) {
   const scratch = await mkdtemp(join(root, 'data/.trace-compact-'));
   try {
     const target = join(scratch, 'compacted.duckdb');
-    const live = new DuckDBStore({ path: source, memoryLimit: env.ALTFLOW_TRACE_MEMORY_LIMIT ?? '1GB', threads: 2 });
+    const live = new DuckDBStore({
+      path: source,
+      memoryLimit: env.ALTFLOW_BACKUP_COMPACT_MEMORY_LIMIT ?? env.ALTFLOW_TRACE_MEMORY_LIMIT ?? '1GB',
+      threads: 2,
+    });
     try {
       await live.db.execute('CHECKPOINT');
       if (automatic) {

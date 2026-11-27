@@ -175,7 +175,20 @@ export async function compactTraces(db: DuckDBStore['db'], target: string) {
     const [[name]] = await (await conn.run('SELECT current_database()')).getRows();
     const database = '"' + String(name).replaceAll('"', '""') + '"';
     await conn.run(`ATTACH ${literal(target)} AS compacted`);
-    await conn.run(`COPY FROM DATABASE ${database} TO compacted`);
+    await conn.run(`COPY FROM DATABASE ${database} TO compacted (SCHEMA)`);
+    const catalog = await conn.run(`SELECT schema_name, table_name FROM duckdb_tables()
+      WHERE database_name = ${literal(String(name))} AND NOT internal AND NOT temporary`);
+    for (const [schema, tableName] of await catalog.getRows()) {
+      const table = [schema, tableName].map(value => '"' + String(value).replaceAll('"', '""') + '"').join('.');
+      const input = database + '.' + table;
+      const output = 'compacted.' + table;
+      const result = await conn.run(`SELECT DISTINCT rowid // ${hotShardRows} AS shard FROM ${input} ORDER BY shard`);
+      for (const [shard] of await result.getRows()) {
+        const first = BigInt(String(shard)) * BigInt(hotShardRows);
+        await conn.run(`INSERT INTO ${output} BY NAME SELECT * FROM ${input}
+          WHERE rowid >= ${first} AND rowid < ${first + BigInt(hotShardRows)} ORDER BY rowid`);
+      }
+    }
     await conn.run('CHECKPOINT compacted');
     await conn.run('DETACH compacted');
   } finally {

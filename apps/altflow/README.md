@@ -44,7 +44,7 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 - 备份用 4 MiB 原始数据块计算 SHA-256，逐块压缩。相同数据块只保存一个对象，各恢复点用清单引用数据块。单个对象小于 1 GiB。
 - 首次启用时，`ALTFLOW_BACKUP_CLEANUP=false` 会保留本地 Trace，用于检查归档和恢复。开启 `ALTFLOW_BACKUP_CLEANUP=true` 后，已结束且超过 7 天的 Trace 才进入清理范围。每批先上传和回读校验，再删除内容仍与归档一致的本地记录。上传失败会保留记录，供下次重试。近期 Trace 有独立恢复点，已归档历史可离线读取 Parquet。
 - OSS 默认保留 90 天 Trace 归档，以及最近 7 个日、4 个周、3 个月的业务恢复点，重叠恢复点只留一份。没有保留清单引用的数据块经过 7 天宽限期再回收。OSS 备份前缀超过默认 10 GiB 会写告警。请勿配置按对象年龄直接删除共享数据块的 OSS 生命周期规则。启用版本控制时，单独配置非当前版本的保留期限，否则删除后的版本仍会占用容量。
-- 在线清理会执行 DuckDB 检查点，已释放的数据库块可供后续写入复用。开启清理后，启动时若检测到 256 MiB 以上空闲块且有足够暂存空间，会自动压缩。也可在 Agent 停机后运行 `pnpm --filter @internal/altflow backup compact`。它复制并校验剩余数据，只有能实际缩小文件时才替换原库。命令读取 `ALTFLOW_RUNTIME_ROOT`，需要有空间暂存压缩后的库。
+- 在线清理会执行 DuckDB 检查点，已释放的数据库块可供后续写入复用。开启清理后，启动时若检测到 256 MiB 以上空闲块且有足够暂存空间，会自动压缩。也可在 Agent 停机后运行 `pnpm --filter @internal/altflow backup compact`。它复制并校验剩余数据，只有能实际缩小文件时才替换原库。命令读取 `ALTFLOW_RUNTIME_ROOT`，需要有空间暂存压缩后的库。大型数据库可单独设置 `ALTFLOW_BACKUP_COMPACT_MEMORY_LIMIT`，运行中的 Agent 仍使用原有内存配置。
 
 使用新目录恢复。在仓库根目录执行以下任一命令。
 
