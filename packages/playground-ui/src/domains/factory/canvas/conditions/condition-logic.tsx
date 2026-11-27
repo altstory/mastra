@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/ds/components/Select';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface ConditionLogicProps {
   logic: 'AND' | 'OR';
@@ -8,27 +9,28 @@ export interface ConditionLogicProps {
 
 /** The word on the wire between a group's conditions, "and" or "or", as a picker that switches how they all join. */
 export function ConditionLogic({ logic, onChange }: ConditionLogicProps) {
+  useLocale();
   return (
     <Select value={logic} onValueChange={next => next && next !== logic && onChange(next)}>
-      <SelectTrigger size="sm" variant="ghost" aria-label="Match all or any" className="w-fit self-center">
+      <SelectTrigger size="sm" variant="ghost" aria-label={studioT('Match all or any')} className="w-fit self-center">
         <Txt as="span" variant="caption" tone="muted">
-          {logic === 'AND' ? 'and' : 'or'}
+          {logic === 'AND' ? studioT('and') : studioT('or')}
         </Txt>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="AND">
           <span className="flex items-baseline gap-2">
-            and
+            {studioT('and')}
             <Txt as="span" variant="caption" tone="muted">
-              all must match
+              {studioT('all must match')}
             </Txt>
           </span>
         </SelectItem>
         <SelectItem value="OR">
           <span className="flex items-baseline gap-2">
-            or
+            {studioT('or')}
             <Txt as="span" variant="caption" tone="muted">
-              any can match
+              {studioT('any can match')}
             </Txt>
           </span>
         </SelectItem>

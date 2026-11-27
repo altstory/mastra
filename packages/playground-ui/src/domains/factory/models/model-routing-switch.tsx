@@ -2,6 +2,7 @@ import { MODEL_LANES, MODEL_ROUTES, MODEL_SCOPE_LABELS, connectorPath } from './
 import type { FactoryModelScope, ModelDefaults, ModelLane } from './model-routes';
 
 import { SegmentedControl, SegmentedControlItem } from '@/ds/components/SegmentedControl';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 const GLYPH_LANE_Y: Record<ModelLane, number> = { chats: 4, runs: 12 };
 const GLYPH_DEFAULTS_Y: Record<ModelDefaults, number> = { personal: 4, factory: 12 };
@@ -17,9 +18,10 @@ export function ModelRoutingSwitch({
   disabled?: boolean;
   onValueChange: (scope: FactoryModelScope) => void;
 }) {
+  useLocale();
   return (
     <SegmentedControl
-      aria-label="Model routing"
+      aria-label={studioT('Model routing')}
       aria-busy={pending}
       disabled={disabled}
       value={value}

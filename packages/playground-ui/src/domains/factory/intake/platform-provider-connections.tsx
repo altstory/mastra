@@ -24,6 +24,7 @@ import { Input } from '@/ds/components/Input';
 import { toast } from '@/ds/components/Toaster';
 import { IconChainLink3 } from '@/ds/icons/central/IconChainLink3';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** Supplies how every Platform connect button below it connects an account. */
 export function PlatformConnectActionsProvider({
@@ -47,8 +48,9 @@ interface ApiKeyDialogProps {
 }
 
 function ApiKeyDialog({ provider, title, pending, reconnecting, onSubmit, onClose }: ApiKeyDialogProps) {
+  useLocale();
   const meta = PLATFORM_CONNECT_PROVIDERS[provider];
-  const credentialName = meta.credentialName ?? 'API key';
+  const credentialName = studioT(meta.credentialName ?? 'API key');
   const fields = reconnecting ? [] : (meta.params ?? []);
   const [apiKey, setApiKey] = useState('');
   const [params, setParams] = useState<Record<string, string>>({});
@@ -65,8 +67,10 @@ function ApiKeyDialog({ provider, title, pending, reconnecting, onSubmit, onClos
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Paste an {credentialName} from your {meta.displayName} account. The {credentialName} is stored by Mastra
-            Platform and never reaches the browser again.
+            {studioT(
+              'Paste a credential from your {provider} account. Mastra Platform stores this {credential} and never sends it back to the browser.',
+              { provider: meta.displayName, credential: credentialName },
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -82,15 +86,15 @@ function ApiKeyDialog({ provider, title, pending, reconnecting, onSubmit, onClos
           <Input
             aria-label={`${meta.displayName} ${credentialName}`}
             type="password"
-            placeholder={`Paste your ${credentialName}`}
+            placeholder={studioT('Paste your {value0}', { value0: credentialName })}
             value={apiKey}
             onChange={event => setApiKey(event.target.value)}
           />
         </DialogBody>
         <DialogFooter>
-          <DialogCancel>Cancel</DialogCancel>
+          <DialogCancel>{studioT('Cancel')}</DialogCancel>
           <DialogAction disabled={!complete} onConfirm={submit} loading={pending}>
-            Connect
+            {studioT('Connect')}
           </DialogAction>
         </DialogFooter>
       </DialogContent>
@@ -121,6 +125,7 @@ export function ProviderConnectControl({
   className,
   onCompleted,
 }: ProviderConnectControlProps) {
+  useLocale();
   const meta = PLATFORM_CONNECT_PROVIDERS[provider];
   const actions = usePlatformConnectActions();
   const [pending, setPending] = useState(false);
@@ -137,13 +142,17 @@ export function ProviderConnectControl({
         : await actions.connect(provider, { ...(credentials ? { credentials } : {}), ...(params ? { params } : {}) });
       setCollectingApiKey(false);
       if (connection) {
-        toast.success(`${meta.displayName} connected`);
+        toast.success(studioT('{value0} connected', { value0: meta.displayName }));
       } else {
-        toast.success(`${meta.displayName} authorization completed. The connection is activating.`);
+        toast.success(
+          studioT('{value0} authorization completed. The connection is activating.', { value0: meta.displayName }),
+        );
       }
       onCompleted?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Failed to connect ${meta.displayName}`);
+      toast.error(
+        err instanceof Error ? err.message : studioT('Failed to connect {value0}', { value0: meta.displayName }),
+      );
     } finally {
       setPending(false);
     }
@@ -178,15 +187,16 @@ export function ProviderConnectControl({
 
 export function PlatformConnectButton({
   provider,
-  buttonLabel = 'Connect',
+  buttonLabel = studioT('Connect'),
 }: {
   provider: PlatformConnectProviderId;
   buttonLabel?: string;
 }) {
+  useLocale();
   return (
     <ProviderConnectControl
       provider={provider}
-      label={`Connect ${PLATFORM_CONNECT_PROVIDERS[provider].displayName}`}
+      label={studioT('Connect {value0}', { value0: PLATFORM_CONNECT_PROVIDERS[provider].displayName })}
       buttonLabel={buttonLabel}
       icon={<IconChainLink3 />}
     />
@@ -200,11 +210,12 @@ export function PlatformReconnectButton({
   provider: PlatformConnectProviderId;
   connectionId: string;
 }) {
+  useLocale();
   return (
     <ProviderConnectControl
       provider={provider}
       reconnectConnectionId={connectionId}
-      label={`Reconnect ${PLATFORM_CONNECT_PROVIDERS[provider].displayName}`}
+      label={studioT('Reconnect {value0}', { value0: PLATFORM_CONNECT_PROVIDERS[provider].displayName })}
       buttonLabel="Reconnect"
       icon={<IconChainLink3 />}
     />
@@ -212,12 +223,13 @@ export function PlatformReconnectButton({
 }
 
 export function PlatformManageLink({ provider }: { provider: PlatformConnectProviderId }) {
+  useLocale();
   return (
     <ConnectionManagementButton
-      aria-label={`Manage ${PLATFORM_CONNECT_PROVIDERS[provider].displayName} connection`}
+      aria-label={studioT('Manage {value0} connection', { value0: PLATFORM_CONNECT_PROVIDERS[provider].displayName })}
       render={<a href={MASTRA_PLATFORM_URL} target="_blank" rel="noopener noreferrer" />}
     >
-      Manage
+      {studioT('Manage')}
     </ConnectionManagementButton>
   );
 }
@@ -240,15 +252,16 @@ export function PlatformConnectionActions({
 
 export function AddPlatformAccountButton({
   provider,
-  buttonLabel = 'Add account',
+  buttonLabel = studioT('Add account'),
 }: {
   provider: PlatformConnectProviderId;
   buttonLabel?: string;
 }) {
+  useLocale();
   return (
     <ProviderConnectControl
       provider={provider}
-      label={`Add account to ${PLATFORM_CONNECT_PROVIDERS[provider].displayName}`}
+      label={studioT('Add account to {value0}', { value0: PLATFORM_CONNECT_PROVIDERS[provider].displayName })}
       buttonLabel={buttonLabel}
       variant="ghost"
       icon={<IconPlusMedium />}

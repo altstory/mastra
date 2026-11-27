@@ -3,6 +3,7 @@ import { Txt } from '@/ds/components/Txt';
 import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { raisedSurfaceStyle } from '@/ds/primitives/raised-surface';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** One trigger new items arrive on, with the sources that send it. */
@@ -33,15 +34,16 @@ export function SourcesColumn({
   intakeHref: string;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   return (
-    <section aria-label="Sources" className="flex w-63 shrink-0 flex-col gap-3 max-sm:w-full">
+    <section aria-label={studioT('Sources')} className="flex w-63 shrink-0 flex-col gap-3 max-sm:w-full">
       <div className="flex h-5 items-center justify-between">
         <Txt as="h2" variant="column" tone="muted">
-          Sources
+          {studioT('Sources')}
         </Txt>
         <Link href={intakeHref} className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
           <Txt as="span" variant="caption">
-            Work Intake
+            {studioT('Work Intake')}
           </Txt>
           <IconArrowUpRight className="size-icon-xs" aria-hidden />
         </Link>
@@ -78,7 +80,7 @@ export function SourcesColumn({
               ))}
               {lane.sources.length === 0 && (
                 <Txt as="span" variant="caption" tone="muted">
-                  No source connected
+                  {studioT('No source connected')}
                 </Txt>
               )}
             </div>
@@ -90,10 +92,12 @@ export function SourcesColumn({
       {!routeList && (
         <div className="flex flex-col gap-2.5 px-3.25 pt-2">
           <Txt as="p" variant="caption" tone="muted">
-            A new issue or pull request is offered to the boards in this order. The first rule that matches keeps it.
+            {studioT(
+              'A new issue or pull request is offered to the boards in this order. The first rule that matches keeps it.',
+            )}
           </Txt>
           <Txt as="p" variant="caption" tone="muted">
-            After that, only its board’s card rules apply.
+            {studioT('After that, only its board’s card rules apply.')}
           </Txt>
         </div>
       )}

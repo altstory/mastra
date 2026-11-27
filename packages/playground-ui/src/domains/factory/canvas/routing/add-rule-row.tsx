@@ -1,10 +1,12 @@
 import { Txt } from '@/ds/components/Txt';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { focusRing } from '@/ds/primitives/transitions';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** Starts a new rule for the board. */
 export function AddRuleRow({ onAdd }: { onAdd: () => void }) {
+  useLocale();
   // A DS Button is a pill sized for toolbars; this sits in a rule row's height and shape.
   return (
     <li>
@@ -18,7 +20,7 @@ export function AddRuleRow({ onAdd }: { onAdd: () => void }) {
       >
         <IconPlusMedium className="size-icon-xs" aria-hidden />
         <Txt as="span" variant="caption">
-          Rule
+          {studioT('Rule')}
         </Txt>
       </button>
     </li>

@@ -9,6 +9,7 @@ import { IconCircleDashed } from '@/ds/icons/central/IconCircleDashed';
 import { IconPencil } from '@/ds/icons/central/IconPencil';
 import { GithubIcon } from '@/ds/icons/GithubIcon';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const KIND_LABEL: Record<IntakeTestResultInfo['item']['kind'], string> = {
@@ -45,6 +46,7 @@ export function IntakeTestResult({
   LinkComponent: LinkComponent;
   onEditRule: (routeId: string) => void;
 }) {
+  useLocale();
   const { item, placement, card } = result;
 
   return (
@@ -79,16 +81,17 @@ export function IntakeTestResult({
         <div className="flex items-center gap-2.5 rounded-2xl bg-fill px-4 py-3">
           <IconCircleDashed className="size-icon-sm shrink-0" aria-hidden />
           <Txt as="p" variant="body-sm" tone="ink">
-            Goes to {placement.place}
+            {studioT('Goes to')} {placement.place}
           </Txt>
         </div>
       ) : (
-        <Notice variant="warning">{`Not routed. ${result.reason ?? ''}`}</Notice>
+        <Notice variant="warning">{studioT('Not routed. {value0}', { value0: result.reason ?? '' })}</Notice>
       )}
       {result.legacyEvaluator && (
         <Notice variant="info">
-          This project still files new issues and pull requests with the old route list, so filing may differ from this
-          answer until it switches to intake order.
+          {studioT(
+            'This project still files new issues and pull requests with the old route list, so filing may differ from this answer until it switches to intake order.',
+          )}
         </Notice>
       )}
       {result.note && (
@@ -100,10 +103,10 @@ export function IntakeTestResult({
       <BoardAnswers boards={result.boards} boardId={boardId} onEditRule={onEditRule} />
 
       {card && (
-        <section aria-label="Its card" className="flex flex-col gap-2">
+        <section aria-label={studioT('Its card')} className="flex flex-col gap-2">
           <div className="flex justify-between gap-2">
             <Txt as="h3" variant="body-sm" tone="muted">
-              Its card
+              {studioT('Its card')}
             </Txt>
             <Txt as="span" variant="body-sm" tone="muted">
               {card.place}
@@ -111,7 +114,7 @@ export function IntakeTestResult({
           </div>
           {card.moves.length > 0 && (
             <>
-              <ul aria-label="Card moves" className="flex flex-col gap-2">
+              <ul aria-label={studioT('Card moves')} className="flex flex-col gap-2">
                 {card.moves.map(move => (
                   <li key={move.key} className="flex flex-col gap-1">
                     <div className="flex flex-col rounded-2xl bg-fill px-3 py-2.5">
@@ -142,8 +145,8 @@ export function IntakeTestResult({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            tooltip="Edit rule"
-                            aria-label={`Edit ${rule.name}`}
+                            tooltip={studioT('Edit rule')}
+                            aria-label={studioT('Edit {value0}', { value0: rule.name })}
                             onClick={() => onEditRule(rule.routeId)}
                           >
                             <IconPencil />
@@ -155,7 +158,7 @@ export function IntakeTestResult({
                 ))}
               </ul>
               <Txt as="p" variant="caption" tone="muted">
-                Replays run against the card's current phase and facts.
+                {studioT("Replays run against the card's current phase and facts.")}
               </Txt>
             </>
           )}
@@ -169,7 +172,7 @@ export function IntakeTestResult({
           iconEnd={<IconArrowUpRight />}
           className="self-start"
         >
-          {`Open ${placement.boardName}`}
+          {studioT('Open {value0}', { value0: placement.boardName })}
         </Button>
       )}
     </>

@@ -6,6 +6,7 @@ import { Notice } from '@/ds/components/Notice';
 import { Spinner } from '@/ds/components/Spinner';
 import { IconArrowRotateCounterClockwise } from '@/ds/icons/central/IconArrowRotateCounterClockwise';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface BoardActionsProps {
   /** The board's saved name, as the confirmations ask about it. */
@@ -34,6 +35,7 @@ export function BoardActions({
   onReset,
   onDelete,
 }: BoardActionsProps) {
+  useLocale();
   const [confirm, setConfirm] = useState<'reset' | 'delete'>();
 
   if (!resettable && !deletable) return null;
@@ -43,8 +45,8 @@ export function BoardActions({
         <DropdownMenu.Trigger
           variant="ghost"
           size="icon-sm"
-          tooltip="Board actions"
-          aria-label="Board actions"
+          tooltip={studioT('Board actions')}
+          aria-label={studioT('Board actions')}
           disabled={disabled || busy}
         >
           {busy ? <Spinner size="sm" /> : <Ellipsis />}
@@ -53,13 +55,13 @@ export function BoardActions({
           {resettable && (
             <DropdownMenu.Item onClick={() => setConfirm('reset')}>
               <IconArrowRotateCounterClockwise />
-              Reset to default
+              {studioT('Reset to default')}
             </DropdownMenu.Item>
           )}
           {deletable && (
             <DropdownMenu.Item variant="destructive" onClick={() => setConfirm('delete')}>
               <TrashIcon />
-              Delete board
+              {studioT('Delete board')}
             </DropdownMenu.Item>
           )}
         </DropdownMenu.Content>
@@ -68,28 +70,30 @@ export function BoardActions({
       <AlertDialog open={confirm === 'reset'} onOpenChange={open => !open && setConfirm(undefined)}>
         <AlertDialog.Content>
           <AlertDialog.Header>
-            <AlertDialog.Title>Reset {boardName} to default?</AlertDialog.Title>
+            <AlertDialog.Title>{studioT('Reset {boardName} to default?', { boardName })}</AlertDialog.Title>
             <AlertDialog.Description>
-              Every change made to this board's name and phases is replaced with Factory's version.
+              {studioT("Every change made to this board's name and phases is replaced with Factory's version.")}
             </AlertDialog.Description>
           </AlertDialog.Header>
           <AlertDialog.Footer>
-            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action onClick={onReset}>Reset</AlertDialog.Action>
+            <AlertDialog.Cancel>{studioT('Cancel')}</AlertDialog.Cancel>
+            <AlertDialog.Action onClick={onReset}>{studioT('Reset')}</AlertDialog.Action>
           </AlertDialog.Footer>
         </AlertDialog.Content>
       </AlertDialog>
       <AlertDialog open={confirm === 'delete'} onOpenChange={open => !open && setConfirm(undefined)}>
         <AlertDialog.Content>
           <AlertDialog.Header>
-            <AlertDialog.Title>Delete {boardName}?</AlertDialog.Title>
+            <AlertDialog.Title>{studioT('Delete {boardName}?', { boardName })}</AlertDialog.Title>
             <AlertDialog.Description>
-              The board and its phases are removed from this project. A board that still has cards can’t be deleted.
+              {studioT(
+                'The board and its phases are removed from this project. A board that still has cards can’t be deleted.',
+              )}
             </AlertDialog.Description>
           </AlertDialog.Header>
           <AlertDialog.Footer>
-            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-            <AlertDialog.Action onClick={onDelete}>Delete</AlertDialog.Action>
+            <AlertDialog.Cancel>{studioT('Cancel')}</AlertDialog.Cancel>
+            <AlertDialog.Action onClick={onDelete}>{studioT('Delete')}</AlertDialog.Action>
           </AlertDialog.Footer>
         </AlertDialog.Content>
       </AlertDialog>
@@ -105,16 +109,21 @@ export interface BoardActionErrorsProps {
 
 /** Why the last reset or delete didn't go through. */
 export function BoardActionErrors({ resetError, deleteError }: BoardActionErrorsProps) {
+  useLocale();
   return (
     <>
       {resetError !== undefined && (
         <Notice variant="destructive" role="alert">
-          <Notice.Message>The board was not reset. {resetError}</Notice.Message>
+          <Notice.Message>
+            {studioT('The board was not reset.')} {resetError}
+          </Notice.Message>
         </Notice>
       )}
       {deleteError !== undefined && (
         <Notice variant="destructive" role="alert">
-          <Notice.Message>The board was not deleted. {deleteError}</Notice.Message>
+          <Notice.Message>
+            {studioT('The board was not deleted.')} {deleteError}
+          </Notice.Message>
         </Notice>
       )}
     </>

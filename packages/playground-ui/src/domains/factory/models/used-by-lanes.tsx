@@ -8,9 +8,11 @@ import {
 import type { FactoryModelScope, ModelDefaults, ModelLane } from './model-routes';
 
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 export function UsedByLanes({ scope, defaults }: { scope: FactoryModelScope; defaults: ModelDefaults }) {
+  useLocale();
   const lanes = lanesUsing(scope, defaults);
   if (lanes.length === 0) {
     return (
@@ -22,7 +24,7 @@ export function UsedByLanes({ scope, defaults }: { scope: FactoryModelScope; def
 
   return (
     <Txt as="span" variant="meta" tone="muted" className="flex flex-wrap items-center gap-2">
-      Used by
+      {studioT('Used by')}
       {lanes.map(lane => (
         <LaneBadge key={lane} lane={lane} defaults={defaults} />
       ))}

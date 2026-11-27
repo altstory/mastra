@@ -14,6 +14,7 @@ import { Input } from '@/ds/components/Input';
 import { SegmentedControl, SegmentedControlItem } from '@/ds/components/SegmentedControl';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/ds/components/Select';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** A value a condition tests for: one, or several for "is any of". */
@@ -39,15 +40,16 @@ export function BooleanValue({
   field: FilterBarField;
   onChange: (row: Row) => void;
 }) {
+  useLocale();
   const options = optionsOf(field) ?? [
-    { value: 'true', label: 'Yes' },
-    { value: 'false', label: 'No' },
+    { value: 'true', label: studioT('Yes') },
+    { value: 'false', label: studioT('No') },
   ];
   const yes = (row.operator !== 'not_equals') === (row.value !== false);
   return (
     <>
       <Txt as="span" variant="caption" tone="muted">
-        is
+        {studioT('is')}
       </Txt>
       <SegmentedControl
         size="sm"
@@ -75,10 +77,11 @@ export function PresenceValue({
   field: FilterBarField;
   onChange: (row: Row) => void;
 }) {
+  useLocale();
   return (
     <>
       <Txt as="span" variant="caption" tone="muted">
-        is
+        {studioT('is')}
       </Txt>
       <SegmentedControl
         size="sm"
@@ -88,8 +91,8 @@ export function PresenceValue({
           onChange({ ...row, operator: value === 'true' ? 'exists' : 'not_exists', value: undefined })
         }
       >
-        <SegmentedControlItem value="true">Yes</SegmentedControlItem>
-        <SegmentedControlItem value="false">No</SegmentedControlItem>
+        <SegmentedControlItem value="true">{studioT('Yes')}</SegmentedControlItem>
+        <SegmentedControlItem value="false">{studioT('No')}</SegmentedControlItem>
       </SegmentedControl>
     </>
   );
@@ -113,6 +116,7 @@ export function ValueControl({
   placeholder: string | undefined;
   onChange: (row: Row) => void;
 }) {
+  useLocale();
   const options = optionsOf(field);
   // An open field keeps one control while its suggestions load, so a value being typed isn't lost.
   if (field.strict === false && !typed) {
@@ -126,7 +130,7 @@ export function ValueControl({
         options={(options ?? []).map(option => ({ value: option.value, label: option.label ?? option.value }))}
         values={values}
         many={many}
-        placeholder={placeholder ?? 'Search or type a value'}
+        placeholder={placeholder ?? studioT('Search or type a value')}
         onChange={next => onChange({ ...row, value: many ? next : next[0] })}
       />
     );
@@ -148,9 +152,9 @@ export function ValueControl({
         value={row.value === undefined ? null : String(row.value)}
         onValueChange={value => value !== null && onChange({ ...row, value })}
       >
-        <SelectTrigger size="sm" aria-label="Value" className="w-fit">
+        <SelectTrigger size="sm" aria-label={studioT('Value')} className="w-fit">
           <Txt as="span" variant="caption" className="font-medium">
-            {current?.label ?? (row.value === undefined ? 'Choose a value' : String(row.value))}
+            {current?.label ?? (row.value === undefined ? studioT('Choose a value') : String(row.value))}
           </Txt>
         </SelectTrigger>
         <SelectContent>
@@ -187,6 +191,7 @@ function ManyValues({
   values: string[];
   onChange: (values: string[]) => void;
 }) {
+  useLocale();
   // A saved value the field no longer offers (a removed phase) still shows, and stays until unticked.
   const chosen = values.map(value => options.find(option => option.value === value) ?? { value, label: value });
   const items = [...options, ...chosen.filter(choice => !options.includes(choice))];
@@ -201,14 +206,14 @@ function ManyValues({
       isItemEqualToValue={(option: Choice, value: Choice) => option.value === value.value}
       onValueChange={next => onChange(next.map(option => option.value))}
     >
-      <ComboboxTrigger size="sm" aria-label="Values" title={labels.join(', ')} className="w-fit max-w-64">
+      <ComboboxTrigger size="sm" aria-label={studioT('Values')} title={labels.join(', ')} className="w-fit max-w-64">
         <Txt as="span" variant="caption" tone={labels.length === 0 ? 'muted' : undefined} className="font-medium">
           {listSummary(labels)}
         </Txt>
       </ComboboxTrigger>
       <ComboboxContent>
-        <ComboboxSearch placeholder="Search" />
-        <ComboboxEmpty>No option found.</ComboboxEmpty>
+        <ComboboxSearch placeholder={studioT('Search')} />
+        <ComboboxEmpty>{studioT('No option found.')}</ComboboxEmpty>
         <ComboboxList>
           {(option: Choice) => (
             <ComboboxItem key={option.value} value={option}>
@@ -239,6 +244,7 @@ function OpenValues({
   placeholder: string;
   onChange: (values: string[]) => void;
 }) {
+  useLocale();
   const [query, setQuery] = useState('');
   const typed = query.trim();
   const listed = (value: string) => options.some(option => option.value.toLowerCase() === value.toLowerCase());
@@ -247,7 +253,9 @@ function OpenValues({
   const items = [
     ...options,
     ...chosen.filter(choice => !options.includes(choice)),
-    ...(typed && !listed(typed) && !values.includes(typed) ? [{ value: typed, label: `Use “${typed}”` }] : []),
+    ...(typed && !listed(typed) && !values.includes(typed)
+      ? [{ value: typed, label: studioT('Use “{value0}”', { value0: typed }) }]
+      : []),
   ];
   const labels = chosen.map(choice => choice.value);
   const shared = {
@@ -261,7 +269,7 @@ function OpenValues({
   const content = (
     <ComboboxContent>
       <ComboboxSearch placeholder={placeholder} />
-      <ComboboxEmpty>Type a value to use it.</ComboboxEmpty>
+      <ComboboxEmpty>{studioT('Type a value to use it.')}</ComboboxEmpty>
       <ComboboxList>
         {(option: Choice) => (
           <ComboboxItem key={option.value} value={option}>
@@ -284,7 +292,7 @@ function OpenValues({
         value={chosen}
         onValueChange={next => onChange(next.map(option => option.value))}
       >
-        <ComboboxTrigger size="sm" aria-label="Values" title={labels.join(', ')} className="w-fit max-w-64">
+        <ComboboxTrigger size="sm" aria-label={studioT('Values')} title={labels.join(', ')} className="w-fit max-w-64">
           {summary}
         </ComboboxTrigger>
         {content}
@@ -293,7 +301,7 @@ function OpenValues({
   }
   return (
     <ComboboxRoot {...shared} value={chosen[0] ?? null} onValueChange={next => next && onChange([next.value])}>
-      <ComboboxTrigger size="sm" aria-label="Value" title={labels[0]} className="w-fit max-w-64">
+      <ComboboxTrigger size="sm" aria-label={studioT('Value')} title={labels[0]} className="w-fit max-w-64">
         {summary}
       </ComboboxTrigger>
       {content}
@@ -320,6 +328,7 @@ function TextValue({
   placeholder: string | undefined;
   onChange: (row: Row) => void;
 }) {
+  useLocale();
   // What is being typed, shown as typed until the field is left; the value shows otherwise. Each keystroke
   // reports the value at once, so Save works without leaving the field first: clicking a disabled Save
   // doesn't move focus, so a value only reported on blur never got saved.
@@ -346,9 +355,9 @@ function TextValue({
   return (
     <Input
       size="sm"
-      aria-label="Value"
+      aria-label={studioT('Value')}
       type={field.type === 'number' && !many ? 'number' : 'text'}
-      placeholder={placeholder ?? (many ? 'Values, comma separated' : 'Value')}
+      placeholder={placeholder ?? (many ? studioT('Values, comma separated') : studioT('Value'))}
       value={text}
       className="w-48"
       onChange={event => type(event.target.value)}

@@ -4,11 +4,13 @@ import type { RuleTargetBoard } from './types';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger } from '@/ds/components/Select';
 import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { IconCircleDashed } from '@/ds/icons/central/IconCircleDashed';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const BOARD = 'board:';
 
 function PhasePill({ board, phaseKey }: { board: RuleTargetBoard | undefined; phaseKey: string | undefined }) {
+  useLocale();
   const phase = board?.phases.find(candidate => candidate.id === phaseKey);
   return (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -18,17 +20,18 @@ function PhasePill({ board, phaseKey }: { board: RuleTargetBoard | undefined; ph
         <IconCircleDashed className="size-icon-xs shrink-0 text-muted-foreground" aria-hidden />
       )}
       <span className={cn('truncate', !phase && 'text-muted-foreground')}>
-        {board && phase ? phase.name : 'Pick a phase'}
+        {board && phase ? phase.name : studioT('Pick a phase')}
       </span>
     </span>
   );
 }
 
 function BoardPill({ board, own }: { board: RuleTargetBoard | undefined; own: boolean }) {
+  useLocale();
   return (
     <span className="flex min-w-0 items-center gap-1.5">
       {!own && <IconArrowUpRight className="size-icon-xs shrink-0" aria-hidden />}
-      <span className="truncate">{board ? board.name : 'Pick a board'}</span>
+      <span className="truncate">{board ? board.name : studioT('Pick a board')}</span>
     </span>
   );
 }
@@ -59,6 +62,7 @@ export function MoveTo({
   disabled: boolean;
   onChange: (target: { boardKey: string; phaseKey: string | undefined }) => void;
 }) {
+  useLocale();
   const targetBoard = boards.find(candidate => candidate.id === boardKey);
   const elsewhere = boardKey !== board.id;
   const others = placesNew ? [] : boards.filter(candidate => candidate.id !== board.id);
@@ -76,7 +80,7 @@ export function MoveTo({
         else onChange({ boardKey, phaseKey: value });
       }}
     >
-      <SelectTrigger size="sm" aria-label="Phase" className="max-w-full min-w-0">
+      <SelectTrigger size="sm" aria-label={studioT('Phase')} className="max-w-full min-w-0">
         <PhasePill board={targetBoard} phaseKey={phaseKey} />
       </SelectTrigger>
       <SelectContent align="end">
@@ -101,13 +105,13 @@ export function MoveTo({
     return (
       <div className={FLOW_CELL}>
         {elsewhere && (
-          <CellRow label="Move to">
+          <CellRow label={studioT('Move to')}>
             <StaticPill>
               <BoardPill board={targetBoard} own={false} />
             </StaticPill>
           </CellRow>
         )}
-        <CellRow label={elsewhere ? 'Phase' : 'Move to'}>
+        <CellRow label={elsewhere ? studioT('Phase') : studioT('Move to')}>
           <StaticPill>
             <PhasePill board={targetBoard} phaseKey={phaseKey} />
           </StaticPill>
@@ -119,13 +123,15 @@ export function MoveTo({
   return (
     <div className={FLOW_CELL}>
       {elsewhere && (
-        <CellRow label="Move to">
+        <CellRow label={studioT('Move to')}>
           <Select value={boardKey} onValueChange={value => value && pickBoard(value)}>
-            <SelectTrigger size="sm" aria-label="Board" className="max-w-full min-w-0">
+            <SelectTrigger size="sm" aria-label={studioT('Board')} className="max-w-full min-w-0">
               <BoardPill board={targetBoard} own={false} />
             </SelectTrigger>
             <SelectContent align="end">
-              <SelectItem value={board.id}>{board.name} (this board)</SelectItem>
+              <SelectItem value={board.id}>
+                {board.name} {studioT('(this board)')}
+              </SelectItem>
               {others.map(candidate => (
                 <SelectItem key={candidate.id} value={candidate.id}>
                   <BoardPill board={candidate} own={false} />
@@ -135,7 +141,7 @@ export function MoveTo({
           </Select>
         </CellRow>
       )}
-      <CellRow label={elsewhere ? 'Phase' : 'Move to'}>{phaseSelect}</CellRow>
+      <CellRow label={elsewhere ? studioT('Phase') : studioT('Move to')}>{phaseSelect}</CellRow>
     </div>
   );
 }

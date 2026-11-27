@@ -6,6 +6,7 @@ import { Switch } from '@/ds/components/Switch';
 import { toast } from '@/ds/components/Toaster';
 import { Txt } from '@/ds/components/Txt';
 import { SettingsRow } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 const DEFAULT_CRON = '0 3 * * *';
 
@@ -26,6 +27,7 @@ export function BuildTriggersRows({
   /** Report a failed save and resolve; the switch and schedule picker do not catch a rejection. */
   onSave: (patch: { buildTriggers: EnvironmentBuildTriggersPatch }) => Promise<unknown>;
 }) {
+  useLocale();
   const { schedule, push } = triggers;
   const saveCron = (cron: string) => onSave({ buildTriggers: { schedule: { enabled: true, cron } } });
 
@@ -36,20 +38,23 @@ export function BuildTriggersRows({
         disabled={disabled}
         onCommit={cron => (cron ? saveCron(cron) : onSave({ buildTriggers: { schedule: { enabled: false } } }))}
       />
-      <SettingsRow label="Rebuild on push" description="Rebuild after a push to a repository's default branch.">
+      <SettingsRow
+        label={studioT('Rebuild on push')}
+        description={studioT("Rebuild after a push to a repository's default branch.")}
+      >
         <Switch
-          aria-label="Rebuild on push"
+          aria-label={studioT('Rebuild on push')}
           checked={push.enabled}
           disabled={disabled}
           onCheckedChange={enabled => void onSave({ buildTriggers: { push: { enabled } } })}
         />
       </SettingsRow>
       <SettingsRow
-        label="Build debounce"
-        description="Minimum minutes between automatic rebuilds after a push or a new session, 0 to 1440."
+        label={studioT('Build debounce')}
+        description={studioT('Minimum minutes between automatic rebuilds after a push or a new session, 0 to 1440.')}
       >
         <CommittedInput
-          label="Build debounce in minutes"
+          label={studioT('Build debounce in minutes')}
           type="number"
           min={0}
           max={1440}
@@ -58,7 +63,7 @@ export function BuildTriggersRows({
           onCommit={raw => {
             const debounceMinutes = Number(raw);
             if (!Number.isInteger(debounceMinutes) || debounceMinutes < 0 || debounceMinutes > 1440) {
-              toast.error('Enter a whole number between 0 and 1440');
+              toast.error(studioT('Enter a whole number between 0 and 1440'));
               return Promise.reject(new Error('out of range'));
             }
             return onSave({ buildTriggers: { push: { debounceMinutes } } });
@@ -118,6 +123,7 @@ function ScheduleRows({
   disabled: boolean;
   onCommit: (cron: string) => Promise<unknown>;
 }) {
+  useLocale();
   const cron = schedule.cron ?? DEFAULT_CRON;
   const timezone = schedule.timezone ?? 'UTC';
   const preset = parsePreset(cron);
@@ -144,7 +150,7 @@ function ScheduleRows({
 
   const hourSelect = (onPick: (hour: number) => void) => (
     <Select value={String(hour)} onValueChange={next => onPick(Number(next))} disabled={locked}>
-      <SelectTrigger size="sm" aria-label="Build time" className="w-auto">
+      <SelectTrigger size="sm" aria-label={studioT('Build time')} className="w-auto">
         {pad(hour)} {timezone}
       </SelectTrigger>
       <SelectContent>
@@ -160,15 +166,15 @@ function ScheduleRows({
   return (
     <div className="flex flex-col gap-3">
       <SettingsRow
-        label="Build schedule"
+        label={studioT('Build schedule')}
         description={
           schedule.scheduleAvailable
             ? describe(frequency, cron, hour, day, timezone)
-            : 'Needs a storage adapter with schedules. Build now and push builds still work.'
+            : studioT('Needs a storage adapter with schedules. Build now and push builds still work.')
         }
       >
         <Select value={frequency} onValueChange={next => pick(next)} disabled={locked}>
-          <SelectTrigger size="sm" aria-label="Build frequency">
+          <SelectTrigger size="sm" aria-label={studioT('Build frequency')}>
             {FREQUENCY_LABEL[frequency]}
           </SelectTrigger>
           <SelectContent>
@@ -185,7 +191,7 @@ function ScheduleRows({
           {frequency === 'daily' && (
             <>
               <Txt as="span" variant="caption" tone="muted">
-                Rebuild at
+                {studioT('Rebuild at')}
               </Txt>
               {hourSelect(next => void onCommit(presetCron('daily', next, day)))}
             </>
@@ -193,14 +199,14 @@ function ScheduleRows({
           {frequency === 'weekly' && (
             <>
               <Txt as="span" variant="caption" tone="muted">
-                On
+                {studioT('On')}
               </Txt>
               <Select
                 value={String(day)}
                 onValueChange={next => void onCommit(presetCron('weekly', hour, Number(next)))}
                 disabled={locked}
               >
-                <SelectTrigger size="sm" aria-label="Build day" className="w-auto">
+                <SelectTrigger size="sm" aria-label={studioT('Build day')} className="w-auto">
                   {DAYS[day]}
                 </SelectTrigger>
                 <SelectContent>
@@ -212,7 +218,7 @@ function ScheduleRows({
                 </SelectContent>
               </Select>
               <Txt as="span" variant="caption" tone="muted">
-                at
+                {studioT('at')}
               </Txt>
               {hourSelect(next => void onCommit(presetCron('weekly', next, day)))}
             </>
@@ -220,17 +226,17 @@ function ScheduleRows({
           {frequency === 'custom' && (
             <>
               <Txt as="span" variant="caption" tone="muted">
-                Cron
+                {studioT('Cron')}
               </Txt>
               <span className="w-48">
                 <CommittedInput
-                  label="Build schedule cron"
+                  label={studioT('Build schedule cron')}
                   value={cron}
                   placeholder={DEFAULT_CRON}
                   disabled={locked}
                   onCommit={next => {
                     if (!next) {
-                      toast.error('Enter a cron expression');
+                      toast.error(studioT('Enter a cron expression'));
                       return Promise.reject(new Error('cron is required'));
                     }
                     return onCommit(next);

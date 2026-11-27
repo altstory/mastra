@@ -7,6 +7,7 @@ import { IconCheckmark2Medium } from '@/ds/icons/central/IconCheckmark2Medium';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
 import { IconMinusMedium } from '@/ds/icons/central/IconMinusMedium';
 import { IconPencil } from '@/ds/icons/central/IconPencil';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** Rules that matched the item, whether or not they won: the ones worth opening. */
@@ -40,14 +41,15 @@ export function BoardAnswers({
   boardId: string;
   onEditRule: (routeId: string) => void;
 }) {
+  useLocale();
   return (
-    <section aria-label="What each board answered" className="flex flex-col gap-2">
+    <section aria-label={studioT('What each board answered')} className="flex flex-col gap-2">
       <div className="flex justify-between">
         <Txt as="h3" variant="body-sm" tone="muted">
-          New items
+          {studioT('New items')}
         </Txt>
         <Txt as="span" variant="body-sm" tone="muted">
-          asked in order
+          {studioT('asked in order')}
         </Txt>
       </div>
       <ol className="flex flex-col gap-1">
@@ -78,11 +80,11 @@ export function BoardAnswers({
                 </div>
               </div>
               {board.rules.length > 0 && (
-                <ul aria-label={`${board.name} rules`} className="flex flex-col gap-1">
+                <ul aria-label={studioT('{value0} rules', { value0: board.name })} className="flex flex-col gap-1">
                   {board.rules.map((rule, ruleIndex) => (
                     <li
                       key={rule.routeId}
-                      aria-label={rule.name ?? 'Unnamed rule'}
+                      aria-label={rule.name ?? studioT('Unnamed rule')}
                       className={cn(
                         'flex items-start gap-2 rounded-xl px-2.5 py-2',
                         rule.outcome === 'took' && 'bg-fill-hover',
@@ -93,7 +95,7 @@ export function BoardAnswers({
                       </Txt>
                       <div className="flex min-w-0 flex-1 flex-col">
                         <Txt as="span" variant="body-sm" tone={matched(rule) ? 'ink' : 'muted'}>
-                          {rule.name ?? 'Unnamed rule'}
+                          {rule.name ?? studioT('Unnamed rule')}
                         </Txt>
                         <Txt as="span" variant="caption" tone="muted">
                           {rule.verdict}
@@ -103,8 +105,8 @@ export function BoardAnswers({
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          tooltip="Edit rule"
-                          aria-label={`Edit ${rule.name ?? 'Unnamed rule'}`}
+                          tooltip={studioT('Edit rule')}
+                          aria-label={studioT('Edit {value0}', { value0: rule.name ?? 'Unnamed rule' })}
                           onClick={() => onEditRule(rule.routeId)}
                         >
                           <IconPencil />

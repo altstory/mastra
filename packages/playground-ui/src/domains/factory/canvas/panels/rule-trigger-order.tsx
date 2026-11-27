@@ -7,6 +7,7 @@ import { IconArrowDown } from '@/ds/icons/central/IconArrowDown';
 import { IconArrowUp } from '@/ds/icons/central/IconArrowUp';
 import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 function listed(names: readonly string[]): string {
@@ -48,6 +49,7 @@ export function TriggerOrder({
   onMove: (from: number, to: number) => void;
   onAdd: () => void;
 }) {
+  useLocale();
   return (
     <section aria-label={label} className="flex flex-col gap-1">
       <Txt as="h3" variant="caption" tone="muted">
@@ -56,7 +58,7 @@ export function TriggerOrder({
       {after.length > 0 && (
         <Txt as="p" variant="caption" tone="muted" className="flex items-center gap-1.5">
           <IconArrowCornerDownRight className="size-icon-xs shrink-0" aria-hidden />
-          After {listed(after)}
+          {studioT('After')} {listed(after)}
         </Txt>
       )}
       <ol className="flex flex-col">
@@ -120,8 +122,8 @@ export function TriggerOrder({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    tooltip="Check earlier"
-                    aria-label="Check earlier"
+                    tooltip={studioT('Check earlier')}
+                    aria-label={studioT('Check earlier')}
                     disabled={pending || index === 0}
                     onClick={() => onMove(index, index - 1)}
                   >
@@ -130,8 +132,8 @@ export function TriggerOrder({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    tooltip="Check later"
-                    aria-label="Check later"
+                    tooltip={studioT('Check later')}
+                    aria-label={studioT('Check later')}
                     disabled={pending || index === lines.length - 1}
                     onClick={() => onMove(index, index + 1)}
                   >
@@ -157,10 +159,10 @@ export function TriggerOrder({
               size="sm"
               icon={<IconPlusMedium />}
               className="ml-auto shrink-0"
-              aria-label={`Add rule on ${label}`}
+              aria-label={studioT('Add rule on {value0}', { value0: label })}
               onClick={onAdd}
             >
-              Rule
+              {studioT('Rule')}
             </Button>
           )}
         </div>

@@ -4,6 +4,7 @@ import { DropdownMenu } from '@/ds/components/DropdownMenu';
 import { IconChevronDownMedium } from '@/ds/icons/central/IconChevronDownMedium';
 import { IconCircleDashed } from '@/ds/icons/central/IconCircleDashed';
 import { GithubIcon } from '@/ds/icons/GithubIcon';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** The rule's triggers as one pill; a menu of every trigger, by who its rules see, picks several. */
 export function TriggerPicker<Event extends string>({
@@ -19,12 +20,13 @@ export function TriggerPicker<Event extends string>({
   disabled: boolean;
   onChange: (on: Event[]) => void;
 }) {
+  useLocale();
   const first = value[0];
   const FirstIcon = first ? describe(first).icon : IconCircleDashed;
   const label = (
     <>
       <FirstIcon className="size-icon-xs shrink-0" aria-hidden />
-      <span className="truncate">{first ? describe(first).label : 'Pick a trigger'}</span>
+      <span className="truncate">{first ? describe(first).label : studioT('Pick a trigger')}</span>
       {value.length > 1 && <span className="shrink-0 text-muted-foreground">+{value.length - 1}</span>}
     </>
   );
@@ -33,7 +35,7 @@ export function TriggerPicker<Event extends string>({
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger variant="default" size="sm" aria-label="When" className="max-w-full min-w-0">
+      <DropdownMenu.Trigger variant="default" size="sm" aria-label={studioT('When')} className="max-w-full min-w-0">
         {label}
         <IconChevronDownMedium className="size-icon-xs shrink-0 text-muted-foreground" aria-hidden />
       </DropdownMenu.Trigger>
@@ -60,7 +62,7 @@ export function TriggerPicker<Event extends string>({
                   {text.githubOnly && (
                     <>
                       <GithubIcon className="size-icon-xs shrink-0 text-muted-foreground" aria-hidden="true" />
-                      <span className="sr-only">GitHub only</span>
+                      <span className="sr-only">{studioT('GitHub only')}</span>
                     </>
                   )}
                 </DropdownMenu.CheckboxItem>

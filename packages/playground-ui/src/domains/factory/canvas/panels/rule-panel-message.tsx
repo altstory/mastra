@@ -3,6 +3,7 @@ import { Button } from '@/ds/components/Button';
 import { Notice } from '@/ds/components/Notice';
 import { Txt } from '@/ds/components/Txt';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** The rule panel while there is no rule to show: loading, failed, or gone. */
 export function RulePanelMessage({
@@ -14,11 +15,18 @@ export function RulePanelMessage({
   error?: boolean;
   onClose: () => void;
 }) {
+  useLocale();
   return (
-    <SidePanel label="Rule">
+    <SidePanel label={studioT('Rule')}>
       <div className="flex items-start justify-between gap-2">
         <PanelMessageText text={text} error={error} />
-        <Button variant="ghost" size="icon-sm" tooltip="Close" aria-label="Close" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          tooltip={studioT('Close')}
+          aria-label={studioT('Close')}
+          onClick={onClose}
+        >
           <IconCrossMedium />
         </Button>
       </div>

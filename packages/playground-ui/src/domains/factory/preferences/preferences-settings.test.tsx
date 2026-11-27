@@ -5,6 +5,7 @@ import type { Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreferencesSettings } from './preferences-settings';
+import { locale } from '@/lib/i18n';
 
 const SAVED_SOUND_KEY = 'mastracode.doneSound';
 
@@ -41,6 +42,7 @@ describe('PreferencesSettings', () => {
     act(() => root?.unmount());
     root = undefined;
     container.remove();
+    locale.adopt('auto', ['en']);
     localStorage.clear();
     vi.unstubAllGlobals();
   });
@@ -63,5 +65,15 @@ describe('PreferencesSettings', () => {
     fireEvent.click(soundSwitch());
     expect(localStorage.getItem(SAVED_SOUND_KEY)).toBe('arcade');
     expect(soundPicker().textContent).toBe('Arcade');
+  });
+  it('updates the selected sound label when switching languages without changing the saved preference', async () => {
+    await renderOnServerThenHydrate();
+    const picker = soundPicker();
+
+    act(() => locale.setLocale('zh'));
+
+    expect(within(container).getByRole('combobox', { name: '完成提示音' })).toBe(picker);
+    expect(picker.textContent).toBe('街机提示音');
+    expect(localStorage.getItem(SAVED_SOUND_KEY)).toBe('arcade');
   });
 });

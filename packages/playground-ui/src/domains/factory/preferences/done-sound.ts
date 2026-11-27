@@ -9,14 +9,35 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { t as studioT } from '@/lib/i18n';
 
 export type DoneSound = 'none' | 'chime' | 'arcade' | 'fanfare';
 
 export const DONE_SOUND_OPTIONS: { value: DoneSound; label: string }[] = [
-  { value: 'none', label: 'None' },
-  { value: 'chime', label: 'Chime' },
-  { value: 'arcade', label: 'Arcade' },
-  { value: 'fanfare', label: 'Fanfare' },
+  {
+    value: 'none',
+    get label() {
+      return studioT('None');
+    },
+  },
+  {
+    value: 'chime',
+    get label() {
+      return studioT('Chime');
+    },
+  },
+  {
+    value: 'arcade',
+    get label() {
+      return studioT('Arcade');
+    },
+  },
+  {
+    value: 'fanfare',
+    get label() {
+      return studioT('Fanfare');
+    },
+  },
 ];
 
 const DONE_SOUND_KEY = 'mastracode.doneSound';

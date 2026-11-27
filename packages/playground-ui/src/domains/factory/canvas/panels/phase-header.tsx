@@ -10,12 +10,34 @@ import { Txt } from '@/ds/components/Txt';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
 import { IconLock } from '@/ds/icons/central/IconLock';
 import { focusRing } from '@/ds/primitives/transitions';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const KINDS: Record<BoardPhaseKind, { label: string; meaning: string }> = {
-  resting: { label: 'Resting', meaning: 'No agent works here. Cards wait for a person or an event to move them.' },
-  working: { label: 'Working', meaning: 'An agent works on each card here, following the steps below.' },
-  terminal: { label: 'Terminal', meaning: 'Cards are finished here. Their agent sessions stop.' },
+  resting: {
+    get label() {
+      return studioT('Resting');
+    },
+    get meaning() {
+      return studioT('No agent works here. Cards wait for a person or an event to move them.');
+    },
+  },
+  working: {
+    get label() {
+      return studioT('Working');
+    },
+    get meaning() {
+      return studioT('An agent works on each card here, following the steps below.');
+    },
+  },
+  terminal: {
+    get label() {
+      return studioT('Terminal');
+    },
+    get meaning() {
+      return studioT('Cards are finished here. Their agent sessions stop.');
+    },
+  },
 };
 
 const KIND_ORDER: readonly BoardPhaseKind[] = ['resting', 'working', 'terminal'];
@@ -42,6 +64,7 @@ export function PhaseHeader({
   onKind: (kind: BoardPhaseKind) => void;
   onClose: () => void;
 }) {
+  useLocale();
   const kind = KINDS[phase.kind];
   const description = phase.description ?? '';
 
@@ -55,7 +78,7 @@ export function PhaseHeader({
         <Txt as="h2" variant="card-title-strong" className="min-w-0 truncate">
           <InlineText
             value={phase.name}
-            label="Phase name"
+            label={studioT('Phase name')}
             required
             readOnly={readOnly}
             variant="card-title-strong"
@@ -70,7 +93,14 @@ export function PhaseHeader({
                 <span
                   role="img"
                   tabIndex={0}
-                  aria-label={`${kind.label}. ${kindLocked ? `${kind.meaning} This phase keeps its kind.` : kind.meaning}`}
+                  aria-label={
+                    kindLocked
+                      ? studioT('{label}. {meaning} This phase keeps its kind.', {
+                          label: kind.label,
+                          meaning: kind.meaning,
+                        })
+                      : studioT('{label}. {meaning}', { label: kind.label, meaning: kind.meaning })
+                  }
                   className={cn('inline-flex shrink-0 rounded-sm', focusRing)}
                 >
                   <Badge size="sm" icon={kindLocked ? <IconLock /> : undefined}>
@@ -81,7 +111,9 @@ export function PhaseHeader({
             />
             <TooltipContent side="bottom" className="max-w-72">
               {kindLocked
-                ? `${kind.meaning} The first phase and phases Factory's code declares keep their kind.`
+                ? studioT("{value0} The first phase and phases Factory's code declares keep their kind.", {
+                    value0: kind.meaning,
+                  })
                 : kind.meaning}
             </TooltipContent>
           </Tooltip>
@@ -93,7 +125,7 @@ export function PhaseHeader({
               if (next && next !== phase.kind) onKind(next);
             }}
           >
-            <SelectTrigger size="sm" variant="ghost" aria-label="Phase kind" className="w-auto shrink-0">
+            <SelectTrigger size="sm" variant="ghost" aria-label={studioT('Phase kind')} className="w-auto shrink-0">
               {kind.label}
             </SelectTrigger>
             <SelectContent>
@@ -116,11 +148,16 @@ export function PhaseHeader({
           {total === undefined ? null : (
             <>
               {total}
-              <span className="sr-only"> {total === 1 ? 'card' : 'cards'}</span>
+              <span className="sr-only"> {total === 1 ? studioT('card') : studioT('cards')}</span>
             </>
           )}
         </Txt>
-        <Button size="icon-sm" variant="ghost" tooltip={`Close ${phase.name}`} onClick={onClose}>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          tooltip={studioT('Close {value0}', { value0: phase.name })}
+          onClick={onClose}
+        >
           <IconCrossMedium />
         </Button>
       </div>
@@ -128,8 +165,8 @@ export function PhaseHeader({
         <div className="pl-7.5">
           <InlineText
             value={description}
-            label="Phase description"
-            placeholder="Add a description"
+            label={studioT('Phase description')}
+            placeholder={studioT('Add a description')}
             multiline
             readOnly={readOnly}
             variant="caption"

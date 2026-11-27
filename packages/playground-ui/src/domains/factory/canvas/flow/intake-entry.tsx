@@ -8,6 +8,7 @@ import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { raisedSurfaceStyle } from '@/ds/primitives/raised-surface';
 import { focusRing } from '@/ds/primitives/transitions';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** The intake lines fade out while a phase is dragged: they would point at where the rows stood. */
@@ -34,12 +35,13 @@ export function IntakeEntry({
   linked: boolean;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   return (
     <section data-intake-start="" aria-labelledby="canvas-intake" className={cn(raisedSurfaceStyle, INTAKE_CARD)}>
       <div className="flex min-h-5.5 items-center gap-2">
         <IconArrowInbox className="size-icon-sm shrink-0 text-muted-foreground" aria-hidden />
         <Txt as="h2" id="canvas-intake" variant="card-title-strong" tone="ink" className="min-w-0 flex-1 truncate">
-          New issues and pull requests
+          {studioT('New issues and pull requests')}
         </Txt>
         <Link
           href={reorderHref}
@@ -48,7 +50,7 @@ export function IntakeEntry({
             focusRing,
           )}
         >
-          Reorder
+          {studioT('Reorder')}
           <IconArrowUpRight className="size-icon-xs" aria-hidden />
         </Link>
       </div>

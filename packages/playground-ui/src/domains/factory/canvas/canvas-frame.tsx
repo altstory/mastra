@@ -13,6 +13,7 @@ import { IconMinusMedium } from '@/ds/icons/central/IconMinusMedium';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { overlaySurfaceStyle } from '@/ds/primitives/raised-surface';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
@@ -95,24 +96,25 @@ export function CanvasViewTabs({
   leading?: ReactNode;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   return (
     <div className="flex items-center gap-2">
       {leading}
       <nav
-        aria-label="Board views"
+        aria-label={studioT('Board views')}
         className="flex h-8 items-center gap-2 rounded-2xl bg-card p-0.75 pl-2.5 shadow-rim"
       >
         <Link href={cardsHref} className="flex items-center gap-1.5 rounded-full pr-1 text-column text-foreground">
           <IconArrowLeft className="size-icon-xs" aria-hidden />
-          Cards
+          {studioT('Cards')}
         </Link>
         <span className="h-3.5 w-px bg-border" aria-hidden />
         <div className="flex gap-0.5">
           <ViewTab href={settingsHref} current={active === 'settings'} LinkComponent={Link}>
-            Board settings
+            {studioT('Board settings')}
           </ViewTab>
           <ViewTab href={routingHref} current={active === 'routing'} LinkComponent={Link}>
-            Routing
+            {studioT('Routing')}
           </ViewTab>
         </div>
       </nav>
@@ -122,11 +124,12 @@ export function CanvasViewTabs({
 
 /** The window every count on the canvas covers. */
 function PeriodLabel() {
+  useLocale();
   return (
     <div className="flex h-8 items-center gap-1.5 rounded-2xl bg-card px-3 shadow-rim">
       <IconClock className="size-icon-xs text-muted-foreground" aria-hidden />
       <Txt as="span" variant="caption" tone="muted">
-        Last 30 days
+        {studioT('Last 30 days')}
       </Txt>
     </div>
   );
@@ -237,6 +240,7 @@ export function CanvasFrame({
   status?: ReactNode;
   children?: ReactNode;
 }) {
+  useLocale();
   const [zoom, setZoom] = useState(1);
   const step = ZOOM_STEPS.indexOf(zoom);
   const phone = usePhoneLayout();
@@ -286,7 +290,7 @@ export function CanvasFrame({
       <div className="absolute right-4 bottom-8 flex h-8 items-center gap-2.5 rounded-2xl bg-card px-2.5 shadow-rim max-md:hidden">
         <button
           type="button"
-          aria-label="Zoom out"
+          aria-label={studioT('Zoom out')}
           disabled={!!status || step <= 0}
           onClick={() => setZoom(ZOOM_STEPS[step - 1] ?? zoom)}
           className="text-muted-foreground hover:text-foreground disabled:opacity-40"
@@ -295,7 +299,7 @@ export function CanvasFrame({
         </button>
         <button
           type="button"
-          aria-label="Reset zoom"
+          aria-label={studioT('Reset zoom')}
           disabled={!!status}
           onClick={() => setZoom(1)}
           className="w-9 text-caption text-muted-foreground tabular-nums hover:text-foreground"
@@ -304,7 +308,7 @@ export function CanvasFrame({
         </button>
         <button
           type="button"
-          aria-label="Zoom in"
+          aria-label={studioT('Zoom in')}
           disabled={!!status || step >= ZOOM_STEPS.length - 1}
           onClick={() => setZoom(ZOOM_STEPS[step + 1] ?? zoom)}
           className="text-muted-foreground hover:text-foreground disabled:opacity-40"

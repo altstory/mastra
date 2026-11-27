@@ -7,12 +7,14 @@ import { Txt } from '@/ds/components/Txt';
 import { IconVolumeFull } from '@/ds/icons/central/IconVolumeFull';
 import { IconVolumeOff } from '@/ds/icons/central/IconVolumeOff';
 import { focusRing } from '@/ds/primitives/transitions';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const AUDIBLE_SOUNDS = DONE_SOUND_OPTIONS.filter(option => option.value !== 'none');
 
 /** The mute button swaps the value for `none`, so the picker keeps the sound it has to come back to. */
 export function SoundPicker({ value, onChange }: { value: DoneSound; onChange: (value: DoneSound) => void }) {
+  useLocale();
   const [lastAudible, setLastAudible] = useState<DoneSound>(value === 'none' ? 'chime' : value);
   // An audible value can arrive after mount (a saved sound loading after hydration); unmuting returns to it.
   if (value !== 'none' && value !== lastAudible) setLastAudible(value);
@@ -24,7 +26,7 @@ export function SoundPicker({ value, onChange }: { value: DoneSound; onChange: (
         type="button"
         role="switch"
         aria-checked={!muted}
-        aria-label="Play a sound"
+        aria-label={studioT('Play a sound')}
         className={cn(
           '-mr-6 flex h-7 items-center rounded-full bg-fill py-1 pr-8 pl-2.5 text-muted-foreground',
           'transition-colors duration-150 motion-reduce:transition-none',
@@ -50,7 +52,7 @@ export function SoundPicker({ value, onChange }: { value: DoneSound; onChange: (
       >
         <SelectTrigger
           size="sm"
-          aria-label="Completion sound"
+          aria-label={studioT('Completion sound')}
           className={cn(
             'relative z-10 w-32 bg-card',
             // Opaque even when muted: the mute button is tucked underneath.

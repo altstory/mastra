@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/ds/compon
 import { DisclosureChevron } from '@/ds/components/DisclosureChevron';
 import { Txt } from '@/ds/components/Txt';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 import { formatModelName } from '@/utils/model';
 
@@ -46,6 +47,7 @@ export function ModelPackList({
   error,
   onSave,
 }: ModelPackListProps) {
+  useLocale();
   const [creating, setCreating] = useState(false);
   const [showOtherPacks, setShowOtherPacks] = useState(false);
   const defaultPackList = useRef<HTMLUListElement>(null);
@@ -116,12 +118,12 @@ export function ModelPackList({
 
   return (
     <div role="group" aria-label={label} className={PACK_LIST_CLASS}>
-      <ListHeading label="Model packs">
+      <ListHeading label={studioT('Model packs')}>
         {!readOnly && !creating && packs.length > 0 && (
           <Button
             size="icon-sm"
             variant="ghost"
-            tooltip="New pack"
+            tooltip={studioT('New pack')}
             ref={button => {
               if (button && focusAfterCreate.current?.kind === 'cancel') {
                 focusAfterCreate.current = null;
@@ -137,7 +139,7 @@ export function ModelPackList({
       </ListHeading>
       {!readOnly && !creating && packs.length >= MODEL_PACKS_MAX && (
         <Txt as="p" variant="caption" tone="muted">
-          Up to {MODEL_PACKS_MAX} packs. Delete one to add another.
+          {studioT('Up to')} {MODEL_PACKS_MAX} {studioT('packs. Delete one to add another.')}
         </Txt>
       )}
       {!readOnly && creating && (
@@ -169,7 +171,7 @@ export function ModelPackList({
         </>
       )}
       {defaultPack && (
-        <ul aria-label="Default pack" tabIndex={-1} ref={defaultPackList}>
+        <ul aria-label={studioT('Default pack')} tabIndex={-1} ref={defaultPackList}>
           {renderPack(defaultPack)}
         </ul>
       )}
@@ -178,12 +180,13 @@ export function ModelPackList({
           <CollapsibleTrigger
             render={
               <Button variant="ghost" size="sm" className="w-full justify-between" iconEnd={<DisclosureChevron />}>
-                Other packs ({otherPacks.length})
+                {studioT('Other packs (')}
+                {otherPacks.length})
               </Button>
             }
           />
           <CollapsibleContent className="pt-1">
-            <ul aria-label="Other packs" className="flex flex-col gap-2">
+            <ul aria-label={studioT('Other packs')} className="flex flex-col gap-2">
               {otherPacks.map(renderPack)}
             </ul>
           </CollapsibleContent>
@@ -191,12 +194,12 @@ export function ModelPackList({
       )}
       {readOnly && (
         <Txt as="p" variant="caption" tone="muted">
-          Only organization admins can change these packs.
+          {studioT('Only organization admins can change these packs.')}
         </Txt>
       )}
       {saving && (
         <Txt as="p" variant="caption" tone="muted" role="status">
-          Saving model packs…
+          {studioT('Saving model packs…')}
         </Txt>
       )}
       {!creating && error && (

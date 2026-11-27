@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StackLink } from '../flow-links';
 import { useRowDrag } from '../use-row-drag';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /**
@@ -18,9 +19,10 @@ export function IntakeOrderList({
   onMove: (from: number, to: number) => void;
   renderBoard: (boardKey: string, row: { index: number; dragging: boolean }) => ReactNode;
 }) {
+  useLocale();
   const drag = useRowDrag({ min: 0, max: boards.length - 1, onDrop: onMove });
   return (
-    <ol aria-label="Boards in intake order" className="flex flex-col">
+    <ol aria-label={studioT('Boards in intake order')} className="flex flex-col">
       {boards.map((boardKey, index) => {
         const motion = drag.rowMotion(index);
         return (

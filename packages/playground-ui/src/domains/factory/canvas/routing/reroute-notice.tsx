@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/ds/components/Button';
 import { Notice } from '@/ds/components/Notice';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /**
  * After rules change, untouched cards (alone in their board's first phase, no session yet) may now belong on another
@@ -22,6 +23,7 @@ export function RerouteNotice({
   moving: boolean;
   onMove: () => void;
 }) {
+  useLocale();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed || total === 0) return null;
@@ -30,22 +32,22 @@ export function RerouteNotice({
   return (
     <Notice
       variant="info"
-      title="Rules changed"
+      title={studioT('Rules changed')}
       actionPlacement="end"
       action={
         <>
           <Button size="sm" variant="ghost" onClick={() => setDismissed(true)}>
-            Not now
+            {studioT('Not now')}
           </Button>
           {canEdit && (
             <Button size="sm" variant="primary" onClick={onMove} loading={moving}>
-              Move them
+              {studioT('Move them')}
             </Button>
           )}
         </>
       }
     >
-      {cards} on {where}.
+      {cards} {studioT('on')} {where}.
     </Notice>
   );
 }

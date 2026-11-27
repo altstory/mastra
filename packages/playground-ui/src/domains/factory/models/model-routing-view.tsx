@@ -8,6 +8,7 @@ import { ModelRoutingSkeleton } from './model-routing-skeleton';
 import { ModelRoutingSwitch } from './model-routing-switch';
 import { Skeleton } from '@/ds/components/Skeleton';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface ModelDefaultsSlots {
   packs: ReactNode;
@@ -44,11 +45,14 @@ export function ModelRoutingView({
   providersSkeleton,
   children,
 }: ModelRoutingViewProps) {
+  useLocale();
   return (
     <SettingsSubsection
       scope="factory"
-      title="Model routing"
-      description="Which defaults chats and work-item runs use. Running threads keep the model they already picked."
+      title={studioT('Model routing')}
+      description={studioT(
+        'Which defaults chats and work-item runs use. Running threads keep the model they already picked.',
+      )}
       action={
         scope ? (
           <ModelRoutingSwitch

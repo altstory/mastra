@@ -2,6 +2,7 @@ import type { RuleLatestSkip, RuleNoteInfo } from './types';
 import { Button } from '@/ds/components/Button';
 import { Notice } from '@/ds/components/Notice';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** What to know about the rule on its triggers, each said once: a rule on two triggers can be hidden on both. */
 export function RuleNotes({
@@ -40,6 +41,7 @@ function RuleNoteItem({
   canEdit: boolean;
   onUngate: () => void;
 }) {
+  useLocale();
   if (note.tone === 'warning') return <Notice variant="warning">{note.text}</Notice>;
 
   return (
@@ -50,7 +52,7 @@ function RuleNoteItem({
       {note.kind === 'skips' && latestSkip && <LatestSkip latest={latestSkip} />}
       {note.kind === 'outsiders' && canEdit && (
         <Button variant="ghost" size="sm" onClick={onUngate}>
-          Let outside authors match
+          {studioT('Let outside authors match')}
         </Button>
       )}
     </div>
@@ -59,15 +61,16 @@ function RuleNoteItem({
 
 /** The item the rule skipped last, linked when it has a URL. */
 function LatestSkip({ latest }: { latest: RuleLatestSkip }) {
+  useLocale();
   const { url, title } = latest;
   return (
     <Txt as="p" variant="caption" tone="muted" className="min-w-0 truncate">
       {url ? (
         <a href={url} target="_blank" rel="noreferrer" className="underline">
-          Latest: {title}
+          {studioT('Latest:')} {title}
         </a>
       ) : (
-        `Latest: ${title}`
+        studioT('Latest: {value0}', { value0: title })
       )}
     </Txt>
   );

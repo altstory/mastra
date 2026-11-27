@@ -1,6 +1,10 @@
+import { t as studioT } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n';
+
 export type PlatformConnectProviderId = 'jira' | 'incident-io' | 'gitlab' | 'gitlab-self-hosted' | 'vanta' | 'linear';
 
 export const MASTRA_PLATFORM_URL = 'https://projects.mastra.ai';
+const SELF_HOSTED_HOSTNAME_EXAMPLE = 'gitlab.example.com';
 
 /** How the provider authorizes: OAuth consent popup or an API-key form. */
 export type PlatformConnectAuthKind = 'oauth' | 'apiKey';
@@ -17,7 +21,7 @@ export interface PlatformConnectProviderMeta {
   displayName: string;
   authKind: PlatformConnectAuthKind;
   /** What an API-key provider calls its key. Defaults to "API key". */
-  credentialName?: string;
+  credentialName?: MessageKey;
   params?: readonly PlatformConnectParam[];
 }
 
@@ -30,7 +34,15 @@ export const PLATFORM_CONNECT_PROVIDERS: Record<PlatformConnectProviderId, Platf
     displayName: 'self-hosted GitLab',
     authKind: 'apiKey',
     credentialName: 'access token',
-    params: [{ key: 'hostname', label: 'Instance hostname', placeholder: 'gitlab.example.com' }],
+    params: [
+      {
+        key: 'hostname',
+        get label() {
+          return studioT('Instance hostname');
+        },
+        placeholder: SELF_HOSTED_HOSTNAME_EXAMPLE,
+      },
+    ],
   },
   vanta: { id: 'vanta', displayName: 'Vanta', authKind: 'oauth' },
   linear: { id: 'linear', displayName: 'Linear', authKind: 'oauth' },

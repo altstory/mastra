@@ -18,6 +18,7 @@ import { isIncidentioDirectConfigured, vantaSourcesEnabled } from './provider-in
 import type { IncidentioIntakeStatus, VantaIntakeStatus } from './provider-intake-status';
 import { Button } from '@/ds/components/Button';
 import { IconArrowRotateCounterClockwise } from '@/ds/icons/central/IconArrowRotateCounterClockwise';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** The slice of a query result the cards read; a TanStack `UseQueryResult` satisfies it. */
 export interface IntakeQueryState<T> {
@@ -44,9 +45,10 @@ interface ProviderCardProps extends IntakeSectionProps {
 }
 
 function RetryButton({ onClick }: { onClick: () => void }) {
+  useLocale();
   return (
     <Button size="sm" variant="ghost" icon={<IconArrowRotateCounterClockwise />} onClick={onClick}>
-      Retry
+      {studioT('Retry')}
     </Button>
   );
 }
@@ -73,6 +75,7 @@ export function JiraIntakeCard({
   statusQuery: IntakeQueryState<JiraIntakeStatus>;
   projectsQuery: IntakeQueryState<JiraProjectSource[]>;
 }) {
+  useLocale();
   const status = statusQuery.data;
   const configured = Boolean(status?.enabled && status.configured);
   const projects = projectsQuery.data ?? [];
@@ -120,7 +123,7 @@ export function JiraIntakeCard({
         renderPicker({
           integrationId: 'jira',
           routingLabel: 'Jira',
-          label: 'Jira projects',
+          label: studioT('Jira projects'),
           addLabel: 'Add project',
           itemIcon: <IntegrationIcon provider="jira" />,
           groups: groupJiraProjectsBySite(projects),
@@ -156,6 +159,7 @@ export function GitLabIntakeCard({
   statusQuery: IntakeQueryState<GitLabIntakeStatus>;
   projectsQuery: IntakeQueryState<GitLabProjectSource[]>;
 }) {
+  useLocale();
   const status = statusQuery.data;
   const statusUnavailable = statusQuery.isError || status?.reason === 'unavailable';
   const configured = Boolean(status?.enabled && status.configured);
@@ -212,7 +216,7 @@ export function GitLabIntakeCard({
         renderPicker({
           integrationId: 'gitlab',
           routingLabel: 'GitLab',
-          label: 'GitLab projects',
+          label: studioT('GitLab projects'),
           addLabel: 'Add project',
           itemIcon: <IntegrationIcon provider="gitlab" />,
           groups: groupGitLabProjectsByAccount(projects),
@@ -246,6 +250,7 @@ export function IncidentioIntakeCard({
   /** Hosts enable this only when `incidentioCredentialActive` is true. */
   sourcesQuery: IntakeQueryState<IntakeNamedSource[]>;
 }) {
+  useLocale();
   const directConfigured = isIncidentioDirectConfigured(statusQuery.data);
   const connections = connectionsQuery.data ?? [];
   const active = connections.filter(connection => connection.status === 'active');
@@ -298,7 +303,7 @@ export function IncidentioIntakeCard({
         renderPicker({
           integrationId: 'incidentio',
           routingLabel: 'incident.io',
-          label: 'Follow-up sources',
+          label: studioT('Follow-up sources'),
           addLabel: 'Add follow-up source',
           itemIcon: <IntegrationIcon provider="incidentio" />,
           groups: [
@@ -333,6 +338,7 @@ export function VantaIntakeCard({
   /** Hosts enable this only when `vantaSourcesEnabled` is true. */
   sourcesQuery: IntakeQueryState<IntakeNamedSource[]>;
 }) {
+  useLocale();
   const vanta = config.vanta ?? { enabled: false, sourceIds: null };
   const connections = connectionsQuery.data ?? [];
   const connected = connections.some(connection => connection.status === 'active');
@@ -384,7 +390,7 @@ export function VantaIntakeCard({
         renderPicker({
           integrationId: 'vanta',
           routingLabel: 'Vanta',
-          label: 'Vulnerability sources',
+          label: studioT('Vulnerability sources'),
           addLabel: 'Add vulnerability source',
           itemIcon: <IntegrationIcon provider="vanta" />,
           groups: [

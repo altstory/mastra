@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { IconMagnifyingGlass } from '@/ds/icons/central/IconMagnifyingGlass';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** Where someone pastes an issue or pull request to see where it would land. */
 export function TestInput({ onTest, defaultValue }: { onTest: (subject: string) => void; defaultValue?: string }) {
+  useLocale();
   return (
     <form
       role="search"
@@ -17,8 +19,8 @@ export function TestInput({ onTest, defaultValue }: { onTest: (subject: string) 
       <input
         name="subject"
         defaultValue={defaultValue}
-        aria-label="Test an issue or pull request"
-        placeholder="Paste an issue or pull request URL"
+        aria-label={studioT('Test an issue or pull request')}
+        placeholder={studioT('Paste an issue or pull request URL')}
         className="min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-placeholder"
       />
     </form>
@@ -27,10 +29,11 @@ export function TestInput({ onTest, defaultValue }: { onTest: (subject: string) 
 
 /** The floating toolbar at the bottom of the canvas. */
 export function CanvasToolbar({ children }: { children: ReactNode }) {
+  useLocale();
   return (
     <div
       role="toolbar"
-      aria-label="Canvas"
+      aria-label={studioT('Canvas')}
       className="flex h-12 w-full max-w-130 items-center gap-2.5 rounded-3xl bg-card pr-2 pl-4 shadow-overlay"
     >
       {children}

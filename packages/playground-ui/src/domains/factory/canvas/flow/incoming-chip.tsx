@@ -2,6 +2,7 @@ import { CANVAS_SELECTED_RING, ChipTooltip, RULE_CHIP } from './rule-chip';
 import type { FlowEmphasis } from './rule-chip';
 import { IconArrowDownRight } from '@/ds/icons/central/IconArrowDownRight';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** Another board's rule that moves its cards onto this board. */
@@ -31,6 +32,7 @@ export function IncomingChip({
   stray?: boolean;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   const { emphasis } = rule;
   const into = stray ? 'into a phase this board doesn’t have' : 'here';
   return (
@@ -46,7 +48,7 @@ export function IncomingChip({
         data-join=""
         data-dimmed={emphasis === 'dimmed' || undefined}
         href={rule.href}
-        aria-label={rule.enabled ? rule.boardName : `${rule.boardName}, off`}
+        aria-label={rule.enabled ? rule.boardName : studioT('{value0}, off', { value0: rule.boardName })}
         className={cn(
           RULE_CHIP,
           'border border-border bg-transparent text-body-sm transition-opacity',
@@ -57,7 +59,7 @@ export function IncomingChip({
       >
         <IconArrowDownRight className="size-icon-xs shrink-0" aria-hidden />
         <span className="truncate">{rule.boardName}</span>
-        {!rule.enabled && <span className="shrink-0 text-caption">Off</span>}
+        {!rule.enabled && <span className="shrink-0 text-caption">{studioT('Off')}</span>}
       </Link>
     </ChipTooltip>
   );

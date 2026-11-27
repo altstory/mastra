@@ -4,6 +4,7 @@ import type { BoardActionErrorsProps, BoardActionsProps } from './board-actions'
 import { Notice } from '@/ds/components/Notice';
 import { Txt } from '@/ds/components/Txt';
 import { IconLock } from '@/ds/icons/central/IconLock';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 interface BoardHeaderProps {
   /** The board's name and description as drafted. */
@@ -40,13 +41,14 @@ export function BoardHeader({
   errors,
   onChange,
 }: BoardHeaderProps) {
+  useLocale();
   return (
     <header className={BOARD_HEADER}>
       <div className="flex items-center gap-2">
         <Txt as="h1" variant="display" tone="ink" className="min-w-0">
           <InlineText
             value={name}
-            label="Board name"
+            label={studioT('Board name')}
             required
             readOnly={readOnly}
             variant="display"
@@ -60,8 +62,8 @@ export function BoardHeader({
         <Txt as="p" variant="body" tone="muted">
           <InlineText
             value={description ?? ''}
-            label="Board description"
-            placeholder="Add a description"
+            label={studioT('Board description')}
+            placeholder={studioT('Add a description')}
             multiline
             readOnly={readOnly}
             variant="body"
@@ -81,19 +83,19 @@ export function BoardHeader({
             <Notice variant="note" icon={<IconLock />}>
               <Notice.Message>
                 {editable
-                  ? 'Only organization admins can change this board.'
-                  : 'This board is defined in code, so it can’t be changed here.'}
+                  ? studioT('Only organization admins can change this board.')
+                  : studioT('This board is defined in code, so it can’t be changed here.')}
               </Notice.Message>
             </Notice>
           )}
           {problems.length > 0 && (
-            <Notice variant="warning" title="This board has problems">
+            <Notice variant="warning" title={studioT('This board has problems')}>
               <Notice.Message>{problems.join(' ')}</Notice.Message>
             </Notice>
           )}
           {rulesFailed && (
             <Notice variant="warning">
-              <Notice.Message>Rules didn’t load, so the map doesn’t show them.</Notice.Message>
+              <Notice.Message>{studioT('Rules didn’t load, so the map doesn’t show them.')}</Notice.Message>
             </Notice>
           )}
           <BoardActionErrors {...errors} />

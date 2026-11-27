@@ -14,6 +14,7 @@ import { IconPencil } from '@/ds/icons/central/IconPencil';
 import { IconStar } from '@/ds/icons/central/IconStar';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
 
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const packActionsVisibility =
@@ -40,6 +41,7 @@ export function ModelPackHeader({
   onMakeDefault: () => void;
   onDelete: () => void;
 }) {
+  useLocale();
   const [renaming, setRenaming] = useState(false);
   const renameChosen = useRef(false);
   const restoreFocus = useRef(false);
@@ -71,8 +73,8 @@ export function ModelPackHeader({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`${pack.name} actions`}
-                tooltip={`${pack.name} actions`}
+                aria-label={studioT('{value0} actions', { value0: pack.name })}
+                tooltip={studioT('{value0} actions', { value0: pack.name })}
                 disabled={disabled}
                 className={cn('shrink-0', packActionsVisibility)}
                 ref={button => {
@@ -93,18 +95,18 @@ export function ModelPackHeader({
                 setRenaming(true);
               }}
             >
-              <IconPencil /> Rename
+              <IconPencil /> {studioT('Rename')}
             </DropdownMenu.Item>
             {!isDefault && (
               <DropdownMenu.Item onClick={onMakeDefault}>
-                <IconStar /> Make default
+                <IconStar /> {studioT('Make default')}
               </DropdownMenu.Item>
             )}
             {canDelete && (
               <>
                 <DropdownMenu.Separator />
                 <DropdownMenu.Item variant="destructive" onClick={onDelete}>
-                  <TrashIcon /> Delete pack
+                  <TrashIcon /> {studioT('Delete pack')}
                 </DropdownMenu.Item>
               </>
             )}
@@ -132,6 +134,7 @@ function PackNameForm({
   onSave: (pack: ModelPack) => Promise<boolean>;
   onClose: () => void;
 }) {
+  useLocale();
   const [name, setName] = useState(pack.name);
   const [submitted, setSubmitted] = useState(false);
   const nameError = modelPackNameError(packSet, name, pack.id);
@@ -150,7 +153,7 @@ function PackNameForm({
 
   return (
     <form
-      aria-label={`Rename ${pack.name}`}
+      aria-label={studioT('Rename {value0}', { value0: pack.name })}
       onSubmit={submit}
       onKeyDown={event => {
         if (event.key === 'Escape' && !disabled) onClose();
@@ -163,19 +166,19 @@ function PackNameForm({
           size="sm"
           value={name}
           maxLength={MODEL_PACK_NAME_MAX}
-          aria-label="Pack name"
+          aria-label={studioT('Pack name')}
           aria-invalid={submitted && Boolean(nameError)}
           disabled={disabled}
           onChange={event => setName(event.target.value)}
         />
-        <Button type="submit" size="icon-sm" variant="ghost" tooltip="Save name" disabled={disabled}>
+        <Button type="submit" size="icon-sm" variant="ghost" tooltip={studioT('Save name')} disabled={disabled}>
           <IconCheckmark2Medium />
         </Button>
         <Button
           type="button"
           size="icon-sm"
           variant="ghost"
-          tooltip="Cancel rename"
+          tooltip={studioT('Cancel rename')}
           disabled={disabled}
           onClick={onClose}
         >

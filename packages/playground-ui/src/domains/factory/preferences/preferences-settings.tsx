@@ -6,20 +6,26 @@ import { SoundPicker } from './sound-picker';
 
 import { ThemeToggle } from '@/ds/components/ThemeToggle';
 import { SettingsContainer, SettingsRow } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export function PreferencesSettings() {
+  useLocale();
   const doneSound = useDoneSound();
   const changeDoneSound = (next: DoneSound) => {
     saveDoneSound(next);
     playDoneSound(next);
   };
   return (
-    <SettingsSubsection scope="personal" title="Preferences" description="Stored in this browser.">
+    <SettingsSubsection
+      scope="personal"
+      title={studioT('Preferences')}
+      description={studioT('Stored in this browser.')}
+    >
       <SettingsContainer>
-        <SettingsRow label="Theme" description="Color scheme for the interface.">
+        <SettingsRow label={studioT('Theme')} description={studioT('Color scheme for the interface.')}>
           <ThemeToggle />
         </SettingsRow>
-        <SettingsRow label="Completion sound" description="Played when an agent run finishes.">
+        <SettingsRow label={studioT('Completion sound')} description={studioT('Played when an agent run finishes.')}>
           <SoundPicker value={doneSound} onChange={changeDoneSound} />
         </SettingsRow>
       </SettingsContainer>

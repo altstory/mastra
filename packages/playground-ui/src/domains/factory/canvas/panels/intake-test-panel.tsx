@@ -4,6 +4,7 @@ import { Button } from '@/ds/components/Button';
 import { Notice } from '@/ds/components/Notice';
 import { Txt } from '@/ds/components/Txt';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** "Where would this go?" for one item: which board takes it and what every rule answered. Nothing is filed. */
 export function IntakeTestPanel({
@@ -20,14 +21,15 @@ export function IntakeTestPanel({
   result: ((close: ReactNode) => ReactNode) | undefined;
   onClose: () => void;
 }) {
+  useLocale();
   const close = (
-    <Button variant="ghost" size="icon-sm" tooltip="Close" aria-label="Close" onClick={onClose}>
+    <Button variant="ghost" size="icon-sm" tooltip={studioT('Close')} aria-label={studioT('Close')} onClick={onClose}>
       <IconCrossMedium />
     </Button>
   );
 
   return (
-    <SidePanel label="Where would this go?">
+    <SidePanel label={studioT('Where would this go?')}>
       {result ? (
         result(close)
       ) : (
@@ -40,8 +42,9 @@ export function IntakeTestPanel({
           </div>
           <TestStatus blank={subject.trim() === ''} error={error} />
           <Txt as="p" variant="caption" tone="muted">
-            Links from GitHub and GitLab repositories linked to this project are read once and never filed. For Linear,
-            Jira and incident.io, paste a link to an item Factory already has, or use Why? on a Not routed item.
+            {studioT(
+              'Links from GitHub and GitLab repositories linked to this project are read once and never filed. For Linear, Jira and incident.io, paste a link to an item Factory already has, or use Why? on a Not routed item.',
+            )}
           </Txt>
         </>
       )}
@@ -51,17 +54,18 @@ export function IntakeTestPanel({
 
 /** Why there is no answer yet: nothing to test, the test failed, or it is still running. */
 function TestStatus({ blank, error }: { blank: boolean; error: string | undefined }) {
+  useLocale();
   if (blank) {
     return (
       <Txt as="p" variant="body-sm" tone="muted" role="status">
-        No item to test.
+        {studioT('No item to test.')}
       </Txt>
     );
   }
   if (error !== undefined) return <Notice variant="destructive">{error}</Notice>;
   return (
     <Txt as="p" variant="body-sm" tone="muted" role="status">
-      Checking where it would go…
+      {studioT('Checking where it would go…')}
     </Txt>
   );
 }

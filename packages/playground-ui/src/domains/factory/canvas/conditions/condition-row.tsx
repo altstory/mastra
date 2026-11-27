@@ -9,6 +9,7 @@ import { Txt } from '@/ds/components/Txt';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { CircleDotIcon } from '@/ds/icons/CircleDotIcon';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 function FieldIcon({ id }: { id: string }) {
   const Icon = FIELD_ICONS[id] ?? CircleDotIcon;
@@ -103,6 +104,7 @@ export function ConditionRowEditor({
   onAnd,
   onOr,
 }: ConditionRowEditorProps) {
+  useLocale();
   return (
     <div className="flex min-w-0 flex-col gap-2 transition-opacity duration-fast ease-out-custom starting:opacity-0">
       <div className="flex min-w-0 items-center gap-1">
@@ -114,11 +116,11 @@ export function ConditionRowEditor({
             onFieldChange(next);
           }}
         >
-          <SelectTrigger size="sm" variant="ghost" aria-label="Field" className="max-w-full min-w-0">
+          <SelectTrigger size="sm" variant="ghost" aria-label={studioT('Field')} className="max-w-full min-w-0">
             <span className="flex min-w-0 items-center gap-1.5">
               {field && <FieldIcon id={field.id} />}
               <Txt as="span" variant="body-sm" tone={row.field ? undefined : 'muted'} className="truncate">
-                {field?.label ?? (row.field || 'Choose a field')}
+                {field?.label ?? (row.field || studioT('Choose a field'))}
               </Txt>
             </span>
           </SelectTrigger>
@@ -136,8 +138,8 @@ export function ConditionRowEditor({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Remove condition"
-          tooltip="Remove condition"
+          aria-label={studioT('Remove condition')}
+          tooltip={studioT('Remove condition')}
           className="ml-auto shrink-0"
           onClick={onRemove}
         >
@@ -155,7 +157,7 @@ export function ConditionRowEditor({
                 value={row.operator}
                 onValueChange={operator => operator && operator !== row.operator && onOperatorChange(operator)}
               >
-                <SelectTrigger size="sm" variant="ghost" aria-label="Operator" className="w-fit">
+                <SelectTrigger size="sm" variant="ghost" aria-label={studioT('Operator')} className="w-fit">
                   <Txt as="span" variant="body-sm">
                     {operatorLabel(row.operator)}
                   </Txt>
@@ -187,12 +189,12 @@ export function ConditionRowEditor({
         <div className="flex items-center gap-1">
           {onAnd && (
             <Button variant="ghost" size="sm" icon={<IconPlusMedium />} onClick={onAnd}>
-              And
+              {studioT('And')}
             </Button>
           )}
           {onOr && (
             <Button variant="ghost" size="sm" icon={<IconPlusMedium />} onClick={onOr}>
-              Or
+              {studioT('Or')}
             </Button>
           )}
         </div>

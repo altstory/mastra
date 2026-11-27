@@ -9,6 +9,7 @@ import type { StatusPresentation } from '@/ds/components/StatusIndicators';
 import { Txt } from '@/ds/components/Txt';
 import { IconBox } from '@/ds/icons/central/IconBox';
 import { IconServer } from '@/ds/icons/central/IconServer';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 const CONNECTED_ROW_CLASS = 'flex min-h-10 items-center gap-2.5 py-1.5 pr-1.5 pl-3';
 
@@ -17,9 +18,10 @@ export function ProviderRows(props: Omit<ComponentProps<'ul'>, 'className'>) {
 }
 
 export function ProviderRowsSkeleton({ description }: { description?: string }) {
+  useLocale();
   return (
-    <div role="status" aria-label="Loading providers" className="flex flex-col gap-1">
-      <ListHeading label="Providers" description={description} />
+    <div role="status" aria-label={studioT('Loading providers')} className="flex flex-col gap-1">
+      <ListHeading label={studioT('Providers')} description={description} />
       <ProviderRows aria-hidden>
         {[0, 1].map(index => (
           <li key={index} className={CONNECTED_ROW_CLASS}>

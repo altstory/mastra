@@ -13,6 +13,7 @@ import type { FlowEmphasis, FlowRuleLine } from './rule-chip';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { focusRing } from '@/ds/primitives/transitions';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** One phase of the flow with what its row shows. */
@@ -128,6 +129,7 @@ export function PhaseFlow({
   intake,
   LinkComponent: Link,
 }: PhaseFlowProps) {
+  useLocale();
   const phases = model.rows.map(row => row.phase);
   const phone = usePhoneLayout();
   const [adding, setAdding] = useState<number>();
@@ -152,7 +154,7 @@ export function PhaseFlow({
       <IntakeEntry sentence={intake.sentence} reorderHref={intake.reorderHref} linked={linked} LinkComponent={Link} />
       {/* A phone's flow is one column with no room beside the rules for the intake line or the links into cards. */}
       {!phone && <IntakeBus flow={flow} />}
-      <ol aria-label="Phases" className="flex flex-col">
+      <ol aria-label={studioT('Phases')} className="flex flex-col">
         {model.rows.map((row, index) => {
           const { phase } = row;
           const span = spanOf(index);
@@ -179,7 +181,7 @@ export function PhaseFlow({
                       'flex items-center justify-end text-caption text-muted-foreground max-sm:order-last max-sm:w-auto',
                     )}
                   >
-                    {phase.kind === 'terminal' && previous.kind !== 'terminal' && 'Cards are finished here'}
+                    {phase.kind === 'terminal' && previous.kind !== 'terminal' && studioT('Cards are finished here')}
                   </span>
                   <span className={CARD_SIDE}>
                     <span className={LINK_LINE} />
@@ -299,10 +301,11 @@ export function PhaseFlow({
 
 /** Opens a new phase after `after`, in the gap it sits in. */
 function AddPhaseButton({ after, onClick, className }: { after: FlowPhase; onClick: () => void; className: string }) {
+  useLocale();
   return (
     <button
       type="button"
-      aria-label={`Add a phase after ${after.name}`}
+      aria-label={studioT('Add a phase after {value0}', { value0: after.name })}
       onClick={onClick}
       className={cn(
         ADD_HERE,
@@ -312,7 +315,7 @@ function AddPhaseButton({ after, onClick, className }: { after: FlowPhase; onCli
       )}
     >
       <IconPlusMedium className="size-icon-xs" aria-hidden />
-      Phase
+      {studioT('Phase')}
     </button>
   );
 }
@@ -340,6 +343,7 @@ function RowIn({
   linkedFrom: RowLink;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   const [open, setOpen] = useState(false);
   const folded = row.lines.slice(FOLD_AFTER);
   const unfolded = open || folded.some(line => line.ruleId === selectedRule);
@@ -395,7 +399,7 @@ function RowIn({
             focusRing,
           )}
         >
-          +{folded.length} more
+          +{folded.length} {studioT('more')}
         </button>
       )}
       {row.incoming.map(rule => (
@@ -404,7 +408,7 @@ function RowIn({
       {rulesEditable && (
         <Link
           href={row.newRuleHref}
-          aria-label={`Add a rule into ${row.phase.name}`}
+          aria-label={studioT('Add a rule into {value0}', { value0: row.phase.name })}
           className={cn(
             ADD_HERE,
             'h-6.5 px-2.5',
@@ -415,7 +419,7 @@ function RowIn({
           )}
         >
           <IconPlusMedium className="size-icon-xs" aria-hidden />
-          Rule
+          {studioT('Rule')}
         </Link>
       )}
     </div>

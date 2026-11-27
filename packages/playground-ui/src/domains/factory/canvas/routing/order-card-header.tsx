@@ -4,6 +4,7 @@ import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { IconDotGrid2x3 } from '@/ds/icons/central/IconDotGrid2x3';
 import { focusRing } from '@/ds/primitives/transitions';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /**
@@ -35,6 +36,7 @@ export function OrderCardHeader({
   LinkComponent: LinkComponent;
   children?: ReactNode;
 }) {
+  useLocale();
   return (
     <header className="flex min-h-5.5 items-center gap-2">
       <span
@@ -71,13 +73,13 @@ export function OrderCardHeader({
       {children}
       <Link
         href={rulesHref}
-        aria-label={`All rules on ${name}`}
+        aria-label={studioT('All rules on {value0}', { value0: name })}
         className={cn(
           'flex items-center gap-1 rounded-sm text-caption text-muted-foreground hover:text-foreground',
           focusRing,
         )}
       >
-        All rules
+        {studioT('All rules')}
         <IconArrowUpRight className="size-icon-xs" aria-hidden />
       </Link>
     </header>

@@ -18,6 +18,7 @@ import { IconZap } from '@/ds/icons/central/IconZap';
 import { raisedSurfaceStyle, surfaceStateLayerStyle } from '@/ds/primitives/raised-surface';
 import { focusRing } from '@/ds/primitives/transitions';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** A phase as the canvas draws it. */
@@ -87,6 +88,7 @@ export function PhaseNode({
   moves,
   LinkComponent: Link,
 }: PhaseNodeProps) {
+  useLocale();
   const count = total === undefined ? undefined : total.toLocaleString();
   const terminal = phase.kind === 'terminal';
   const selected = emphasis === 'selected';
@@ -130,7 +132,7 @@ export function PhaseNode({
         {problem && (
           <TriangleAlert
             className="size-icon-xs shrink-0 text-warning-indicator"
-            aria-label="This phase has problems"
+            aria-label={studioT('This phase has problems')}
           />
         )}
         {!terminal && count !== undefined && (
@@ -140,12 +142,12 @@ export function PhaseNode({
       {terminal && count !== undefined && (
         <span className="text-caption text-muted-foreground tabular-nums">{count}</span>
       )}
-      {start && <span className="text-caption text-muted-foreground">New cards start here</span>}
+      {start && <span className="text-caption text-muted-foreground">{studioT('New cards start here')}</span>}
       <PhaseWork kind={phase.kind} work={work} />
       {unreached && (
         <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
           <TriangleAlert className="size-icon-xs shrink-0 text-warning-indicator" aria-hidden />
-          No rule or move leads here
+          {studioT('No rule or move leads here')}
         </span>
       )}
       {(next.length > 0 || moves) && (
@@ -162,7 +164,7 @@ export function PhaseNode({
           ) : (
             <IconArrowSplitUp className="mt-1.25 size-icon-xs shrink-0 text-muted-foreground" aria-hidden />
           )}
-          <ul aria-label="Moves to" className="flex min-w-0 flex-wrap gap-1.5">
+          <ul aria-label={studioT('Moves to')} className="flex min-w-0 flex-wrap gap-1.5">
             {next.map(key => {
               const target = phases.find(other => other.key === key);
               return (
@@ -170,7 +172,10 @@ export function PhaseNode({
                   {target && <BoardStageIcon stage={key} kind={phaseIconKind(boardId, target.kind)} decorative />}
                   <span className="truncate text-body-sm text-foreground">{target?.name ?? key}</span>
                   {automatic.has(key) && (
-                    <IconZap className="size-icon-xs shrink-0 text-muted-foreground" aria-label="on its own" />
+                    <IconZap
+                      className="size-icon-xs shrink-0 text-muted-foreground"
+                      aria-label={studioT('on its own')}
+                    />
                   )}
                 </li>
               );
@@ -183,14 +188,15 @@ export function PhaseNode({
 }
 
 function PhaseWork({ kind, work }: { kind: BoardPhaseKind; work: FlowPhaseWork | undefined }) {
-  if (kind === 'resting') return <WorkRow icon={IconHand5Finger} label="Waits for someone" />;
+  useLocale();
+  if (kind === 'resting') return <WorkRow icon={IconHand5Finger} label={studioT('Waits for someone')} />;
   if (kind !== 'working' || !work) return null;
   const { goal, tools } = work;
   return (
     <>
       <WorkRow
         icon={IconRobot}
-        label={work.skill ?? 'No skill'}
+        label={work.skill ?? studioT('No skill')}
         broken={work.skillProblem !== undefined}
         detailIcon={work.autoStart ? IconZap : IconHand5Finger}
         detail={work.autoStart ? 'On its own' : 'By hand'}
@@ -205,7 +211,7 @@ function PhaseWork({ kind, work }: { kind: BoardPhaseKind; work: FlowPhaseWork |
       {goal && (
         <WorkRow
           icon={IconTarget}
-          label="Goal"
+          label={studioT('Goal')}
           detail={goal.maxRuns === undefined ? undefined : `Pauses after ${goal.maxRuns} runs`}
         />
       )}
@@ -281,6 +287,7 @@ function MovesPicker({
   required: ReadonlySet<string>;
   onChange: (nextPhases: string[]) => void;
 }) {
+  useLocale();
   const toggle = (key: string) =>
     onChange(
       next.includes(key)
@@ -294,7 +301,7 @@ function MovesPicker({
         render={
           <button
             type="button"
-            aria-label={`Change moves from ${phase.name}`}
+            aria-label={studioT('Change moves from {value0}', { value0: phase.name })}
             className={cn(
               'group/moves relative z-10 -mx-1.25 grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-fill-hover hover:text-foreground',
               'data-popup-open:bg-fill-hover data-popup-open:text-foreground',
@@ -320,7 +327,7 @@ function MovesPicker({
         }
       />
       <DropdownMenu.Content align="start" className="w-56">
-        <DropdownMenu.Label>Cards can move to</DropdownMenu.Label>
+        <DropdownMenu.Label>{studioT('Cards can move to')}</DropdownMenu.Label>
         {phases
           .filter(other => other.key !== phase.key)
           .map(other => {
@@ -334,7 +341,9 @@ function MovesPicker({
               >
                 <BoardStageIcon stage={other.key} kind={phaseIconKind(boardId, other.kind)} decorative />
                 <span className="truncate">{other.name}</span>
-                {locked && <IconLock className="ml-auto size-icon-xs" aria-label="Factory makes this move" />}
+                {locked && (
+                  <IconLock className="ml-auto size-icon-xs" aria-label={studioT('Factory makes this move')} />
+                )}
               </DropdownMenu.CheckboxItem>
             );
           })}

@@ -6,6 +6,7 @@ import { Switch } from '@/ds/components/Switch';
 import { Txt } from '@/ds/components/Txt';
 import { IconCircleDashed } from '@/ds/icons/central/IconCircleDashed';
 import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** The rule's trigger, name as the panel's title, switch and menu; a new rule says so until it has somewhere to go. */
@@ -38,6 +39,7 @@ export function RuleHeader({
   onToggle: (enabled: boolean) => void;
   onDelete: () => void;
 }) {
+  useLocale();
   return (
     <div className="flex items-start gap-2">
       {Icon ? (
@@ -48,7 +50,7 @@ export function RuleHeader({
       {name === undefined ? (
         <>
           <Txt as="h2" variant="card-title-strong" className="min-w-0 flex-1 truncate">
-            New rule
+            {studioT('New rule')}
           </Txt>
           <Txt as="span" variant="caption" tone="muted" className="shrink-0">
             {boardName}
@@ -61,7 +63,7 @@ export function RuleHeader({
       ) : (
         // The name is one line of text that wraps like the title it is: Enter doesn't break it.
         <textarea
-          aria-label="Name"
+          aria-label={studioT('Name')}
           value={name}
           maxLength={maxNameLength}
           rows={1}
@@ -77,20 +79,25 @@ export function RuleHeader({
       )}
       {rule && !readOnly && (
         <>
-          <Switch aria-label={`${rule.name} on`} checked={rule.enabled} disabled={pending} onCheckedChange={onToggle} />
+          <Switch
+            aria-label={studioT('{value0} on', { value0: rule.name })}
+            checked={rule.enabled}
+            disabled={pending}
+            onCheckedChange={onToggle}
+          />
           <DropdownMenu>
-            <DropdownMenu.Trigger variant="ghost" size="icon-sm" tooltip="More" aria-label="More">
+            <DropdownMenu.Trigger variant="ghost" size="icon-sm" tooltip={studioT('More')} aria-label={studioT('More')}>
               <Ellipsis />
             </DropdownMenu.Trigger>
             <DropdownMenu.Content align="end">
               <DropdownMenu.Item variant="destructive" onClick={onDelete}>
-                Delete rule
+                {studioT('Delete rule')}
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu>
         </>
       )}
-      <Button variant="ghost" size="icon-sm" tooltip="Close" aria-label="Close" onClick={onClose}>
+      <Button variant="ghost" size="icon-sm" tooltip={studioT('Close')} aria-label={studioT('Close')} onClick={onClose}>
         <IconCrossMedium />
       </Button>
     </div>

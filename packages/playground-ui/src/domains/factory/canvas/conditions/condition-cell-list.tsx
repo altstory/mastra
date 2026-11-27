@@ -6,6 +6,7 @@ import { AddConditionButton, FLOW_CELL, FLOW_CELL_SELECTED, ValueChip, Wire } fr
 import { pinParentHeight } from '../pin-parent-height';
 import { ConditionLogic } from './condition-logic';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /**
@@ -77,6 +78,7 @@ export function ConditionCellList({
   onAdd,
   onCollapse,
 }: ConditionCellListProps) {
+  useLocale();
   const list = useRef<HTMLDivElement>(null);
 
   // A click elsewhere in the panel closes the cell; the pickers' popups sit outside the panel and leave it open.
@@ -107,7 +109,7 @@ export function ConditionCellList({
       {nodes.length === 0 && everyText && (
         <div className={cn(FLOW_CELL, 'flex-row items-center justify-between')}>
           <Txt as="span" variant="body-sm" tone="muted">
-            Only if
+            {studioT('Only if')}
           </Txt>
           <ValueChip>{everyText}</ValueChip>
         </div>
@@ -147,7 +149,7 @@ export function ConditionCellList({
       {incomplete && (
         <GrowIn>
           <Txt as="p" variant="caption" tone="muted" className="mt-2">
-            Finish or remove unfinished conditions to save.
+            {studioT('Finish or remove unfinished conditions to save.')}
           </Txt>
         </GrowIn>
       )}
@@ -214,11 +216,12 @@ export function ConditionRowButton({
   onSelect: () => void;
   children: ReactNode;
 }) {
+  useLocale();
   return (
     <button
       type="button"
       data-row={rowKey}
-      aria-label={`Edit condition: ${text}`}
+      aria-label={studioT('Edit condition: {value0}', { value0: text })}
       className="-m-1 rounded-xl p-1 text-left outline-hidden focus-visible:ring-1 focus-visible:ring-foreground"
       onClick={onSelect}
     >

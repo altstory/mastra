@@ -9,6 +9,7 @@ import { Button } from '@/ds/components/Button';
 import { Input } from '@/ds/components/Input';
 import { Txt } from '@/ds/components/Txt';
 import { SettingsRow } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 interface ModelPackEditorProps {
   packSet: ModelPackSet;
@@ -20,6 +21,7 @@ interface ModelPackEditorProps {
 }
 
 export function ModelPackEditor({ packSet, models, saving, error, onSave, onCancel }: ModelPackEditorProps) {
+  useLocale();
   const [name, setName] = useState('');
   const [entries, setEntries] = useState<ModelPackModel[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -34,16 +36,16 @@ export function ModelPackEditor({ packSet, models, saving, error, onSave, onCanc
 
   return (
     <form
-      aria-label="New pack"
+      aria-label={studioT('New pack')}
       onSubmit={submit}
       className="border-border1 flex min-w-0 flex-col gap-3 rounded-lg border p-3"
     >
-      <SettingsRow label="Name" errorMsg={submitted ? nameError : undefined} controlPlacement="below">
+      <SettingsRow label={studioT('Name')} errorMsg={submitted ? nameError : undefined} controlPlacement="below">
         <Input
           autoFocus
           value={name}
           maxLength={MODEL_PACK_NAME_MAX}
-          placeholder="Build"
+          placeholder={studioT('Build')}
           disabled={saving}
           onChange={event => setName(event.target.value)}
         />
@@ -51,7 +53,7 @@ export function ModelPackEditor({ packSet, models, saving, error, onSave, onCanc
       <ModelPackTimeline entries={entries} models={models} disabled={saving} onChange={setEntries} />
       {submitted && entries.length === 0 && (
         <Txt as="p" variant="caption" className="text-destructive-foreground" role="alert">
-          Choose a model before saving.
+          {studioT('Choose a model before saving.')}
         </Txt>
       )}
       {error && (
@@ -61,10 +63,10 @@ export function ModelPackEditor({ packSet, models, saving, error, onSave, onCanc
       )}
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" disabled={saving}>
-          Save
+          {studioT('Save')}
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={onCancel}>
-          Cancel
+          {studioT('Cancel')}
         </Button>
       </div>
     </form>

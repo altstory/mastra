@@ -6,6 +6,7 @@ import { PHASE_CARD } from './phase-node';
 import { Skeleton, SkeletonText } from '@/ds/components/Skeleton';
 import { IconArrowInbox } from '@/ds/icons/central/IconArrowInbox';
 import { raisedSurfaceStyle } from '@/ds/primitives/raised-surface';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const bar = 'motion-reduce:before:animate-none';
@@ -23,8 +24,9 @@ export function BoardHeaderSkeleton() {
 
 /** The flow while the board loads: the intake card, then phase cards joined by their links, in the loaded columns. */
 export function PhaseFlowSkeleton() {
+  useLocale();
   return (
-    <div role="status" aria-label="Loading board" className="flex flex-col">
+    <div role="status" aria-label={studioT('Loading board')} className="flex flex-col">
       <div aria-hidden className={cn(raisedSurfaceStyle, INTAKE_CARD)}>
         <div className="flex min-h-5.5 items-center gap-2">
           <IconArrowInbox className="size-icon-sm shrink-0 text-muted-foreground" />

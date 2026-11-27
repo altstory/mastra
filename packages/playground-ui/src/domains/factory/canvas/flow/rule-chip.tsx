@@ -3,6 +3,7 @@ import type { ComponentType, ReactElement } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ds/components/Tooltip';
 import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 export const RULE_CHIP = 'bg-fill-subtle hover:bg-fill flex h-6.5 min-w-0 items-center gap-1.5 rounded-full px-2.5';
@@ -77,6 +78,7 @@ export function TriggerLabel({ trigger, dimmed = false }: { trigger: FlowTrigger
 
 /** One rule on one trigger: its place on the trigger, its name, what it filed in the last 30 days, and its warnings. */
 export function RuleChip({ line, LinkComponent: Link }: { line: FlowRuleLine; LinkComponent: LinkComponent }) {
+  useLocale();
   const { emphasis, notes } = line;
   const warned = notes.some(note => note.tone === 'warning');
   const peek =
@@ -100,7 +102,13 @@ export function RuleChip({ line, LinkComponent: Link }: { line: FlowRuleLine; Li
         href={line.href}
         {...peek}
         aria-current={emphasis === 'selected' ? 'true' : undefined}
-        aria-label={`${line.name}, rule ${line.rank} of ${line.of} on ${line.trigger.label}${emphasis === 'elsewhere' ? ', matched but another board took it' : ''}`}
+        aria-label={studioT('{value0}, rule {value1} of {value2} on {value3}{value4}', {
+          value0: line.name,
+          value1: line.rank,
+          value2: line.of,
+          value3: line.trigger.label,
+          value4: emphasis === 'elsewhere' ? studioT(', matched but another board took it') : '',
+        })}
         className={cn(
           RULE_CHIP,
           'max-w-full transition-opacity',

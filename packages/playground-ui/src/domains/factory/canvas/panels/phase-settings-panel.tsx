@@ -32,6 +32,7 @@ import { IconRobot } from '@/ds/icons/central/IconRobot';
 import { IconTarget } from '@/ds/icons/central/IconTarget';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface PhaseSettingsPanelProps<Tool extends string> {
   phase: PanelPhase;
@@ -133,6 +134,7 @@ export function PhaseSettingsPanel<Tool extends string>({
   onRemove,
   onClose,
 }: PhaseSettingsPanelProps<Tool>) {
+  useLocale();
   const [runsOpen, setRunsOpen] = useState(false);
   const working = phase.kind === 'working';
   const exitToolId = phase.exitTool?.id ?? '';
@@ -141,7 +143,7 @@ export function PhaseSettingsPanel<Tool extends string>({
 
   if (working && runsOpen) {
     return (
-      <SidePanel label={`${phase.name} agent runs`}>
+      <SidePanel label={studioT('{value0} agent runs', { value0: phase.name })}>
         <PhaseRunsPanel
           phase={phase}
           phases={phases}
@@ -159,19 +161,19 @@ export function PhaseSettingsPanel<Tool extends string>({
 
   const runProblems = [
     instructions.length > MAX_PHASE_INSTRUCTIONS && (
-      <PanelRow key="instructions" label="Instructions">
+      <PanelRow key="instructions" label={studioT('Instructions')}>
         <LimitCount length={instructions.length} max={MAX_PHASE_INSTRUCTIONS} />
       </PanelRow>
     ),
     (goal?.objective.length ?? 0) > MAX_PHASE_OBJECTIVE && (
-      <PanelRow key="goal" label="Goal">
+      <PanelRow key="goal" label={studioT('Goal')}>
         <LimitCount length={goal?.objective.length ?? 0} max={MAX_PHASE_OBJECTIVE} />
       </PanelRow>
     ),
     !phaseGoalRunsValid(goal?.maxRuns) && (
-      <PanelRow key="runs" label="Pause goal after">
+      <PanelRow key="runs" label={studioT('Pause goal after')}>
         <Txt as="span" variant="caption" className="text-warning-foreground">
-          {goal?.maxRuns} runs
+          {goal?.maxRuns} {studioT('runs')}
         </Txt>
       </PanelRow>
     ),
@@ -198,10 +200,10 @@ export function PhaseSettingsPanel<Tool extends string>({
 
       {working && (
         <>
-          <PanelSection icon={<IconPlay />} title="Starts">
-            <PanelRow label="Start on its own">
+          <PanelSection icon={<IconPlay />} title={studioT('Starts')}>
+            <PanelRow label={studioT('Start on its own')}>
               <Switch
-                aria-label={`${phase.name}: start on its own`}
+                aria-label={studioT('{value0}: start on its own', { value0: phase.name })}
                 checked={phase.autoStart ?? false}
                 disabled={disabled}
                 onCheckedChange={checked => {
@@ -222,7 +224,7 @@ export function PhaseSettingsPanel<Tool extends string>({
             )}
           </PanelSection>
 
-          <PanelSection icon={<IconRobot />} title="Agent runs">
+          <PanelSection icon={<IconRobot />} title={studioT('Agent runs')}>
             <PhaseSkill
               phaseName={phase.name}
               skillName={phase.runner?.skill}
@@ -242,12 +244,12 @@ export function PhaseSettingsPanel<Tool extends string>({
               className="flex min-h-6 items-center justify-between gap-1.5 text-left text-muted-foreground hover:text-foreground"
             >
               <Txt as="span" variant="caption">
-                Instructions, goal, session, tools
+                {studioT('Instructions, goal, session, tools')}
               </Txt>
               {runProblems.length > 0 && (
                 <>
                   <IconExclamationTriangle aria-hidden className="ml-auto size-icon-xs text-warning-foreground" />
-                  <span className="sr-only">(can&apos;t save)</span>
+                  <span className="sr-only">{studioT("(can't save)")}</span>
                 </>
               )}
               <IconChevronRightMedium aria-hidden className="size-icon-xs shrink-0" />
@@ -255,14 +257,14 @@ export function PhaseSettingsPanel<Tool extends string>({
             {runProblems}
           </PanelSection>
 
-          <PanelSection icon={<IconFlag2 />} title="Ends">
-            <PanelRow label="Exit tool">
+          <PanelSection icon={<IconFlag2 />} title={studioT('Ends')}>
+            <PanelRow label={studioT('Exit tool')}>
               <Input
                 size="sm"
                 className="w-32"
-                aria-label={`${phase.name} exit tool`}
+                aria-label={studioT('{value0} exit tool', { value0: phase.name })}
                 value={exitToolId}
-                placeholder="None"
+                placeholder={studioT('None')}
                 disabled={disabled}
                 onChange={event => {
                   const value = event.target.value.trim();
@@ -273,9 +275,12 @@ export function PhaseSettingsPanel<Tool extends string>({
             </PanelRow>
             {exitToolId !== '' && (
               <>
-                <PanelRow label="Approve on its own">
+                <PanelRow label={studioT('Approve on its own')}>
                   <Switch
-                    aria-label={`${phase.name}: approve ${exitToolId} on its own`}
+                    aria-label={studioT('{value0}: approve {value1} on its own', {
+                      value0: phase.name,
+                      value1: exitToolId,
+                    })}
                     checked={phase.exitTool?.autoApprove ?? false}
                     disabled={disabled}
                     onCheckedChange={checked => {
@@ -300,7 +305,7 @@ export function PhaseSettingsPanel<Tool extends string>({
         </>
       )}
 
-      <PanelSection icon={<IconDirection1 />} title="Allowed moves">
+      <PanelSection icon={<IconDirection1 />} title={studioT('Allowed moves')}>
         <PhaseMovesPicker
           phase={phase}
           phases={phases}
@@ -313,7 +318,7 @@ export function PhaseSettingsPanel<Tool extends string>({
       </PanelSection>
 
       {working && (
-        <PanelSection icon={<IconTarget />} title="Outcomes">
+        <PanelSection icon={<IconTarget />} title={studioT('Outcomes')}>
           <PhaseOutcomesList
             phase={phase}
             phases={phases}
@@ -328,7 +333,7 @@ export function PhaseSettingsPanel<Tool extends string>({
       {onRemove && (
         <div>
           <Button size="sm" variant="ghost" icon={<TrashIcon />} onClick={onRemove}>
-            Remove {phase.name}
+            {studioT('Remove')} {phase.name}
           </Button>
         </div>
       )}
@@ -352,11 +357,12 @@ function OnlyWhen({
   /** The rule's condition cells. */
   children: ReactNode;
 }) {
+  useLocale();
   if (disabled && !rule?.conditions.length) return null;
   return (
     <div className="flex flex-col gap-1.5">
       <Txt as="span" variant="caption" tone="muted">
-        Only when
+        {studioT('Only when')}
       </Txt>
       {children}
       {problem && (

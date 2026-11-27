@@ -12,6 +12,7 @@ import { IconArrowDown } from '@/ds/icons/central/IconArrowDown';
 import { IconArrowUp } from '@/ds/icons/central/IconArrowUp';
 import { IconDotGrid1x3Horizontal } from '@/ds/icons/central/IconDotGrid1x3Horizontal';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const EMPTY_CATALOG: AvailableModelOption[] = [];
@@ -35,6 +36,7 @@ export function ModelPackTimeline({
   onChange,
   renderProviderIcon,
 }: ModelPackTimelineProps) {
+  useLocale();
   const occupiedIds = useMemo(() => new Set(entries.map(entry => entry.modelId)), [entries]);
   const addLabel = entries.length ? 'Add model' : 'Choose a model';
   const [focusIndex, setFocusIndex] = useState<number>();
@@ -42,7 +44,7 @@ export function ModelPackTimeline({
   return (
     <div className="min-w-0">
       {entries.length > 0 && (
-        <ol aria-label="Models in this pack">
+        <ol aria-label={studioT('Models in this pack')}>
           {entries.map((entry, index) => {
             const label = index === 0 ? 'Primary model' : `Fallback ${index}`;
             const update = (next: ModelPackModel) => onChange?.(entries.with(index, next));
@@ -87,26 +89,26 @@ export function ModelPackTimeline({
                         <DropdownMenu.Trigger
                           size="icon-sm"
                           variant="ghost"
-                          aria-label={`${label} actions`}
+                          aria-label={studioT('{value0} actions', { value0: label })}
                           className="pointer-fine:opacity-0 pointer-fine:group-focus-within/model:opacity-100 pointer-fine:group-hover/model:opacity-100 pointer-fine:aria-expanded:opacity-100"
-                          tooltip={`${label} actions`}
+                          tooltip={studioT('{value0} actions', { value0: label })}
                           disabled={disabled}
                         >
                           <IconDotGrid1x3Horizontal />
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content align="end">
                           <DropdownMenu.Item disabled={index === 0} onClick={() => move(index - 1)}>
-                            <IconArrowUp /> Move up
+                            <IconArrowUp /> {studioT('Move up')}
                           </DropdownMenu.Item>
                           <DropdownMenu.Item disabled={index === entries.length - 1} onClick={() => move(index + 1)}>
-                            <IconArrowDown /> Move down
+                            <IconArrowDown /> {studioT('Move down')}
                           </DropdownMenu.Item>
                           <DropdownMenu.Separator />
                           <DropdownMenu.Item
                             variant="destructive"
                             onClick={() => onChange(entries.filter((_, at) => at !== index))}
                           >
-                            <TrashIcon /> Remove model
+                            <TrashIcon /> {studioT('Remove model')}
                           </DropdownMenu.Item>
                         </DropdownMenu.Content>
                       </DropdownMenu>
@@ -116,7 +118,9 @@ export function ModelPackTimeline({
                   <div className={PACK_MODEL_ROW_CLASS}>
                     <span className="sr-only">{label}: </span>
                     <ModelPackEntryLabel entry={entry} renderProviderIcon={renderProviderIcon} />
-                    <span className="sr-only">, thinking: {THINKING_LEVEL_LABELS[entry.thinkingLevel]}</span>
+                    <span className="sr-only">
+                      {studioT(', thinking:')} {THINKING_LEVEL_LABELS[entry.thinkingLevel]}
+                    </span>
                   </div>
                 )}
               </li>

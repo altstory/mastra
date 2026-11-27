@@ -10,6 +10,7 @@ import { ModelPicker } from '@/domains/llm';
 import type { ModelPickerValue } from '@/domains/llm';
 import { ThinkingLevelRamp } from '@/ds/components/ThinkingLevel';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { formatModelName } from '@/utils/model';
 
 interface ModelPackModelPickerProps {
@@ -34,6 +35,7 @@ export function ModelPackModelPicker({
   disabled,
   onChange,
 }: ModelPackModelPickerProps) {
+  useLocale();
   const choice = entry && models.find(option => option.id === entry.modelId);
   const value = entry && (choice ? catalogModelPickerValue(choice) : customPickerValue(entry.modelId));
   const name = entry ? formatModelName(entry.modelId) : label;
@@ -70,13 +72,21 @@ export function ModelPackModelPicker({
       align="start"
       chevron={false}
       triggerClassName={entry ? 'w-full justify-start' : undefined}
-      aria-label={entry ? `${label}: ${name}, thinking: ${THINKING_LEVEL_LABELS[thinkingLevel]}` : label}
+      aria-label={
+        entry
+          ? studioT('{value0}: {value1}, thinking: {value2}', {
+              value0: label,
+              value1: name,
+              value2: THINKING_LEVEL_LABELS[thinkingLevel],
+            })
+          : label
+      }
       renderProviderIcon={renderPackProviderIcon}
       settings={
         <ThinkingLevelRamp
           options={options}
           value={thinkingLevel}
-          label="Thinking"
+          label={studioT('Thinking')}
           onChange={level => {
             if (disabled) return;
             if (!entry) return setNewModelThinkingLevel(level);

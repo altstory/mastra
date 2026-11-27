@@ -24,6 +24,7 @@ import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
 import { SettingsRow, SettingsSkeleton } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** A source row in the picker drawer, which has no settings card around it to space its rows. */
@@ -124,17 +125,19 @@ function SourceItemSummary({
 }
 
 function SavingStatus({ label }: { label: string }) {
+  useLocale();
   return (
     <span className="flex items-center gap-2">
-      <Spinner size="sm" aria-label={`Saving ${label} selection`} />
+      <Spinner size="sm" aria-label={studioT('Saving {value0} selection', { value0: label })} />
       <Txt as="span" variant="caption" tone="muted" aria-hidden>
-        Saving…
+        {studioT('Saving…')}
       </Txt>
     </span>
   );
 }
 
 export function SourcePicker(props: SourcePickerProps) {
+  useLocale();
   const {
     label,
     addLabel,
@@ -177,13 +180,13 @@ export function SourcePicker(props: SourcePickerProps) {
                       size="sm"
                       variant="ghost"
                       icon={<TrashIcon />}
-                      aria-label={`Remove ${sourcePickerItemText(item)}`}
+                      aria-label={studioT('Remove {value0}', { value0: sourcePickerItemText(item) })}
                       onClick={() => {
                         onToggleItem(item.id);
                         requestAnimationFrame(() => trigger.current?.focus());
                       }}
                     >
-                      Remove
+                      {studioT('Remove')}
                     </Button>
                   </div>
                   {details && <div className="min-w-0 basis-full">{details}</div>}
@@ -192,7 +195,7 @@ export function SourcePicker(props: SourcePickerProps) {
             })}
           </ul>
         )}
-        {loading && <SettingsSkeleton label={`Loading ${label}`} variant="item" rows={1} />}
+        {loading && <SettingsSkeleton label={studioT('Loading {value0}', { value0: label })} variant="item" rows={1} />}
         <div className={cn('flex items-center gap-2', selected.length > 0 && 'pt-1')}>
           <DrawerTrigger
             render={
@@ -202,7 +205,7 @@ export function SourcePicker(props: SourcePickerProps) {
                 size="sm"
                 variant="ghost"
                 icon={<IconPlusMedium />}
-                aria-label={`${addLabel} to ${label}`}
+                aria-label={studioT('{value0} to {value1}', { value0: addLabel, value1: label })}
               >
                 {addLabel}
               </Button>
@@ -217,7 +220,7 @@ export function SourcePicker(props: SourcePickerProps) {
             </Txt>
             {onRetry && (
               <Button size="sm" variant="ghost" icon={<IconArrowRotateCounterClockwise />} onClick={onRetry}>
-                Retry
+                {studioT('Retry')}
               </Button>
             )}
           </div>
@@ -243,6 +246,7 @@ function SourcePickerDrawer({
   pickControl,
   trigger,
 }: SourcePickerProps & { trigger: RefObject<HTMLButtonElement | null> }) {
+  useLocale();
   const [query, setQuery] = useState('');
   const searchInput = useRef<HTMLInputElement>(null);
   const addedHeading = useId();
@@ -264,8 +268,8 @@ function SourcePickerDrawer({
         <div className="mt-3">
           <SearchInput
             ref={searchInput}
-            label={`Search ${label}`}
-            placeholder="Search"
+            label={studioT('Search {value0}', { value0: label })}
+            placeholder={studioT('Search')}
             value={query}
             onValueChange={setQuery}
             className="w-full"
@@ -277,17 +281,17 @@ function SourcePickerDrawer({
           <SettingsRow label={label} description={error}>
             {onRetry && (
               <Button size="sm" variant="ghost" icon={<IconArrowRotateCounterClockwise />} onClick={onRetry}>
-                Retry
+                {studioT('Retry')}
               </Button>
             )}
           </SettingsRow>
         ) : loading ? (
-          <SettingsSkeleton label={`Loading ${label}`} variant="item" rows={3} />
+          <SettingsSkeleton label={studioT('Loading {value0}', { value0: label })} variant="item" rows={3} />
         ) : (
           <>
             {added.length > 0 && (
               <section aria-labelledby={addedHeading}>
-                <SectionHeading id={addedHeading}>Added</SectionHeading>
+                <SectionHeading id={addedHeading}>{studioT('Added')}</SectionHeading>
                 <ul>
                   {added.map(({ item, groupLabel }) => (
                     <li key={item.id} className={drawerRowLayout}>
@@ -301,8 +305,8 @@ function SourcePickerDrawer({
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          tooltip="Remove"
-                          aria-label={`Remove ${sourcePickerItemText(item)}`}
+                          tooltip={studioT('Remove')}
+                          aria-label={studioT('Remove {value0}', { value0: sourcePickerItemText(item) })}
                           onClick={() => {
                             onToggleItem(item.id);
                             focusSearch();
@@ -316,7 +320,7 @@ function SourcePickerDrawer({
                 </ul>
               </section>
             )}
-            {added.length > 0 && available.length > 0 && <SectionHeading>Available</SectionHeading>}
+            {added.length > 0 && available.length > 0 && <SectionHeading>{studioT('Available')}</SectionHeading>}
             <div role="group" aria-label={label}>
               {available.length === 0
                 ? emptyText && (
@@ -347,13 +351,13 @@ function SourcePickerDrawer({
                                   size="sm"
                                   variant="ghost"
                                   icon={<IconPlusMedium />}
-                                  aria-label={`Add ${sourcePickerItemText(item)}`}
+                                  aria-label={studioT('Add {value0}', { value0: sourcePickerItemText(item) })}
                                   onClick={() => {
                                     onToggleItem(item.id);
                                     focusSearch();
                                   }}
                                 >
-                                  Add
+                                  {studioT('Add')}
                                 </Button>
                               )}
                             </div>
@@ -371,7 +375,7 @@ function SourcePickerDrawer({
         <DrawerClose
           render={
             <Button size="sm" icon={<IconCheckmark2Medium />}>
-              Done
+              {studioT('Done')}
             </Button>
           }
         />

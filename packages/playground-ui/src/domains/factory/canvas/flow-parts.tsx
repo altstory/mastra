@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** One step of a flow: a rounded cell on the panel. */
@@ -51,15 +52,16 @@ export function StaticPill({ children, className }: { children: ReactNode; class
 
 /** "+ Condition": a dashed pill between the conditions and what comes after them. */
 export function AddConditionButton({ onClick }: { onClick: () => void }) {
+  useLocale();
   return (
     <button
       type="button"
-      aria-label="Add condition"
+      aria-label={studioT('Add condition')}
       onClick={onClick}
       className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border-strong px-3 text-body-sm text-muted-foreground outline-hidden hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground"
     >
       <IconPlusMedium className="size-icon-xs" aria-hidden />
-      Condition
+      {studioT('Condition')}
     </button>
   );
 }

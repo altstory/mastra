@@ -8,6 +8,7 @@ import {
 } from './pack-layout';
 
 import { Skeleton, SkeletonText } from '@/ds/components/Skeleton';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const bar = 'motion-reduce:before:animate-none';
@@ -22,9 +23,10 @@ function ModelRow() {
 }
 
 export function ModelPackListSkeleton({ label }: { label: string }) {
+  useLocale();
   return (
     <div role="status" aria-label={label} className={PACK_LIST_CLASS}>
-      <ListHeading label="Model packs" />
+      <ListHeading label={studioT('Model packs')} />
       <div aria-hidden className={PACK_CARD_CLASS}>
         <div className={PACK_HEADER_CLASS}>
           <SkeletonText line="text-caption px-3 py-1" className={cn('w-14', bar)} />

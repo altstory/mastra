@@ -22,6 +22,7 @@ import { Button } from '@/ds/components/Button';
 import { Notice } from '@/ds/components/Notice';
 import { Txt } from '@/ds/components/Txt';
 import { IconChevronLeftMedium } from '@/ds/icons/central/IconChevronLeftMedium';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** What the trigger pill says: the first trigger, and how many more. */
 function triggerText<Event extends string>(
@@ -149,6 +150,7 @@ export function RuleEditorView<Event extends string>({
   onMoveRule,
   onAddRule,
 }: RuleEditorViewProps<Event>) {
+  useLocale();
   const readOnly = !canEdit;
 
   return (
@@ -156,10 +158,10 @@ export function RuleEditorView<Event extends string>({
       {onBackToTest && (
         <div className="flex items-center justify-between gap-2">
           <Button variant="ghost" size="sm" icon={<IconChevronLeftMedium />} onClick={onBackToTest}>
-            Back to test
+            {studioT('Back to test')}
           </Button>
           <Txt as="span" variant="caption" tone="muted" className="truncate">
-            {board.name} rule
+            {board.name} {studioT('rule')}
           </Txt>
         </div>
       )}
@@ -184,7 +186,7 @@ export function RuleEditorView<Event extends string>({
 
       <div className="flex flex-col">
         <div className={FLOW_CELL}>
-          <CellRow label="When" stacked={triggerText(on, describeTrigger).length > 24}>
+          <CellRow label={studioT('When')} stacked={triggerText(on, describeTrigger).length > 24}>
             <TriggerPicker
               value={on}
               sections={triggerSections}
@@ -202,16 +204,20 @@ export function RuleEditorView<Event extends string>({
               <Notice
                 variant="info"
                 action={
-                  !readOnly && <Notice.Button onClick={onAddTrusted}>Add: Pull request trusted is yes</Notice.Button>
+                  !readOnly && (
+                    <Notice.Button onClick={onAddTrusted}>{studioT('Add: Pull request trusted is yes')}</Notice.Button>
+                  )
                 }
               >
-                Also matches pull requests from outside authors.
+                {studioT('Also matches pull requests from outside authors.')}
               </Notice>
             )}
             {problem && <Notice variant="warning">{problem}</Notice>}
             {legacyTrigger !== undefined && (
               <Notice variant="info">
-                Also listens on “{legacyTrigger}”, which takes new issues and pull requests. Saving keeps it.
+                {studioT('Also listens on “')}
+                {legacyTrigger}
+                {studioT('”, which takes new issues and pull requests. Saving keeps it.')}
               </Notice>
             )}
           </div>
@@ -219,9 +225,9 @@ export function RuleEditorView<Event extends string>({
         <Wire />
         {on.length === 0 ? (
           <div className={FLOW_CELL}>
-            <CellRow label="Move to">
+            <CellRow label={studioT('Move to')}>
               <Txt as="span" variant="body-sm" tone="muted">
-                Pick a trigger first
+                {studioT('Pick a trigger first')}
               </Txt>
             </CellRow>
           </div>
@@ -247,7 +253,8 @@ export function RuleEditorView<Event extends string>({
             <div className="flex flex-col gap-2 pt-4">
               {preview?.changed !== undefined && (
                 <Txt as="p" variant="caption" tone="muted" role="status">
-                  {preview.changed} of the last {preview.sampled} items would now land on a different board or phase.
+                  {preview.changed} {studioT('of the last')} {preview.sampled}{' '}
+                  {studioT('items would now land on a different board or phase.')}
                 </Txt>
               )}
               <RetestBox retest={retest} />
@@ -258,10 +265,10 @@ export function RuleEditorView<Event extends string>({
               )}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={rule ? onDiscard : onClose}>
-                  {rule ? 'Discard' : 'Cancel'}
+                  {rule ? studioT('Discard') : studioT('Cancel')}
                 </Button>
                 <Button variant="primary" size="sm" disabled={!canSave} loading={pending} onClick={onSave}>
-                  {rule ? 'Save' : 'Create rule'}
+                  {rule ? studioT('Save') : studioT('Create rule')}
                 </Button>
               </div>
             </div>

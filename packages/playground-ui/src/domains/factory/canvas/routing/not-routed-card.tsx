@@ -6,6 +6,7 @@ import { IconChevronDownMedium } from '@/ds/icons/central/IconChevronDownMedium'
 import { IconChevronTopMedium } from '@/ds/icons/central/IconChevronTopMedium';
 import { IconCircleDashed } from '@/ds/icons/central/IconCircleDashed';
 import { raisedSurfaceStyle } from '@/ds/primitives/raised-surface';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /**
@@ -38,19 +39,20 @@ export function NotRoutedCard({
   /** The loaded items, each a `NotRoutedItem`. */
   children: ReactNode;
 }) {
+  useLocale();
   const [open, setOpen] = useState(defaultOpen);
   const listed = count > 0 || hasMore;
 
   return (
     <section
       id={id}
-      aria-label="Not routed"
+      aria-label={studioT('Not routed')}
       className={cn(raisedSurfaceStyle, 'flex scroll-mt-4 flex-col gap-1.75 rounded-2xl px-3.25 pt-2.75 pb-3')}
     >
       <header className="flex min-h-5.5 items-center gap-2">
         <IconCircleDashed className="size-icon-sm shrink-0 text-muted-foreground" aria-hidden />
         <Txt as="h2" variant="card-title-strong" tone="ink">
-          Not routed
+          {studioT('Not routed')}
         </Txt>
         <Txt as="span" variant="caption" tone="muted" className="min-w-0 flex-1 truncate">
           {notRoutedSummary({ pending, error, hasMore }, count)}
@@ -60,7 +62,7 @@ export function NotRoutedCard({
             size="icon-sm"
             variant="ghost"
             aria-expanded={open}
-            tooltip={open ? 'Hide items not routed' : 'Show items not routed'}
+            tooltip={open ? studioT('Hide items not routed') : studioT('Show items not routed')}
             onClick={() => setOpen(!open)}
           >
             {open ? <IconChevronTopMedium /> : <IconChevronDownMedium />}
@@ -69,16 +71,16 @@ export function NotRoutedCard({
       </header>
       {!listed && !pending && !error && (
         <Txt as="p" variant="caption" tone="muted">
-          A new issue or pull request ends up here when no board’s rules take it.
+          {studioT('A new issue or pull request ends up here when no board’s rules take it.')}
         </Txt>
       )}
       {open && listed && (
-        <ul aria-label="Items not routed" className="flex flex-col">
+        <ul aria-label={studioT('Items not routed')} className="flex flex-col">
           {children}
           {hasMore && (
             <li className="flex justify-center border-t border-border pt-2">
               <Button size="sm" variant="ghost" onClick={onLoadMore} loading={loadingMore}>
-                Load more
+                {studioT('Load more')}
               </Button>
             </li>
           )}

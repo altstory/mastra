@@ -9,6 +9,7 @@ import { IconArrowUpRight } from '@/ds/icons/central/IconArrowUpRight';
 import { raisedSurfaceStyle, surfaceStateLayerStyle } from '@/ds/primitives/raised-surface';
 import { focusRing } from '@/ds/primitives/transitions';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /** A rule that sends this board's cards to another board, and where they land there. */
@@ -33,12 +34,13 @@ interface OtherBoardsProps {
 
 /** Rules that send this board's cards to another board, and rules into a phase the board no longer has. */
 export function OtherBoards({ leaving, stray, strayIncoming, LinkComponent: Link }: OtherBoardsProps) {
+  useLocale();
   return (
     <>
       {leaving.length > 0 && (
         <section aria-labelledby="canvas-leaving" className="flex flex-col gap-4">
           <Txt as="h2" id="canvas-leaving" variant="body-sm" tone="muted">
-            To other boards
+            {studioT('To other boards')}
           </Txt>
           <ul className="flex flex-col gap-3">
             {leaving.map(move => {
@@ -62,7 +64,7 @@ export function OtherBoards({ leaving, stray, strayIncoming, LinkComponent: Link
                       {stage && (
                         <BoardStageIcon stage={stage.key} kind={phaseIconKind(stage.boardId, stage.kind)} decorative />
                       )}
-                      {move.phaseName ?? 'A removed phase'}
+                      {move.phaseName ?? studioT('A removed phase')}
                     </span>
                     <span className="flex items-center gap-1 text-caption text-muted-foreground">
                       <IconArrowUpRight className="size-icon-xs" aria-hidden />
@@ -79,11 +81,12 @@ export function OtherBoards({ leaving, stray, strayIncoming, LinkComponent: Link
         <section aria-labelledby="canvas-stray" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <Txt as="h2" id="canvas-stray" variant="body-sm" tone="muted">
-              Into a removed phase
+              {studioT('Into a removed phase')}
             </Txt>
             <Txt as="p" variant="caption" tone="muted">
-              These rules name a phase this board doesn’t have, so they can’t move cards. Open one to pick another
-              phase.
+              {studioT(
+                'These rules name a phase this board doesn’t have, so they can’t move cards. Open one to pick another phase.',
+              )}
             </Txt>
           </div>
           <ul className="flex flex-col items-start gap-1.5">

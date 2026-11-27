@@ -19,6 +19,7 @@ import { Input } from '@/ds/components/Input';
 import { Txt } from '@/ds/components/Txt';
 import { IconLoadingCircle } from '@/ds/icons/central/IconLoadingCircle';
 import { IconSquareArrowTopRight } from '@/ds/icons/central/IconSquareArrowTopRight';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface OAuthStartResponse {
   sessionId: string;
@@ -63,6 +64,7 @@ function openAuthorizationUrl(url: string) {
 }
 
 function PasteCodeDialog({ provider, session, actions, onClose, onComplete, scopeNotice }: ProviderOAuthDialogProps) {
+  useLocale();
   const displayName = providerDisplayName(provider);
   const completeMutation = useMutation({ mutationFn: actions.complete });
   const [code, setCode] = useState('');
@@ -84,20 +86,24 @@ function PasteCodeDialog({ provider, session, actions, onClose, onComplete, scop
     <Dialog open onOpenChange={open => !open && close()} pending={completeMutation.isPending}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Sign in to {displayName}</DialogTitle>
-          <DialogDescription>{scopeNotice ?? 'Authorize your account and paste the returned code.'}</DialogDescription>
+          <DialogTitle>
+            {studioT('Sign in to')} {displayName}
+          </DialogTitle>
+          <DialogDescription>
+            {scopeNotice ?? studioT('Authorize your account and paste the returned code.')}
+          </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <Txt as="p" variant="caption" tone="muted">
             {session.instructions}
           </Txt>
           <Button icon={<IconSquareArrowTopRight />} onClick={() => openAuthorizationUrl(session.url)}>
-            Open authorization page
+            {studioT('Open authorization page')}
           </Button>
           <Input
             autoFocus
-            aria-label="Authorization code"
-            placeholder="Paste authorization code"
+            aria-label={studioT('Authorization code')}
+            placeholder={studioT('Paste authorization code')}
             value={code}
             disabled={completeMutation.isPending}
             onChange={event => setCode(event.target.value)}
@@ -112,9 +118,9 @@ function PasteCodeDialog({ provider, session, actions, onClose, onComplete, scop
           )}
         </DialogBody>
         <DialogFooter>
-          <DialogCancel>Cancel</DialogCancel>
+          <DialogCancel>{studioT('Cancel')}</DialogCancel>
           <DialogAction disabled={!code.trim()} onConfirm={() => void complete()} loading={completeMutation.isPending}>
-            Complete sign in
+            {studioT('Complete sign in')}
           </DialogAction>
         </DialogFooter>
       </DialogContent>
@@ -123,6 +129,7 @@ function PasteCodeDialog({ provider, session, actions, onClose, onComplete, scop
 }
 
 function DeviceCodeDialog({ provider, session, actions, onClose, onComplete, scopeNotice }: ProviderOAuthDialogProps) {
+  useLocale();
   const displayName = providerDisplayName(provider);
   const pollMutation = useMutation({ mutationFn: actions.poll });
   const { mutate: poll } = pollMutation;
@@ -165,9 +172,11 @@ function DeviceCodeDialog({ provider, session, actions, onClose, onComplete, sco
     <Dialog open onOpenChange={open => !open && close()}>
       <DialogContent>
         <DialogHeader className="items-center text-center">
-          <DialogTitle>Sign in to {displayName}</DialogTitle>
+          <DialogTitle>
+            {studioT('Sign in to')} {displayName}
+          </DialogTitle>
           <DialogDescription>
-            {scopeNotice ?? 'Enter the device code on the provider authorization page.'}
+            {scopeNotice ?? studioT('Enter the device code on the provider authorization page.')}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="items-center text-center">
@@ -181,7 +190,7 @@ function DeviceCodeDialog({ provider, session, actions, onClose, onComplete, sco
               >
                 {session.userCode}
               </Txt>
-              <CopyButton content={session.userCode} variant="ghost" size="icon-sm" tooltip="Copy code" />
+              <CopyButton content={session.userCode} variant="ghost" size="icon-sm" tooltip={studioT('Copy code')} />
             </div>
           )}
           <Button
@@ -189,7 +198,7 @@ function DeviceCodeDialog({ provider, session, actions, onClose, onComplete, sco
             className="w-full"
             onClick={() => openAuthorizationUrl(session.url)}
           >
-            Open authorization page
+            {studioT('Open authorization page')}
           </Button>
         </DialogBody>
         <DialogFooter>
@@ -206,11 +215,11 @@ function DeviceCodeDialog({ provider, session, actions, onClose, onComplete, sco
             <div className="mr-auto flex items-center gap-2 text-muted-foreground" role="status">
               <IconLoadingCircle className="size-icon-sm motion-safe:animate-spin motion-reduce:animate-none" />
               <Txt as="span" variant="caption">
-                Waiting for authorization…
+                {studioT('Waiting for authorization…')}
               </Txt>
             </div>
           )}
-          <DialogCancel disabled={pollMutation.isPending}>Cancel</DialogCancel>
+          <DialogCancel disabled={pollMutation.isPending}>{studioT('Cancel')}</DialogCancel>
         </DialogFooter>
       </DialogContent>
     </Dialog>

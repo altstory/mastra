@@ -1,6 +1,7 @@
 import { SidePanel } from '../canvas-frame';
 import { Txt } from '@/ds/components/Txt';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** The canvas's side panel when the page names a phase the board doesn't have. */
 export function PhaseNotFoundPanel({
@@ -13,13 +14,14 @@ export function PhaseNotFoundPanel({
   boardHref: string;
   LinkComponent: LinkComponent;
 }) {
+  useLocale();
   return (
-    <SidePanel label="Phase not found">
+    <SidePanel label={studioT('Phase not found')}>
       <Txt variant="body-sm" tone="ink" role="alert">
-        {boardTitle} has no such phase.
+        {boardTitle} {studioT('has no such phase.')}
       </Txt>
       <LinkComponent href={boardHref} className="text-body-sm text-muted-foreground hover:text-foreground">
-        Back to the board
+        {studioT('Back to the board')}
       </LinkComponent>
     </SidePanel>
   );

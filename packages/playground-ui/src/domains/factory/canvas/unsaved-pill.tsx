@@ -2,6 +2,7 @@ import { TriangleAlert } from 'lucide-react';
 import { FLOAT_IN } from './canvas-frame';
 import { Button } from '@/ds/components/Button';
 import { Txt } from '@/ds/components/Txt';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 /**
@@ -24,6 +25,7 @@ export function UnsavedPill({
   onSave: () => void;
   onDiscard: () => void;
 }) {
+  useLocale();
   return (
     <div className={cn('flex h-10 items-center gap-1 rounded-full bg-card pr-1 pl-3.5 shadow-overlay', FLOAT_IN)}>
       {held ? (
@@ -35,7 +37,7 @@ export function UnsavedPill({
         {label}
       </Txt>
       <Button size="sm" variant="ghost" disabled={saving} onClick={onDiscard}>
-        Discard
+        {studioT('Discard')}
       </Button>
       <Button size="sm" variant="primary" disabled={held} loading={saving} onClick={onSave}>
         {saveLabel}

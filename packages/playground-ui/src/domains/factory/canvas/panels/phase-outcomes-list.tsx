@@ -8,6 +8,7 @@ import { Txt } from '@/ds/components/Txt';
 import { IconArrowRight } from '@/ds/icons/central/IconArrowRight';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { TrashIcon } from '@/ds/icons/TrashIcon';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 /** What the board's rules work out about a phase's outcomes, for the outcomes list. */
 export interface PhaseOutcomesInfo {
@@ -43,6 +44,7 @@ export function PhaseOutcomesList({
   disabled: boolean;
   onChange: (outcomes: PanelPhaseOutcome[] | null) => void;
 }) {
+  useLocale();
   const own = phase.outcomes?.length ? phase.outcomes : undefined;
   const { defaults, problems, added, exitToolPick, max } = info;
   const nameOf = (key: string) => phases.find(other => other.key === key)?.name ?? key;
@@ -50,7 +52,7 @@ export function PhaseOutcomesList({
   if (next.length === 0) {
     return (
       <Txt as="p" variant="caption" tone="muted">
-        Allow a move first; each outcome goes to one of them.
+        {studioT('Allow a move first; each outcome goes to one of them.')}
       </Txt>
     );
   }
@@ -60,24 +62,25 @@ export function PhaseOutcomesList({
   if (!own) {
     return (
       <div className="flex flex-col gap-2">
-        <ul aria-label={`${phase.name} outcomes`} className="flex flex-col gap-1">
+        <ul aria-label={studioT('{value0} outcomes', { value0: phase.name })} className="flex flex-col gap-1">
           {defaults.map(outcome => (
             <li key={outcome.key}>
               <Txt as="span" variant="caption" tone="muted">
-                <code>{outcome.key}</code> moves the card to {nameOf(outcome.to)}
+                <code>{outcome.key}</code> {studioT('moves the card to')} {nameOf(outcome.to)}
               </Txt>
             </li>
           ))}
         </ul>
         {exitTool && <ExitToolNote exitTool={exitTool} picked={exitToolPick} phases={phases} />}
         <Txt as="p" variant="caption" tone="muted">
-          The agent may report any allowed move by the key of the phase it goes to. Customize them to describe each one,
-          or to offer fewer moves than people have.
+          {studioT(
+            'The agent may report any allowed move by the key of the phase it goes to. Customize them to describe each one, or to offer fewer moves than people have.',
+          )}
         </Txt>
         {!disabled && (
           <div>
             <Button size="sm" variant="ghost" onClick={() => onChange(defaults.slice(0, max))}>
-              Customize outcomes
+              {studioT('Customize outcomes')}
             </Button>
           </div>
         )}
@@ -91,10 +94,11 @@ export function PhaseOutcomesList({
   return (
     <div className="flex flex-col gap-2">
       <Txt as="p" variant="caption" tone="muted">
-        The agent reports one by its key when its work is done; the description tells it when, and shows in the
-        card&apos;s history.
+        {studioT(
+          "The agent reports one by its key when its work is done; the description tells it when, and shows in the card's history.",
+        )}
       </Txt>
-      <ul aria-label={`${phase.name} outcomes`} className="flex flex-col gap-1.5">
+      <ul aria-label={studioT('{value0} outcomes', { value0: phase.name })} className="flex flex-col gap-1.5">
         {own.map((outcome, index) => {
           const problem = problems[index] ?? {};
           const name = `outcome ${outcome.key || index + 1}`;
@@ -104,9 +108,9 @@ export function PhaseOutcomesList({
                 <Field invalid={Boolean(problem.key)} disabled={disabled} className="min-w-0 flex-1">
                   <Input
                     size="sm"
-                    aria-label={`${phase.name} outcome ${index + 1} key`}
+                    aria-label={studioT('{value0} outcome {value1} key', { value0: phase.name, value1: index + 1 })}
                     value={outcome.key}
-                    placeholder="Key, e.g. review"
+                    placeholder={studioT('Key, e.g. review')}
                     disabled={disabled}
                     onChange={event => set(index, { key: event.target.value.trim() })}
                   />
@@ -118,7 +122,11 @@ export function PhaseOutcomesList({
                   disabled={disabled}
                   onValueChange={value => set(index, { to: String(value) })}
                 >
-                  <SelectTrigger size="sm" aria-label={`${phase.name} ${name} goes to`} className="w-24 shrink-0">
+                  <SelectTrigger
+                    size="sm"
+                    aria-label={studioT('{value0} {value1} goes to', { value0: phase.name, value1: name })}
+                    className="w-24 shrink-0"
+                  >
                     <span className="truncate">{nameOf(outcome.to)}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -133,7 +141,7 @@ export function PhaseOutcomesList({
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    tooltip={`Remove ${name}`}
+                    tooltip={studioT('Remove {value0}', { value0: name })}
                     onClick={() => {
                       const rest = own.filter((_, other) => other !== index);
                       onChange(rest.length > 0 ? rest : null);
@@ -146,9 +154,9 @@ export function PhaseOutcomesList({
               <Field invalid={Boolean(problem.label)} disabled={disabled}>
                 <Input
                   size="sm"
-                  aria-label={`${phase.name} outcome ${index + 1} label`}
+                  aria-label={studioT('{value0} outcome {value1} label', { value0: phase.name, value1: index + 1 })}
                   value={outcome.label}
-                  placeholder="Description, e.g. Change request opened"
+                  placeholder={studioT('Description, e.g. Change request opened')}
                   disabled={disabled}
                   onChange={event => set(index, { label: event.target.value })}
                 />
@@ -163,11 +171,11 @@ export function PhaseOutcomesList({
         <div className="flex flex-wrap gap-1">
           {added && own.length < max && (
             <Button size="sm" variant="ghost" icon={<IconPlusMedium />} onClick={() => onChange([...own, added])}>
-              Add outcome
+              {studioT('Add outcome')}
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
-            Use one per move
+            {studioT('Use one per move')}
           </Button>
         </div>
       )}
@@ -185,12 +193,14 @@ function ExitToolNote({
   picked: PanelPhaseOutcome | undefined;
   phases: readonly PanelPhase[];
 }) {
+  useLocale();
   if (!picked) {
     return (
       <Notice variant="warning">
         <Notice.Message>
-          When <code>{exitTool}</code> succeeds, no outcome is picked, so the card waits for the agent to report one.
-          Key an outcome <code>advance</code> to choose where its success moves the card.
+          {studioT('When')} <code>{exitTool}</code>{' '}
+          {studioT('succeeds, no outcome is picked, so the card waits for the agent to report one. Key an outcome')}{' '}
+          <code>advance</code> {studioT('to choose where its success moves the card.')}
         </Notice.Message>
       </Notice>
     );
@@ -198,7 +208,8 @@ function ExitToolNote({
   const to = phases.find(other => other.key === picked.to)?.name ?? picked.to;
   return (
     <Txt as="p" variant="caption" tone="muted">
-      When <code>{exitTool}</code> succeeds, it reports <code>{picked.key}</code>, moving the card to {to}.
+      {studioT('When')} <code>{exitTool}</code> {studioT('succeeds, it reports')} <code>{picked.key}</code>
+      {studioT(', moving the card to')} {to}.
     </Txt>
   );
 }

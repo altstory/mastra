@@ -3,6 +3,7 @@ import { BoardStageIcon, phaseIconKind } from '../../board/board-icons';
 import { CARD_PORT, Port } from '../flow-links';
 import { passwordManagerOptOutProps } from '@/ds/primitives/password-manager-autofill';
 import { raisedSurfaceStyle } from '@/ds/primitives/raised-surface';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const FIELD = 'hover:bg-fill -mx-1.5 min-w-0 flex-1 rounded-md bg-transparent px-1.5 outline-none';
@@ -32,6 +33,7 @@ export function NewPhaseCard({
   onAdd: (phase: { key: string; name: string }, open: boolean) => void;
   onCancel: () => void;
 }) {
+  useLocale();
   const [name, setName] = useState('');
   const [typedKey, setTypedKey] = useState<string>();
   // Set once added or dropped, so the blur of a field being taken off the page settles nothing twice.
@@ -48,7 +50,7 @@ export function NewPhaseCard({
 
   return (
     <form
-      aria-label="New phase"
+      aria-label={studioT('New phase')}
       onKeyDown={event => {
         if (event.nativeEvent.isComposing) return;
         if (event.key === 'Enter') {
@@ -75,9 +77,9 @@ export function NewPhaseCard({
       <div className="flex min-w-0 items-center gap-2">
         <BoardStageIcon stage={key} kind={phaseIconKind(boardId, 'resting')} decorative />
         <input
-          aria-label="New phase name"
+          aria-label={studioT('New phase name')}
           value={name}
-          placeholder="Phase name"
+          placeholder={studioT('Phase name')}
           autoFocus
           {...passwordManagerOptOutProps}
           onChange={event => setName(event.currentTarget.value)}
@@ -85,9 +87,9 @@ export function NewPhaseCard({
         />
       </div>
       <label className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground">
-        Key
+        {studioT('Key')}
         <input
-          aria-label="New phase key"
+          aria-label={studioT('New phase key')}
           value={key}
           {...passwordManagerOptOutProps}
           onChange={event => setTypedKey(event.currentTarget.value)}
@@ -99,7 +101,9 @@ export function NewPhaseCard({
           {problem}
         </span>
       ) : (
-        <span className="text-caption text-muted-foreground">Enter adds it. The key can’t change once added.</span>
+        <span className="text-caption text-muted-foreground">
+          {studioT('Enter adds it. The key can’t change once added.')}
+        </span>
       )}
       {linked && <Port className={cn(CARD_PORT, '-bottom-1.25')} />}
     </form>

@@ -17,6 +17,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/ds/compon
 import { DisclosureChevron } from '@/ds/components/DisclosureChevron';
 import { Txt } from '@/ds/components/Txt';
 import { SettingsContainer } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 export const DEFAULTS_HEADER_CLASS = 'flex flex-wrap items-center gap-x-3 gap-y-2';
@@ -47,6 +48,7 @@ export function DefaultsCard({
   /** The page was opened on this card's anchor, so start it expanded even when unused. */
   openedByLink?: boolean;
 }) {
+  useLocale();
   const inUse = defaultsInUse(scope, defaults);
   const [expanded, setExpanded] = useState(openedByLink);
 
@@ -66,7 +68,7 @@ export function DefaultsCard({
                 <CollapsibleTrigger
                   render={
                     <Button variant="ghost" size="sm" iconEnd={<DisclosureChevron />}>
-                      Settings
+                      {studioT('Settings')}
                     </Button>
                   }
                 />

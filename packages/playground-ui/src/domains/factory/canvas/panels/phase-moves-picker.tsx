@@ -7,6 +7,7 @@ import { IconCheckmark2Medium } from '@/ds/icons/central/IconCheckmark2Medium';
 import { IconLock } from '@/ds/icons/central/IconLock';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import { menuItemClass } from '@/ds/primitives/menu-item';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
 
 const LOCKED = "Factory's code makes this move";
@@ -33,6 +34,7 @@ export function PhaseMovesPicker({
   disabled: boolean;
   onChange: (nextPhases: string[]) => void;
 }) {
+  useLocale();
   const allowed = phases.filter(other => other.key !== phase.key && next.includes(other.key));
   const toggle = (key: string) =>
     onChange(
@@ -45,11 +47,11 @@ export function PhaseMovesPicker({
     <div className="flex flex-wrap items-center gap-1.25">
       {allowed.length === 0 && (
         <Txt as="p" variant="caption" tone="muted">
-          Cards stay here; no move is allowed.
+          {studioT('Cards stay here; no move is allowed.')}
         </Txt>
       )}
       {allowed.length > 0 && (
-        <ul aria-label={`Allowed moves from ${phase.name}`} className="contents">
+        <ul aria-label={studioT('Allowed moves from {value0}', { value0: phase.name })} className="contents">
           {allowed.map(other => {
             const locked = required.includes(other.key);
             const chip = (
@@ -64,7 +66,7 @@ export function PhaseMovesPicker({
                 {locked && (
                   <>
                     <IconLock aria-hidden className="size-icon-xs shrink-0 text-muted-foreground" />
-                    <span className="sr-only">(locked)</span>
+                    <span className="sr-only">{studioT('(locked)')}</span>
                   </>
                 )}
               </span>
@@ -86,14 +88,18 @@ export function PhaseMovesPicker({
       )}
       {!disabled && (
         <Popover>
-          <PopoverTrigger size="icon-sm" variant="ghost" tooltip={`Change moves from ${phase.name}`}>
+          <PopoverTrigger
+            size="icon-sm"
+            variant="ghost"
+            tooltip={studioT('Change moves from {value0}', { value0: phase.name })}
+          >
             <IconPlusMedium />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 p-1.5">
             <Txt as="p" variant="caption" tone="muted" className="px-2 pt-0.5 pb-1.5">
-              {phase.name} can move cards to
+              {phase.name} {studioT('can move cards to')}
             </Txt>
-            <ul aria-label={`Moves from ${phase.name}`} className="flex flex-col gap-0.5">
+            <ul aria-label={studioT('Moves from {value0}', { value0: phase.name })} className="flex flex-col gap-0.5">
               {phases.map(other => {
                 if (other.key === phase.key) {
                   return (
@@ -103,7 +109,7 @@ export function PhaseMovesPicker({
                         {other.name}
                       </Txt>
                       <Txt as="span" variant="caption" tone="muted" className="ml-auto shrink-0">
-                        this phase
+                        {studioT('this phase')}
                       </Txt>
                     </li>
                   );
@@ -115,7 +121,7 @@ export function PhaseMovesPicker({
                     <button
                       type="button"
                       aria-pressed={on}
-                      aria-label={locked ? `${other.name} (locked)` : undefined}
+                      aria-label={locked ? studioT('{value0} (locked)', { value0: other.name }) : undefined}
                       aria-disabled={locked || undefined}
                       title={locked ? LOCKED : undefined}
                       onClick={locked ? undefined : () => toggle(other.key)}
@@ -140,7 +146,7 @@ export function PhaseMovesPicker({
               })}
             </ul>
             <Txt as="p" variant="caption" tone="muted" className="px-2 pt-1.5">
-              Waits for the board's Save.
+              {studioT("Waits for the board's Save.")}
             </Txt>
           </PopoverContent>
         </Popover>

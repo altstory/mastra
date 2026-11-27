@@ -10,6 +10,7 @@ import type { IntakeQueryState, IntakeSelectionState } from './provider-intake-c
 import { Button } from '@/ds/components/Button';
 import { IconArrowRotateCounterClockwise } from '@/ds/icons/central/IconArrowRotateCounterClockwise';
 import { SettingsRow } from '@/ds/new/settings';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 export interface GithubIntakeStatus {
   enabled: boolean;
@@ -39,8 +40,9 @@ export function GithubIntakeCard({
   repositoriesQuery,
   connectButton,
   manageButton,
-  emptyDescription = 'Link a repository to a Factory to add one.',
+  emptyDescription = studioT('Link a repository to a Factory to add one.'),
 }: GithubIntakeCardProps) {
+  useLocale();
   // Present only when the server registers Dependabot intake alongside GitHub.
   const dependabot: IntakeSelection | undefined = config.dependabot;
   const status = statusQuery.data;
@@ -67,7 +69,7 @@ export function GithubIntakeCard({
             loading={statusQuery.isFetching}
             onClick={() => void statusQuery.refetch()}
           >
-            Retry
+            {studioT('Retry')}
           </Button>
         )
       }
@@ -75,7 +77,7 @@ export function GithubIntakeCard({
       {connected && (
         <>
           <SourcePicker
-            label="Bring in issues from"
+            label={studioT('Bring in issues from')}
             addLabel="Add repository"
             itemIcon={<SettingsIntegrationIcon provider="github" />}
             groups={[{ id: 'repositories', items }]}
@@ -87,20 +89,22 @@ export function GithubIntakeCard({
             onToggleItem={slug => selection.update(current => toggleSource(current, slug))}
           />
           {repositoriesQuery.isSuccess && slugs.length === 0 && (
-            <SettingsRow label="No linked repositories yet" description={emptyDescription} />
+            <SettingsRow label={studioT('No linked repositories yet')} description={emptyDescription} />
           )}
         </>
       )}
       {connected && dependabot && (
         <>
           <SettingsRow
-            label="Dependabot alerts"
-            description="Create a card for each open Dependabot alert in selected repositories."
+            label={studioT('Dependabot alerts')}
+            description={studioT('Create a card for each open Dependabot alert in selected repositories.')}
           >
             <IntakeSyncControl
-              label="Sync alerts"
+              label={studioT('Sync alerts')}
               accessibleLabel="Sync Dependabot alerts"
-              description="Poll selected repositories for open Dependabot alerts every 15 minutes. Cards close when the alert is fixed or dismissed."
+              description={studioT(
+                'Poll selected repositories for open Dependabot alerts every 15 minutes. Cards close when the alert is fixed or dismissed.',
+              )}
               checked={dependabot.enabled}
               disabled={false}
               onCheckedChange={enabled => dependabotSelection.update(current => ({ ...current, enabled }))}
@@ -108,7 +112,7 @@ export function GithubIntakeCard({
           </SettingsRow>
           {dependabot.enabled && (
             <SourcePicker
-              label="Dependabot repositories"
+              label={studioT('Dependabot repositories')}
               addLabel="Add repository"
               itemIcon={<SettingsIntegrationIcon provider="github" />}
               groups={[{ id: 'dependabot-repositories', items }]}

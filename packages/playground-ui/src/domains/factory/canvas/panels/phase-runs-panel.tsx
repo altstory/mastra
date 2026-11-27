@@ -25,6 +25,7 @@ import { Txt } from '@/ds/components/Txt';
 import { IconChainLink3 } from '@/ds/icons/central/IconChainLink3';
 import { IconChevronLeftMedium } from '@/ds/icons/central/IconChevronLeftMedium';
 import { fieldErrorRimWithin, inputSurfaceAndFocusWithinStyle } from '@/ds/primitives/form-element';
+import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 /** A Factory tool a phase can grant the session working a card there. */
@@ -60,6 +61,7 @@ export function PhaseRunsPanel<Tool extends string>({
   onTools: (tools: Tool[] | null) => void;
   onBack: () => void;
 }) {
+  useLocale();
   const instructions = phase.runner?.instructions ?? '';
   const goal = phase.runner?.goal;
   const objective = goal?.objective ?? '';
@@ -74,7 +76,12 @@ export function PhaseRunsPanel<Tool extends string>({
   return (
     <>
       <div className="flex min-h-7 min-w-0 items-center gap-2">
-        <Button size="icon-sm" variant="ghost" tooltip={`Back to ${phase.name}`} onClick={onBack}>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          tooltip={studioT('Back to {value0}', { value0: phase.name })}
+          onClick={onBack}
+        >
           <IconChevronLeftMedium />
         </Button>
         <BoardStageIcon stage={phase.key} kind={phaseIconKind(boardId, phase.kind)} decorative />
@@ -82,26 +89,26 @@ export function PhaseRunsPanel<Tool extends string>({
           {phase.name}
         </Txt>
         <Txt as="span" variant="caption" tone="muted" className="shrink-0">
-          Agent runs
+          {studioT('Agent runs')}
         </Txt>
       </div>
 
       <LimitedText
-        title="Instructions"
-        label={`${phase.name} instructions`}
+        title={studioT('Instructions')}
+        label={studioT('{value0} instructions', { value0: phase.name })}
         value={instructions}
         max={MAX_PHASE_INSTRUCTIONS}
-        placeholder="Added to the agent's prompt when the phase starts."
+        placeholder={studioT("Added to the agent's prompt when the phase starts.")}
         disabled={disabled}
         onChange={text => onRunner({ instructions: text })}
       />
 
       <LimitedText
-        title="Goal"
-        label={`${phase.name} goal`}
+        title={studioT('Goal')}
+        label={studioT('{value0} goal', { value0: phase.name })}
         value={objective}
         max={MAX_PHASE_OBJECTIVE}
-        placeholder="The agent keeps working until a judge finds this met. Leave empty for a single run."
+        placeholder={studioT('The agent keeps working until a judge finds this met. Leave empty for a single run.')}
         disabled={disabled}
         onChange={text => onRunner({ goal: text.trim() ? { ...goal, objective: text } : undefined })}
       >
@@ -110,9 +117,12 @@ export function PhaseRunsPanel<Tool extends string>({
             <div className="flex items-center justify-between gap-1.5">
               <FieldLabel
                 size="smaller"
-                info={`After this many runs without meeting the goal, the card waits for a person. From 1 to ${MAX_PHASE_GOAL_RUNS}; leave empty for Factory's default.`}
+                info={studioT(
+                  "After this many runs without meeting the goal, the card waits for a person. From 1 to {value0}; leave empty for Factory's default.",
+                  { value0: MAX_PHASE_GOAL_RUNS },
+                )}
               >
-                Pause goal after
+                {studioT('Pause goal after')}
               </FieldLabel>
               <InputNumber
                 className="w-32"
@@ -127,9 +137,9 @@ export function PhaseRunsPanel<Tool extends string>({
                 }}
               >
                 <InputNumberGroup size="sm">
-                  <InputNumberInput placeholder="Default" />
+                  <InputNumberInput placeholder={studioT('Default')} />
                   <InputGroupAddon align="inline-end" variant="flush">
-                    <InputGroupText className="mr-1">runs</InputGroupText>
+                    <InputGroupText className="mr-1">{studioT('runs')}</InputGroupText>
                     <InputNumberDecrement />
                     <InputNumberIncrement />
                   </InputGroupAddon>
@@ -137,18 +147,20 @@ export function PhaseRunsPanel<Tool extends string>({
               </InputNumber>
             </div>
             {!phaseGoalRunsValid(goal.maxRuns) && (
-              <FieldError>Use a whole number from 1 to {MAX_PHASE_GOAL_RUNS}.</FieldError>
+              <FieldError>
+                {studioT('Use a whole number from 1 to')} {MAX_PHASE_GOAL_RUNS}.
+              </FieldError>
             )}
           </Field>
         )}
       </LimitedText>
 
       <div className="flex flex-col gap-2 px-1">
-        <PanelRow label="Session">
+        <PanelRow label={studioT('Session')}>
           <Input
             size="sm"
             className="w-28"
-            aria-label={`${phase.name} session`}
+            aria-label={studioT('{value0} session', { value0: phase.name })}
             value={phase.runner?.context ?? ''}
             placeholder={defaultSession}
             disabled={disabled}
@@ -157,13 +169,15 @@ export function PhaseRunsPanel<Tool extends string>({
         </PanelRow>
         <Txt as="p" variant="caption" tone="muted" className="flex items-center gap-1.5">
           <IconChainLink3 aria-hidden className="size-icon-xs shrink-0" />
-          {sharing.length > 0 ? `Shared with ${sharing.join(', ')}, one per card` : 'One per card'}
+          {sharing.length > 0
+            ? studioT('Shared with {value0}, one per card', { value0: sharing.join(', ') })
+            : studioT('One per card')}
         </Txt>
       </div>
 
-      <div role="group" aria-label="Factory tools" className="flex flex-col gap-2.5 px-1">
+      <div role="group" aria-label={studioT('Factory tools')} className="flex flex-col gap-2.5 px-1">
         <Txt as="span" variant="caption" tone="muted">
-          Factory tools
+          {studioT('Factory tools')}
         </Txt>
         {phaseTools.map(tool => (
           <div key={tool.id} className="flex items-center justify-between gap-1.5">
@@ -208,6 +222,7 @@ function LimitedText({
   onChange: (text: string) => void;
   children?: ReactNode;
 }) {
+  useLocale();
   const over = value.length > max;
   return (
     <div className="flex flex-col gap-2 px-1">
@@ -235,7 +250,7 @@ function LimitedText({
           )}
           data-base-ui-swipe-ignore=""
         />
-        {over && <FieldError>Too long to save.</FieldError>}
+        {over && <FieldError>{studioT('Too long to save.')}</FieldError>}
       </Field>
       {children}
     </div>

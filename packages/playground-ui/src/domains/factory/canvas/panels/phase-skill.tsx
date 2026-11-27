@@ -9,6 +9,7 @@ import { IconFileText } from '@/ds/icons/central/IconFileText';
 import { IconPencil } from '@/ds/icons/central/IconPencil';
 import { IconPlusMedium } from '@/ds/icons/central/IconPlusMedium';
 import type { LinkComponent } from '@/ds/types/link-component';
+import { t as studioT, useLocale } from '@/lib/i18n';
 
 const NO_SKILL = '__none__';
 
@@ -46,20 +47,21 @@ export function PhaseSkill({
   LinkComponent: LinkComponent;
   onChange: (skill: string | undefined) => void;
 }) {
+  useLocale();
   const skill = skillName ? skills?.find(candidate => candidate.name === skillName) : undefined;
   const missing = skillName !== undefined && skills !== undefined && skill === undefined;
   const names = (skills ?? []).map(candidate => candidate.name);
   // A missing skill stays picked, so the picker shows what the phase points at.
   if (skillName && !names.includes(skillName)) names.push(skillName);
   const options: ComboboxOption[] = [
-    { value: NO_SKILL, label: 'No skill' },
+    { value: NO_SKILL, label: studioT('No skill') },
     ...names.map(name => ({ value: name, label: name })),
   ];
   const badged = skill !== undefined && badges.length > 0;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <PanelRow label="Skill">
+      <PanelRow label={studioT('Skill')}>
         <div className="flex min-w-0 items-center gap-1">
           <Combobox
             options={options}
@@ -67,9 +69,9 @@ export function PhaseSkill({
             variant="ghost"
             size="sm"
             align="end"
-            searchPlaceholder="Search skills"
-            emptyText="No skill matches"
-            aria-label={`${phaseName} skill`}
+            searchPlaceholder={studioT('Search skills')}
+            emptyText={studioT('No skill matches')}
+            aria-label={studioT('{value0} skill', { value0: phaseName })}
             disabled={disabled}
             className="min-w-0"
             onValueChange={value => onChange(value === NO_SKILL || value === '' ? undefined : value)}
@@ -90,12 +92,12 @@ export function PhaseSkill({
         <div className="flex flex-wrap items-center gap-1">
           {missing && (
             <Badge variant="destructive" size="sm">
-              Not found
+              {studioT('Not found')}
             </Badge>
           )}
           {skill?.error && (
             <Badge variant="destructive" size="sm">
-              Failed to load
+              {studioT('Failed to load')}
             </Badge>
           )}
           {skill && badges.map(badge => <Badge key={badge}>{badge}</Badge>)}
@@ -104,11 +106,11 @@ export function PhaseSkill({
       <SkillNote skill={skill} missing={missing} skillName={skillName} phaseName={phaseName} />
       <div className="flex flex-wrap items-center gap-1">
         <Button size="sm" variant="ghost" render={<LinkComponent href={skillsHref} />}>
-          All skills
+          {studioT('All skills')}
         </Button>
         {skillsEditable && (
           <Button size="sm" variant="ghost" icon={<IconPlusMedium />} render={<LinkComponent href={newSkillHref} />}>
-            New skill
+            {studioT('New skill')}
           </Button>
         )}
       </div>
@@ -128,17 +130,19 @@ function SkillNote({
   skillName: string | undefined;
   phaseName: string;
 }) {
+  useLocale();
   if (skill?.error) {
     return (
       <Txt as="p" variant="caption" role="alert" className="text-destructive-foreground">
-        Agents can't load this skill: {skill.error}
+        {studioT("Agents can't load this skill:")} {skill.error}
       </Txt>
     );
   }
   if (missing) {
     return (
       <Txt as="p" variant="caption" role="alert" className="text-destructive-foreground">
-        This factory has no {skillName} skill, so cards entering {phaseName} fail to start.
+        {studioT('This factory has no')} {skillName} {studioT('skill, so cards entering')} {phaseName}{' '}
+        {studioT('fail to start.')}
       </Txt>
     );
   }
