@@ -7,10 +7,11 @@
     "start:prebuilt": "node start-built.mjs --skip-build",
     "build:deps": "node scripts/build-deps.mjs",
     "dev": "node start-local.mjs",
+    "backup": "node --import tsx scripts/backup.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "publish:creator-skills": "node --import tsx scripts/publish-creator-skills.mjs",
     "seed:shared-skills": "node --import tsx scripts/seed-shared-skills.mjs",
-    "test": "node --import tsx --test scripts/creator-gateway.test.mjs scripts/creator-memory.test.mjs scripts/modelhub-gateway.test.mjs scripts/context-compaction.test.mjs scripts/memory-isolation.test.mjs scripts/conversation-preferences.test.mjs scripts/user-storage.test.mjs scripts/conversation-projects.test.mjs scripts/account-preferences.test.mjs",
+    "test": "node --import tsx --test scripts/creator-gateway.test.mjs scripts/creator-memory.test.mjs scripts/modelhub-gateway.test.mjs scripts/context-compaction.test.mjs scripts/memory-isolation.test.mjs scripts/conversation-preferences.test.mjs scripts/user-storage.test.mjs scripts/conversation-projects.test.mjs scripts/account-preferences.test.mjs scripts/backup.test.mjs",
     "test:tools": "node --import tsx --test scripts/tool-runtime.test.mjs scripts/creative-work.test.mjs scripts/conversation-tools.test.mjs scripts/subagents.test.mjs scripts/subagents-http.test.mjs scripts/office.test.mjs scripts/user-storage.test.mjs scripts/validate-script-format.test.mjs scripts/script-graph.test.mjs scripts/script-qa.test.mjs scripts/project-status.test.mjs scripts/story-ledger.test.mjs scripts/script-state.test.mjs scripts/branch-graph.test.mjs scripts/script-qa-tool.test.mjs",
     "build": "node start-built.mjs --build-only"
   },

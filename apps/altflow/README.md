@@ -36,6 +36,26 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 源码合并不移动现有安装的数据库、环境文件、上传资料或工作区。切换服务前，停止旧进程并备份数据；通过 `ALTFLOW_RUNTIME_ROOT` 指向原有数据根目录，即可沿用原目录下的 `src/mastra/public/preview.db`、`data/`、`workspace/` 和 `.cache/embeddings/`。`MASTRA_PREVIEW_ROOT` 作为旧配置别名继续兼容。不要让两个进程同时打开同一个 DuckDB 文件。
 
+### OSS 增量备份和 Trace 保留
+
+在 Agent 的 `.env` 设置 `ALTFLOW_BACKUP_PREFIX=altflow-backups/production-agent`，然后用 `start` 或 `start:prebuilt` 启动。每套部署使用独立前缀，只运行一个写入进程。备份复用应用的私有 OSS 配置，凭证需要对备份前缀有读取、写入、列举和清理权限。
+
+- Agent 启动后立即备份，每 15 分钟检查一次。业务库每天成功备份一次，日期按 UTC 计算。会话、工作记忆、知识库、数据集、向量和用户文件索引取 SQLite 一致性快照，同时保存索引引用的 OSS 文件正文。每个数据库各自取快照。
+- 备份用 4 MiB 原始数据块计算 SHA-256，逐块压缩。相同数据块只保存一个对象，各恢复点用清单引用数据块。单个对象小于 1 GiB。
+- 首次启用时，`ALTFLOW_BACKUP_CLEANUP=false` 会保留本地 Trace，用于检查归档和恢复。开启 `ALTFLOW_BACKUP_CLEANUP=true` 后，已结束且超过 7 天的 Trace 才进入清理范围。每批先上传和回读校验，再删除内容仍与归档一致的本地记录。上传失败会保留记录，供下次重试。近期 Trace 有独立恢复点，已归档历史可离线读取 Parquet。
+- OSS 默认保留 90 天 Trace 归档，以及最近 7 个日、4 个周、3 个月的业务恢复点，重叠恢复点只留一份。没有保留清单引用的数据块经过 7 天宽限期再回收。OSS 备份前缀超过默认 10 GiB 会写告警。请勿配置按对象年龄直接删除共享数据块的 OSS 生命周期规则。启用版本控制时，单独配置非当前版本的保留期限，否则删除后的版本仍会占用容量。
+- 在线清理会执行 DuckDB 检查点，已释放的数据库块可供后续写入复用。开启清理后，启动时若检测到 256 MiB 以上空闲块且有足够暂存空间，会自动压缩。也可在 Agent 停机后运行 `pnpm --filter @internal/altflow backup compact`。它复制并校验剩余数据，只有能实际缩小文件时才替换原库。命令读取 `ALTFLOW_RUNTIME_ROOT`，需要有空间暂存压缩后的库。
+
+使用新目录恢复。在仓库根目录执行以下任一命令。
+
+```sh
+pnpm --filter @internal/altflow backup restore business/2026-11-27.json /tmp/altflow-recovered-business
+pnpm --filter @internal/altflow backup restore hot.json /tmp/altflow-recovered-traces
+pnpm --filter @internal/altflow backup restore archive/DATE/HASH.json /tmp/altflow-recovered-archive
+```
+
+业务恢复会输出数据库和 `oss-objects/` 下的文件正文。切换到恢复实例前，把文件正文按相同对象键上传到该实例的私有 OSS 桶。`hot.json` 会重建 `data/observability.duckdb`。历史归档文件可用 DuckDB 的 `read_parquet` 查询。
+
 ## 模型
 
 只注册 AltFlow ModelHub 网关，隐藏 Mastra 公共模型供应商。目录来自 `https://modelhub.altflow.cn/v1/model-catalog` 的 `free_chat_models`，不使用包含内部路由的 `/v1/models`。

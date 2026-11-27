@@ -30,6 +30,9 @@ import {
   protectConversationResponses,
 } from './agents/reference-visibility';
 import { createAltFlowAuth } from './altflow-auth';
+import { DiskAwareStorageExporter } from './backup/guard';
+import { backupConfig, startBackups } from './backup/service';
+import { ossBackupObjects } from './backup/objects';
 import { ContextCompaction } from './context-compaction';
 import { CONTEXT_MEMORY_OPTIONS, CREATOR_MEMORY_OPTIONS } from './context-memory';
 import { localEmbedder } from './embedding';
@@ -65,6 +68,7 @@ import { userStorageRoutes } from './user-storage-routes';
 
 const previewPath = (...parts: string[]) =>
   resolve(process.env.ALTFLOW_RUNTIME_ROOT ?? process.env.MASTRA_PREVIEW_ROOT ?? process.cwd(), ...parts);
+const backups = process.env.MASTRA_BACKUP_RUNTIME === 'true' ? backupConfig(process.env) : undefined;
 const accountsOrigins = (
   process.env.STUDIO_ALLOWED_ORIGINS ??
   'http://127.0.0.1:5174,http://127.0.0.1:4111,http://localhost:5174,http://localhost:4111'
@@ -96,15 +100,16 @@ const model = defaultConversationModel;
 // Fresh checkouts have no ignored database directories yet. Create them before opening stores.
 await mkdir(previewPath('src/mastra/public'), { recursive: true });
 await mkdir(previewPath('data'), { recursive: true });
+const traceStore = new DuckDBStore({
+  path: previewPath('data/observability.duckdb'),
+  memoryLimit: process.env.ALTFLOW_TRACE_MEMORY_LIMIT ?? '1GB',
+  threads: 2,
+});
 const storage = new MastraCompositeStore({
   id: 'creator-preview-storage',
   default: new LibSQLStore({ id: 'preview-storage', url: `file:${previewPath('src/mastra/public/preview.db')}` }),
   domains: {
-    observability: new DuckDBStore({
-      path: previewPath('data/observability.duckdb'),
-      memoryLimit: process.env.ALTFLOW_TRACE_MEMORY_LIMIT ?? '1GB',
-      threads: 2,
-    }).observability,
+    observability: traceStore.observability,
   },
 });
 const projectMemory = await storage.getStore('memory');
@@ -123,17 +128,19 @@ const ossKey = process.env.ALTFLOW_OSS_ACCESS_KEY_ID;
 const ossSecret = process.env.ALTFLOW_OSS_ACCESS_KEY_SECRET;
 if (!ossKey || !ossSecret)
   throw new Error('Configure server-only ALTFLOW_OSS_ACCESS_KEY_ID and ALTFLOW_OSS_ACCESS_KEY_SECRET');
+const oss = new OSS({
+  accessKeyId: ossKey,
+  accessKeySecret: ossSecret,
+  region: process.env.ALTFLOW_OSS_REGION ?? 'oss-cn-beijing',
+  bucket: process.env.ALTFLOW_OSS_BUCKET ?? 'altflow-harness',
+  endpoint: process.env.ALTFLOW_OSS_ENDPOINT ?? 'https://oss-cn-beijing.aliyuncs.com',
+  authorizationV4: true,
+  timeout: 30000,
+});
+const fileDatabaseUrl = process.env.ALTFLOW_FILES_DATABASE_URL ?? `file:${previewPath('data/user-files.db')}`;
 const userFiles = new UserStorage({
-  client: new OSS({
-    accessKeyId: ossKey,
-    accessKeySecret: ossSecret,
-    region: process.env.ALTFLOW_OSS_REGION ?? 'oss-cn-beijing',
-    bucket: process.env.ALTFLOW_OSS_BUCKET ?? 'altflow-harness',
-    endpoint: process.env.ALTFLOW_OSS_ENDPOINT ?? 'https://oss-cn-beijing.aliyuncs.com',
-    authorizationV4: true,
-    timeout: 30000,
-  }),
-  databaseUrl: process.env.ALTFLOW_FILES_DATABASE_URL ?? `file:${previewPath('data/user-files.db')}`,
+  client: oss,
+  databaseUrl: fileDatabaseUrl,
   authToken: process.env.ALTFLOW_FILES_DATABASE_AUTH_TOKEN,
 });
 await userFiles.init();
@@ -412,7 +419,14 @@ export const mastra = new Mastra({
   editor: new MastraEditor(),
   observability: new Observability({
     configs: {
-      default: { serviceName: 'creator-preview', exporters: [new MastraStorageExporter({ maxBatchWaitMs: 500 })] },
+      default: {
+        serviceName: 'creator-preview',
+        exporters: [
+          backups
+            ? new DiskAwareStorageExporter(previewPath(), backups.diskReserveBytes)
+            : new MastraStorageExporter({ maxBatchWaitMs: 500 }),
+        ],
+      },
     },
   }),
   server: {
@@ -493,3 +507,17 @@ for (const page of [
   if (!existing) await knowledge.upsertPage({ scope: 'library:creator', ...page });
 }
 await workspace.init();
+
+if (backups) {
+  if (!fileDatabaseUrl.startsWith('file:') || fileDatabaseUrl.includes('?')) {
+    throw new Error('AltFlow backup requires a local file ledger');
+  }
+  await storage.getStore('observability');
+  startBackups({
+    config: backups,
+    root: previewPath(),
+    userFiles: resolve(fileDatabaseUrl.slice(5)),
+    db: traceStore.db,
+    storage: ossBackupObjects(oss),
+  });
+}
