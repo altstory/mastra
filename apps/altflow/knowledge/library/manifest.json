@@ -1054,5 +1054,293 @@
     "path": "theory/emotion/emotion-driven-story-sop",
     "name": "情绪驱动的故事设计四车间流水线与检查表",
     "description": "从点子到正文缺少系统流程、故事平淡无味时，按四车间九步逐阶段设计与自检"
+  },
+  {
+    "file": "theory-revisions-expression-info-gap",
+    "path": "theory/revisions/revisions-expression-info-gap",
+    "name": "常见说法的修订（一）：表达、信息差与结构",
+    "description": "表达可信度、真实感、知情配置、事件判据、转折等常见说法的更准确做法"
+  },
+  {
+    "file": "theory-revisions-emotion-character",
+    "path": "theory/revisions/revisions-emotion-character",
+    "name": "常见说法的修订（二）：情绪节奏、反派与代入",
+    "description": "节奏判据、爽点形状、压抑写法、反派、代入与钩子等常见说法的更准确做法"
+  },
+  {
+    "file": "theory-revisions-expectation-driver",
+    "path": "theory/revisions/revisions-expectation-driver",
+    "name": "常见说法的修订（三）：预期、驱动与故事原型",
+    "description": "期待四循环、驱动锚、事件驱动与十大原型的常见说法的更准确做法"
+  },
+  {
+    "file": "theory-ai-rule-system",
+    "path": "theory/ai-collab/ai-rule-system",
+    "name": "给 AI 建写作规则体系：概念、关系、裁决与自查",
+    "description": "把技巧写成 AI 能稳定执行的规则：定义、关系、优先级、条件与自查清单"
+  },
+  {
+    "file": "theory-ai-staged-flow",
+    "path": "theory/ai-collab/ai-staged-flow",
+    "name": "用 AI 写剧本的分步流程与人设对齐",
+    "description": "先大后小的分步顺序、每步由人拍板的位置、人设对齐与指令拆分"
+  },
+  {
+    "file": "theory-ai-review-and-failures",
+    "path": "theory/ai-collab/ai-review-and-failures",
+    "name": "审读、改稿与 AI 稿失控排查",
+    "description": "AI 稿的审读分级、必查项、改稿反馈、失效归因与常见失控对策"
+  },
+  {
+    "file": "theory-ai-division-and-qa",
+    "path": "theory/ai-collab/ai-division-and-qa",
+    "name": "人机分工与用 AI 写作答疑要点",
+    "description": "人与 AI 的能力分工、适用人群、协作拆法与常见疑问简答"
+  },
+  {
+    "file": "theory-main-emotion",
+    "path": "theory/supplement-emotion/main-emotion",
+    "name": "一条主情绪到底：统一情绪、核心梗与取舍",
+    "description": "用单一主情绪、复合核心梗和主线目标筛选情绪，并用情绪链压住漏洞"
+  },
+  {
+    "file": "theory-emotion-curve-design",
+    "path": "theory/supplement-emotion/emotion-curve-design",
+    "name": "情绪曲线设计：定点配事、叠加、阻断与分阶段兑现",
+    "description": "定情绪点配事件，用叠加阻断展开，分落脚点兑现承诺并倒着写"
+  },
+  {
+    "file": "theory-pressure-and-payoff",
+    "path": "theory/supplement-emotion/pressure-and-payoff",
+    "name": "压抑与爽感补遗：三种压法、三个度与六种爽",
+    "description": "压抑的三种压法和三个度，爽点原理补遗，六种爽与匮乏点共情点找法"
+  },
+  {
+    "file": "theory-expectation-supplement",
+    "path": "theory/supplement-expectation/expectation-supplement",
+    "name": "预期拉扯补遗：两把手、归零开关与多期待并行",
+    "description": "拉扯改现实或改欲望、归零开关、多线期待共用放大、三层目标"
+  },
+  {
+    "file": "theory-emotion-four-stages-and-outline",
+    "path": "theory/supplement-expectation/emotion-four-stages-and-outline",
+    "name": "情绪四阶段与十序列大纲补遗",
+    "description": "四阶段各自的禁忌与判据，十序列危机、觉醒、高潮与取舍标准"
+  },
+  {
+    "file": "theory-pacing-practice",
+    "path": "theory/supplement-expectation/pacing-practice",
+    "name": "节奏实战：全剧动态分配、过渡直给与节奏感练习",
+    "description": "长剧大中小事件排布、过渡直给、用事件篇幅表练节奏感"
+  },
+  {
+    "file": "theory-info-gap-practice",
+    "path": "theory/supplement-expectation/info-gap-practice",
+    "name": "信息差实战补遗：落差大小、势能累积、知情配置与共享秘密",
+    "description": "把信息差当信念落差来设计：信息表、养大点爆、观众知情配置、双层信息差、共享秘密局"
+  },
+  {
+    "file": "theory-hooks-practice",
+    "path": "theory/supplement-expectation/hooks-practice",
+    "name": "钩子实战补遗：事实钩子与情绪、断点选择与揭示闭环",
+    "description": "钩子落在事实上、断点怎么选、信息差钩子拉扯闭环、被打断的揭示与反常选择"
+  },
+  {
+    "file": "theory-character-believability-three-conditions",
+    "path": "theory/supplement-character/character-believability-three-conditions",
+    "name": "人物可信三条件与反差的三种用法、表演档位",
+    "description": "丰富、与观众一致、影子投射三条件，及强反差与浓度档位的用法"
+  },
+  {
+    "file": "theory-character-change-two-reasons",
+    "path": "theory/supplement-character/character-change-two-reasons",
+    "name": "人物转变的两种动机检验与反转人物写法",
+    "description": "用事实动机与情绪动机检验转变；好人变坏、反水、穿成反派的写法"
+  },
+  {
+    "file": "theory-charm-three-layers",
+    "path": "theory/supplement-character/charm-three-layers",
+    "name": "人物深层魅力三层阶梯：呈现、认可、共命运",
+    "description": "标签之外，用事件里的选择立住人物，并让观众认可、与角色共担命运"
+  },
+  {
+    "file": "theory-true-dilemma-construction",
+    "path": "theory/supplement-character/true-dilemma-construction",
+    "name": "两难选择的正确构造：两边都放不下",
+    "description": "纠正\"两难=难选\"的误解，给出构造两难与放置时机的方法"
+  },
+  {
+    "file": "theory-driver-loop-immortal-role",
+    "path": "theory/supplement-character/driver-loop-immortal-role",
+    "name": "人物驱动的循环与\"角色不死\"",
+    "description": "用展现—认可—两难—重塑的循环让人物驱动撑起长篇"
+  },
+  {
+    "file": "theory-permission-and-real-details",
+    "path": "theory/supplement-character/permission-and-real-details",
+    "name": "观众许可：卖点内可不讲理，卖点外必须真",
+    "description": "划分哪里能不讲理、哪里必须写真，附阅历、过度真实与简单人设的处理"
+  },
+  {
+    "file": "theory-safety-valve-and-translator",
+    "path": "theory/supplement-character/safety-valve-and-translator",
+    "name": "强人设主角的配角：安全阀与翻译官",
+    "description": "极端人设的主角靠普通配角拦住越线、替观众说出想法，兼顾人设不破与观众共鸣"
+  },
+  {
+    "file": "theory-mutual-taming-dual-strong-couple",
+    "path": "theory/supplement-character/mutual-taming-dual-strong-couple",
+    "name": "双强相爱相杀：互相驯服的关系结构",
+    "description": "两个强势角色互相吸引又互想改造对方，形成持续戏剧性"
+  },
+  {
+    "file": "theory-unshakable-self-belief-strong-characters",
+    "path": "theory/supplement-character/unshakable-self-belief-strong-characters",
+    "name": "强人物的魅力核：不自我怀疑，及其动摇时刻作为转折点",
+    "description": "把“坚信自己”设为强人物的外显特质，并把首次怀疑设计成关系与情节节点"
+  },
+  {
+    "file": "theory-short-vs-long-character",
+    "path": "theory/supplement-character/short-vs-long-character",
+    "name": "短篇与长篇的人物写法分野：吃瓜型与代入型",
+    "description": "按篇幅分两套人物规则：短篇重对手与冲突，长篇重代入、弧光与背景"
+  },
+  {
+    "file": "theory-supporting-roles-and-rivals",
+    "path": "theory/supplement-character/supporting-roles-and-rivals",
+    "name": "配角替主角选与对手按题材写：双强、另一主角与小人物视角",
+    "description": "主角做不出的选择交给配角，悬疑对手要双强，长线对手当另一主角写"
+  },
+  {
+    "file": "theory-truth-falsehood-game",
+    "path": "theory/supplement-event/truth-falsehood-game",
+    "name": "事件设计底层：真假加博弈，让观众自己发现",
+    "description": "把悬疑与权谋还原成假象和资源博弈，适用于所有题材"
+  },
+  {
+    "file": "theory-event-rich-colorful-rulers",
+    "path": "theory/supplement-event/event-rich-colorful-rulers",
+    "name": "事件的\"丰富\"与\"多彩\"：两把尺子与复杂度清单",
+    "description": "用目的判对错，用转折与真假判好坏，并按需控制复杂度"
+  },
+  {
+    "file": "theory-worldbuilding-as-glue",
+    "path": "theory/supplement-event/worldbuilding-as-glue",
+    "name": "世界观是粘合剂：先捋人物事件，再边设边推",
+    "description": "世界观不要先行做完：用设定粘住人物与事件，并控制出场时机"
+  },
+  {
+    "file": "theory-driver-knowledge-direction-and-starts",
+    "path": "theory/supplement-event/driver-knowledge-direction-and-starts",
+    "name": "三种驱动的知情方向与起手步骤",
+    "description": "三种驱动各用不同的知情方向；说明为何不能拉满，并给出各自的起手三步"
+  },
+  {
+    "file": "theory-obstacle-choice-ending",
+    "path": "theory/supplement-event/obstacle-choice-ending",
+    "name": "阻碍逼出选择，选择生成结局：从目标受阻推分支",
+    "description": "给目标设反向阻碍，由性格与背景推出几条路，每条路通向不同结局"
+  },
+  {
+    "file": "theory-worldbuilding-supplement",
+    "path": "theory/supplement-event/worldbuilding-supplement",
+    "name": "世界观设计补遗：基调、势力秘密、激励大小与序列挂法",
+    "description": "创世定基调，势力须有核心秘密，激励大小适中，转折换阵营"
+  },
+  {
+    "file": "theory-event-reverse-supplement",
+    "path": "theory/supplement-event/event-reverse-supplement",
+    "name": "事件驱动倒推补遗：灾难不当对手、卖点定主角强弱与高潮分量",
+    "description": "倒推主角时的判据：灾难要有人替身、卖点定强弱、动机加反向关系"
+  },
+  {
+    "file": "theory-comedy-supplement",
+    "path": "theory/supplement-event/comedy-supplement",
+    "name": "喜剧补遗：笑的三个来源、痛点要有不合理处与结构喜剧三玩法",
+    "description": "笑点撑不起故事，结构喜剧靠压力解除；找具体的、不合理的共同痛点"
+  },
+  {
+    "file": "theory-uncertainty-fear-and-mystery",
+    "path": "theory/supplement-event/uncertainty-fear-and-mystery",
+    "name": "恐惧与不确定：期限、未知与周边六项动摇",
+    "description": "恐惧的重新定义、让主角周围一切不可信、悬疑不乱改共识"
+  },
+  {
+    "file": "theory-deliberate-design-timing",
+    "path": "theory/supplement-craft/deliberate-design-timing",
+    "name": "动作台词场景的刻意设计时机：重点戏与场景三处",
+    "description": "只在重点戏精雕动作台词，场景只在三处用力，其余正常写"
+  },
+  {
+    "file": "theory-text-vs-screen",
+    "path": "theory/supplement-craft/text-vs-screen",
+    "name": "文字语言与画面语言的差异：从文字改画面的取舍",
+    "description": "判断哪些内容能直接搬上画面，哪些必须换写法"
+  },
+  {
+    "file": "theory-scene-atmosphere-experience-expression",
+    "path": "theory/supplement-craft/scene-atmosphere-experience-expression",
+    "name": "画面与氛围靠阅历：没感知过的东西，表达多半是错的",
+    "description": "影视编剧要靠生活感知写出场景氛围，并以对方理解为表达标准"
+  },
+  {
+    "file": "theory-technique-as-problem-solver",
+    "path": "theory/supplement-craft/technique-as-problem-solver",
+    "name": "技巧按问题选用：先问解决什么毛病、为何生效、何时失效",
+    "description": "用“毛病—工具”对应与原理说明，避免技巧换场景就失效"
+  },
+  {
+    "file": "theory-author-growth-observe-dissect-cross-verify",
+    "path": "theory/supplement-craft/author-growth-observe-dissect-cross-verify",
+    "name": "作者成长的四个做法：认清差距、反向拆解、观察自己、杂学交叉验证",
+    "description": "把工具与见识结合：定阶段目标、拆别人作品、记录触动、跨领域找底层逻辑"
+  },
+  {
+    "file": "theory-ensemble-and-long-form-answers",
+    "path": "theory/qa/ensemble-and-long-form-answers",
+    "name": "答疑要点：群像、拉扯感、成长与无主题长篇",
+    "description": "群像接力棒、两人拉扯、配角压主角、主角是否成长、长篇补主题"
+  },
+  {
+    "file": "theory-supplementary-points",
+    "path": "theory/qa/supplementary-points",
+    "name": "补充要点：付费心理、受众分层、赛道与学习方法",
+    "description": "付费心理两型、同频道受众分层、赛道取舍、理论学习与验证方法"
+  },
+  {
+    "file": "theory-qa-supplements",
+    "path": "theory/qa/qa-supplements",
+    "name": "答疑与补充要点：选型漂移、目的性与创作自检",
+    "description": "零碎但有用的创作判断与自检方法"
+  },
+  {
+    "file": "theory-qa-points",
+    "path": "theory/qa/qa-points",
+    "name": "创作答疑要点：欲望、多线、群像、心态与诊断",
+    "description": "汇总答疑中有普适价值的创作判断与自查方法"
+  },
+  {
+    "file": "theory-qa-notes",
+    "path": "theory/qa/qa-notes",
+    "name": "答疑要点：观众动机、题材选择、同质化与说教",
+    "description": "汇总观众为何付费、写什么题材、同质化与说教等常见创作问答"
+  },
+  {
+    "file": "theory-emotion-misc-b",
+    "path": "theory/qa/emotion-misc-b",
+    "name": "补充要点：六种爽、匮乏点、共情点的找法与作者经历的边界",
+    "description": "六种爽的分类、按匮乏点配爽、用评论找共情、经历决定能写什么"
+  },
+  {
+    "file": "theory-research-audience-practice",
+    "path": "theory/qa/research-audience-practice",
+    "name": "研究观众的练习法：三阶段、归纳深挖放大、对错与好坏",
+    "description": "从自己入手、读评论、归类；把现实痛点放大成情节；判断买不买账"
+  },
+  {
+    "file": "theory-character-misc-a",
+    "path": "theory/qa/character-misc-a",
+    "name": "补充要点：反常选择的钩子、价值观对立、读者情绪与题材偏好",
+    "description": "反常选择先留钩子后回忆、价值观是对立不是对错、同选异果种心锚等"
   }
 ]

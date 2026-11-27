@@ -103,5 +103,45 @@
     "path": "theory/genre-design",
     "name": "悬疑、权谋、世界观与喜剧设计",
     "description": "后台逻辑设计与前台展开：悬疑、权谋、世界观创世、喜剧模型与快叙事。"
+  },
+  {
+    "path": "theory/revisions",
+    "name": "常见说法的修订",
+    "description": "一些常见写法的更准确做法：表达、信息差、情绪节奏、反派、预期、驱动与原型。"
+  },
+  {
+    "path": "theory/ai-collab",
+    "name": "与 AI 协作写作",
+    "description": "怎样给 AI 建规则、分步写剧本、审读改稿、排查失控，以及人机分工。"
+  },
+  {
+    "path": "theory/supplement-emotion",
+    "name": "情绪与爽感补遗",
+    "description": "主情绪、情绪曲线设计、压抑与爽感的补充方法。"
+  },
+  {
+    "path": "theory/supplement-expectation",
+    "name": "预期、节奏、信息差与钩子补遗",
+    "description": "预期拉扯、情绪四阶段、节奏实战、信息差与钩子的补充方法。"
+  },
+  {
+    "path": "theory/supplement-character",
+    "name": "人物写法补遗",
+    "description": "人物可信度、转变、魅力、两难、配角与强人物的补充方法。"
+  },
+  {
+    "path": "theory/supplement-event",
+    "name": "事件、类型与世界观补遗",
+    "description": "事件设计、悬疑权谋、世界观、喜剧、恐惧与原型的补充方法。"
+  },
+  {
+    "path": "theory/supplement-craft",
+    "name": "表达与成长补遗",
+    "description": "动作台词场景的设计时机、文字与画面、阅历与作者成长的方法。"
+  },
+  {
+    "path": "theory/qa",
+    "name": "创作答疑",
+    "description": "创作中常见问题的简短结论与自检方法。"
   }
 ]
