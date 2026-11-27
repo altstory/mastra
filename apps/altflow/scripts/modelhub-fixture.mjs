@@ -50,6 +50,7 @@ export async function modelHubFixture() {
     toolCallText: undefined,
     toolCall: undefined,
     replyParts: undefined,
+    beforeReplyFinish: undefined,
     blocked: false,
     summaryText: '## Primary Request and Intent\n- Preserve original task.\n## Current Work\n- Continue the task.',
     summaryFinish: 'stop',
@@ -136,6 +137,7 @@ export async function modelHubFixture() {
           : state.replyParts.map(content => ({ role: 'assistant', content }))) {
           response.write('data: ' + JSON.stringify(chunk(part)) + '\n\n');
         }
+        if (!callTool && !summarizing) await state.beforeReplyFinish?.();
         response.write(
           'data: ' +
             JSON.stringify({

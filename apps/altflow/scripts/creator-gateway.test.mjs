@@ -12,6 +12,7 @@ import { MastraServer } from '@mastra/hono';
 import { CreatorMemory } from '../src/mastra/agents/creator-memory.ts';
 import { CREATOR_MEMORY_OPTIONS } from '../src/mastra/context-memory.ts';
 import { createAltFlowAuth } from '../src/mastra/altflow-auth.ts';
+import { internalReferencePolicy } from '../src/mastra/agents/internal-reference-policy.ts';
 import { protectConversationResponses } from '../src/mastra/agents/reference-visibility.ts';
 import { ModelHubGateway } from '../src/mastra/modelhub-gateway.ts';
 import {
@@ -53,6 +54,12 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const f = await fixture(t);
   const hub = await modelHubFixture();
   t.after(hub.close);
+  const finishReply = Promise.withResolvers();
+  const firstFragment = '门廊里落着一把雨伞，';
+  const nextFragment = '她沿着走廊往前走看见窗外最后一束光落在对面空房的屋顶';
+  const finalFragment = '远处的钟声穿过雨幕她回头确认同行的人都已经走过长桥';
+  hub.state.replyParts = [firstFragment, nextFragment + finalFragment];
+  hub.state.beforeReplyFinish = () => finishReply.promise;
   const { store } = await setup(t, 4096);
   const files = new ConversationFiles(store);
   const catalog = new ModelHubGateway({ apiKey: 'fixture', baseURL: hub.baseURL });
@@ -88,7 +95,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   const agent = new Agent({
     id: 'creator-agent',
     name: 'Creator',
-    instructions: 'Write a short response.',
+    instructions: 'Write a short response.\n' + internalReferencePolicy,
     model: await catalog.resolveLanguageModel({ modelId: 'qwen3.8-max' }),
     memory,
     tools: {
@@ -192,7 +199,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
       const next = await reader.read();
       if (next.done) return;
       streamed += new TextDecoder().decode(next.value);
-      if (streamed.includes('verified')) return;
+      if (streamed.includes('都已经走过长桥')) return;
     }
   })();
   live.catch(() => {});
@@ -208,10 +215,20 @@ test('signed creator admission, native thread delivery and billed model usage sh
     },
   };
   const send = () => request('/creator-gateway/send', { method: 'POST', body, operation: operationId });
-  const accepted = await send();
-  await assertStatus(accepted, 200);
-  const receipt = await accepted.json();
-  assert.ok(receipt.runId);
+  const receipt = await (async () => {
+    try {
+      const accepted = await send();
+      await assertStatus(accepted, 200);
+      const result = await accepted.json();
+      assert.ok(result.runId);
+      await until(() => streamed.includes(firstFragment));
+      await until(() => streamed.includes('她沿着走廊往前走'));
+      assert.ok(!streamed.includes('都已经走过长桥'));
+      return result;
+    } finally {
+      finishReply.resolve();
+    }
+  })();
   assert.deepEqual(await (await send()).json(), receipt);
   const settled = await until(async () => {
     const data = await (await request('/creator-gateway/operation', { operation: operationId })).json();
@@ -222,7 +239,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
     const current = await (await request('/creator-gateway/operation', { operation: operationId })).json();
     return current.title && current;
   });
-  assert.equal(titled.title, 'verified');
+  assert.equal(titled.title, hub.state.replyParts.join(''));
   const titleRequests = () => hub.state.requests.filter(request => request.body.max_tokens === 256);
   const chatRequests = () => hub.state.requests.filter(request => request.body.max_tokens !== 256);
   assert.equal(titleRequests().length, 1);
@@ -232,7 +249,7 @@ test('signed creator admission, native thread delivery and billed model usage sh
   assert.equal(chatRequests().length, 1);
   assert.match(JSON.stringify(hub.state.requests[0].body.messages), /Only A working memory marker/);
   assert.equal(hub.state.requests[0].body.modelhub_reasoning_effort, 'high');
-  await until(() => streamed.includes('verified'));
+  await until(() => streamed.includes('都已经走过长桥'));
   await reader.cancel();
   await live;
   const history = await request('/memory/threads/' + threadId + '/messages?agentId=creator-agent');

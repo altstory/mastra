@@ -22,6 +22,11 @@ const sourceField =
 const metadataField = /^(?:name|title|slug|path|ref|address)$/i;
 const excerptSize = 24;
 const excerptStride = 12;
+const sentenceBoundary = /[\n。！？!?]/u;
+const fragmentBoundary = /[\s。！？!?，、；：,;]/u;
+const afterLastSentence = /[^\n。！？!?]*$/u;
+const afterLastFragment = /[^\s。！？!?，、；：,;]*$/u;
+const han = /^\p{Script=Han}$/u;
 const pinnedKnowledge = /^\s*<pinned-knowledge(?:[\s>-])/u;
 const normalize = (text: string) =>
   text
@@ -98,13 +103,32 @@ export function referenceOutputGuard(prompt: ChatPrompt) {
   });
   const excerpts = new Set(protectedText.filter(phrase => phrase.length === excerptSize));
   const metadata = new Set(protectedText.filter(phrase => phrase.length !== excerptSize));
+  const protectedPhrases = [...new Set(protectedText)].sort();
+  const maxPhraseLength = protectedPhrases.reduce((max, phrase) => Math.max(max, phrase.length), 0);
+
+  const mayCompleteProtectedPhrase = (text: string, cut: number) => {
+    const prefixLength = normalize(text.slice(0, cut)).length;
+    const normalized = normalize(text);
+    for (let i = Math.max(0, normalized.length - maxPhraseLength + 1); i < prefixLength; i++) {
+      const suffix = normalized.slice(i);
+      let low = 0;
+      let high = protectedPhrases.length;
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (protectedPhrases[mid]! < suffix) low = mid + 1;
+        else high = mid;
+      }
+      if (protectedPhrases[low]?.startsWith(suffix)) return true;
+    }
+    return false;
+  };
 
   const blocked = (text: string, inputs: string[]) => {
     if (asksForReferences) return true;
     for (const candidate of [text, ...inputs]) {
       if (sourceIdentifier.test(candidate)) return true;
       if (
-        candidate.split(/[\n。！？!?]/u).some(line => referenceDescription.test(line) && disclosureContext.test(line))
+        candidate.split(sentenceBoundary).some(line => referenceDescription.test(line) && disclosureContext.test(line))
       )
         return true;
       const normalized = normalize(candidate);
@@ -134,8 +158,18 @@ export function referenceOutputGuard(prompt: ChatPrompt) {
       };
     },
     stream(result: Streamed): Streamed {
-      const pending: StreamPart[] = [];
+      let pending: StreamPart[] = [];
+      let text = '';
+      let sentSentence = '';
+      let sawTool = false;
+      let rejected = asksForReferences;
       let finished = false;
+      const openText = new Set<string>();
+      const emit = (part: StreamPart, controller: TransformStreamDefaultController<StreamPart>) => {
+        if (part.type === 'text-start') openText.add(part.id);
+        if (part.type === 'text-end') openText.delete(part.id);
+        controller.enqueue(part);
+      };
       return {
         ...result,
         stream: result.stream.pipeThrough(
@@ -147,15 +181,63 @@ export function referenceOutputGuard(prompt: ChatPrompt) {
                 return;
               }
               if (part.type !== 'finish') {
+                if (rejected) return;
                 pending.push(part);
+                if (part.type.startsWith('tool-')) sawTool = true;
+                if (part.type !== 'text-delta') return;
+                text += part.delta;
+                if (sawTool || (text.length < excerptSize * 2 && !fragmentBoundary.test(text))) return;
+                if (blocked(sentSentence + text, [])) {
+                  rejected = true;
+                  return;
+                }
+                const lastSentence = text.search(afterLastSentence);
+                const sentenceTail = (lastSentence ? '' : sentSentence) + text.slice(lastSentence);
+                let cut = lastSentence;
+                if (!referenceDescription.test(sentenceTail)) {
+                  cut = text.search(afterLastFragment);
+                  const incrementalCut = text.length - excerptSize;
+                  if (
+                    incrementalCut - cut >= excerptSize &&
+                    han.test(text[incrementalCut - 1]!) &&
+                    han.test(text[incrementalCut]!)
+                  ) {
+                    cut = incrementalCut;
+                  }
+                }
+                if (cut === 0 || mayCompleteProtectedPhrase(text, cut)) return;
+                const remaining: StreamPart[] = [];
+                let sent = 0;
+                for (const chunk of pending) {
+                  if (chunk.type === 'text-delta' && sent < cut) {
+                    const size = Math.min(chunk.delta.length, cut - sent);
+                    emit({ ...chunk, delta: chunk.delta.slice(0, size) }, controller);
+                    sent += size;
+                    if (size < chunk.delta.length) remaining.push({ ...chunk, delta: chunk.delta.slice(size) });
+                  } else if (chunk.type === 'text-start' && sent < cut) {
+                    emit(chunk, controller);
+                  } else if (
+                    chunk.type === 'text-end' &&
+                    openText.has(chunk.id) &&
+                    !remaining.some(item => item.type === 'text-delta' && item.id === chunk.id)
+                  ) {
+                    emit(chunk, controller);
+                  } else {
+                    remaining.push(chunk);
+                  }
+                }
+                pending = remaining;
+                const sentText = sentSentence + text.slice(0, cut);
+                sentSentence = sentText.slice(sentText.search(afterLastSentence));
+                text = text.slice(cut);
                 return;
               }
               finished = true;
-              const text = pending.flatMap(chunk => (chunk.type === 'text-delta' ? [chunk.delta] : [])).join('');
               const inputs = pending.flatMap(chunk =>
                 chunk.type === 'tool-call' ? publicInput(chunk.toolName, chunk.input) : [],
               );
-              if (blocked(text, inputs)) {
+              if (rejected || blocked(sentSentence + text, inputs)) {
+                for (const id of openText) controller.enqueue({ type: 'text-end', id });
                 const id = 'reference-redirect';
                 controller.enqueue({ type: 'text-start', id });
                 controller.enqueue({ type: 'text-delta', id, delta: referenceRedirect });
