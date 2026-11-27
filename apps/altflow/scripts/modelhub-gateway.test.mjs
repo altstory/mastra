@@ -10,7 +10,45 @@ import { MastraStorageExporter, Observability } from '@mastra/observability';
 import { ModelHubGateway } from '../src/mastra/modelhub-gateway.ts';
 import { HistoryMemory } from '../src/mastra/agents/history-memory.ts';
 import { internalReferencePolicy, referenceRedirect } from '../src/mastra/agents/internal-reference-policy.ts';
+import { projectConversation } from '../src/mastra/agents/reference-visibility.ts';
 import { modelHubFixture } from './modelhub-fixture.mjs';
+
+test('creator records a normal script choice in internal working memory and continues the creative reply', async t => {
+  const hub = await modelHubFixture();
+  t.after(hub.close);
+  const gateway = new ModelHubGateway({ apiKey: 'test', baseURL: hub.baseURL });
+  const model = await gateway.resolveLanguageModel({ modelId: 'qwen3.8-max' });
+  const template =
+    '# 当前目标\n\n# 本轮已确认事项（含来源）\n\n# 候选方案与假设（未确认）\n\n# 待用户决定\n\n# 执行进度与下一步\n\n# 相关文档与版本';
+  const notes = template + '\n用户已选择互动剧本（观众做选择），题材为穿越轮回循环。';
+  const answer = '主角每次重来都能保留一条线索，让观众决定下一次先改变谁的命运。';
+  const storage = new LibSQLStore({ id: 'internal-memory-fixture', url: ':memory:' });
+  const memory = new HistoryMemory({
+    storage,
+    options: { generateTitle: false, workingMemory: { enabled: true, scope: 'thread', template } },
+  });
+  const agent = new Agent({
+    id: 'internal-memory-creator',
+    name: 'Creator',
+    model,
+    memory,
+    instructions: internalReferencePolicy,
+  });
+  hub.state.toolCall = { name: 'updateWorkingMemory', args: { memory: notes } };
+  hub.state.replyParts = [answer];
+  for (const mode of ['generate', 'stream']) {
+    const thread = 'internal-memory-' + mode;
+    const options = { memory: { thread, resource: 'creator' } };
+    const result = await agent[mode]('我想做穿越轮回循环的短剧。选择互动剧本（观众做选择）。', options);
+    assert.equal(await result.text, answer);
+    assert.equal(await memory.getWorkingMemory({ threadId: thread, resourceId: 'creator' }), notes);
+    const { messages } = await memory.recall({ threadId: thread, resourceId: 'creator' });
+    const visible = JSON.stringify(projectConversation(messages));
+    assert.ok(visible.includes(answer));
+    assert.doesNotMatch(visible, /updateWorkingMemory|本轮已确认事项|我们换个话题吧/);
+    assert.ok(JSON.stringify(hub.state.requests.at(-1).body.messages).includes('互动剧本'));
+  }
+});
 
 test('creator replies replace a split private disclosure before streaming or executing its tool call', async t => {
   const hub = await modelHubFixture();

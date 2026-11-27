@@ -1,6 +1,6 @@
 import type { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { internalReferencePolicy, referenceRedirect } from './internal-reference-policy';
-import { isPrivateReferenceTool } from './reference-visibility';
+import { isInternalTool, isPrivateReferenceTool } from './reference-visibility';
 
 type ChatModel = ReturnType<ReturnType<typeof createOpenAICompatible>['chatModel']>;
 type ChatPrompt = Parameters<ChatModel['doGenerate']>[0]['prompt'];
@@ -139,8 +139,7 @@ export function referenceOutputGuard(prompt: ChatPrompt) {
     }
     return false;
   };
-  const publicInput = (name: string, input: string) =>
-    isPrivateReferenceTool(name) ? [] : outputStrings(decoded(input));
+  const publicInput = (name: string, input: string) => (isInternalTool(name) ? [] : outputStrings(decoded(input)));
 
   return {
     generate(result: Generated): Generated {
