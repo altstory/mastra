@@ -75,7 +75,7 @@ async function compactDatabase(root, source, before, automatic) {
         );
         for (const { table_name: name } of names) {
           const table = '"' + name.replaceAll('"', '""') + '"';
-          const fingerprint = `SELECT COUNT(*) AS n, bit_xor(hash(to_json(t))) AS checksum FROM ${table} t`;
+          const fingerprint = `SELECT COUNT(*) AS n, bit_xor(hash(t)) AS checksum FROM ${table} t`;
           const [a] = await live.db.query(fingerprint);
           const [b] = await copy.db.query(fingerprint);
           if (a.n !== b.n || a.checksum !== b.checksum) throw Error('Compacted database differs from source');
