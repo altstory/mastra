@@ -112,6 +112,12 @@ export function backupConfig(env: NodeJS.ProcessEnv) {
       .int()
       .positive()
       .parse(env.ALTFLOW_BACKUP_DISK_WARNING_BYTES ?? 2 * 1024 ** 3),
+    intervalMinutes: z.coerce
+      .number()
+      .int()
+      .min(5)
+      .max(1440)
+      .parse(env.ALTFLOW_BACKUP_INTERVAL_MINUTES ?? 60),
   };
 }
 
@@ -176,7 +182,7 @@ export function startBackups({
     }
   }
 
-  const timer = setInterval(() => void run(), 15 * 60_000);
+  const timer = setInterval(() => void run(), config.intervalMinutes * 60_000);
   timer.unref();
   void run();
   return () => clearInterval(timer);

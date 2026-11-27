@@ -40,7 +40,7 @@ pnpm exec turbo build --filter=@internal/altflow --concurrency=1
 
 在 Agent 的 `.env` 设置 `ALTFLOW_BACKUP_PREFIX=altflow-backups/production-agent`，然后用 `start` 或 `start:prebuilt` 启动。每套部署使用独立前缀，只运行一个写入进程。备份复用应用的私有 OSS 配置，凭证需要对备份前缀有读取、写入、列举和清理权限。
 
-- Agent 启动后立即备份，每 15 分钟检查一次。业务库每天成功备份一次，日期按 UTC 计算。会话、工作记忆、知识库、数据集、向量和用户文件索引取 SQLite 一致性快照，同时保存索引引用的 OSS 文件正文。每个数据库各自取快照。
+- Agent 启动后立即备份，默认每 60 分钟检查一次，可用 `ALTFLOW_BACKUP_INTERVAL_MINUTES` 调整（5 到 1440）。业务库每天成功备份一次，日期按 UTC 计算。会话、工作记忆、知识库、数据集、向量和用户文件索引取 SQLite 一致性快照，同时保存索引引用的 OSS 文件正文。每个数据库各自取快照。
 - 备份用 4 MiB 原始数据块计算 SHA-256，逐块压缩。相同数据块只保存一个对象，各恢复点用清单引用数据块。单个对象小于 1 GiB。
 - 首次启用时，`ALTFLOW_BACKUP_CLEANUP=false` 会保留本地 Trace，用于检查归档和恢复。开启 `ALTFLOW_BACKUP_CLEANUP=true` 后，已结束且超过 7 天的 Trace 才进入清理范围。每批先上传和回读校验，再删除内容仍与归档一致的本地记录。上传失败会保留记录，供下次重试。近期 Trace 有独立恢复点，已归档历史可离线读取 Parquet。
 - OSS 默认保留 90 天 Trace 归档，以及最近 7 个日、4 个周、3 个月的业务恢复点，重叠恢复点只留一份。没有保留清单引用的数据块经过 7 天宽限期再回收。OSS 备份前缀超过默认 10 GiB 会写告警。请勿配置按对象年龄直接删除共享数据块的 OSS 生命周期规则。启用版本控制时，单独配置非当前版本的保留期限，否则删除后的版本仍会占用容量。
