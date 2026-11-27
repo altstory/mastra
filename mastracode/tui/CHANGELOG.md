@@ -1,5 +1,44 @@
 # mastracode
 
+## 0.51.0-alpha.4
+
+### Patch Changes
+
+- Updated dependencies [[`d2ac0b7`](https://github.com/mastra-ai/mastra/commit/d2ac0b705c184143ae9af79ffad282fbdd90fc6f), [`c5a632e`](https://github.com/mastra-ai/mastra/commit/c5a632e892d70f330de4bc2bf5a9054b91186405), [`9047217`](https://github.com/mastra-ai/mastra/commit/904721797d4576fdd0afaabee7da8fc7e5a72792), [`0d5613a`](https://github.com/mastra-ai/mastra/commit/0d5613a29c62d540370a72c485efff4059e151f8)]:
+  - @mastra/core@1.87.0-alpha.3
+  - @mastra/code-sdk@1.22.0-alpha.3
+
+## 0.51.0-alpha.3
+
+### Patch Changes
+
+- Updated dependencies [[`67c1571`](https://github.com/mastra-ai/mastra/commit/67c15714862bbc881bb5191a079abc39ec62c45e)]:
+  - @mastra/core@1.87.0-alpha.2
+  - @mastra/code-sdk@1.22.0-alpha.2
+
+## 0.51.0-alpha.2
+
+### Minor Changes
+
+- Menus now open in place of the prompt instead of as pop-ups over the chat. This includes `/settings`, `/models` and its sub-menus, `/theme`, `/goal`, `/think`, `/threads`, `/login` and the other commands that open a menu. While the full-screen setup is open, menus still appear on top of it. ([#28476](https://github.com/mastra-ai/mastra/pull/28476))
+
+  - **Lists** share the same layout: type to filter, arrow keys wrap around, the list scrolls only when the cursor reaches its edge, labels and descriptions line up in columns, and Backspace on an empty search goes back. Menus with letter shortcuts (such as `/mcp`) and text inputs keep their own keys.
+  - **Height:** a menu fits the terminal it opens in and keeps its height while you filter. Closing it brings back the chat rows it covered. Menus in the prompt's place ignore the `maxHeight` overlay option.
+  - **Breadcrumbs:** settings submenus show where you are ("settings › notifications").
+  - **API keys:** `/api-keys` removes a stored key with Delete only (Fn+Delete on a Mac laptop). Backspace used to remove it too; it now edits the search, and closes the menu when the search is empty.
+  - **Suggestions:** command suggestions no longer scroll the chat or leave blank rows under the status line.
+  - **Loading:** slow menus such as `/models` and `/model` show a loading row right away. Esc cancels only the menu it was waiting for.
+
+  `ModelSelectorComponent` no longer draws its own title, hint line or search field, and `titleColor` has no effect. `getSearchInput()` was removed. If you used it to filter the models, use `setFilter()`:
+
+  ```ts
+  // Before
+  selector.getSearchInput().setValue('gpt');
+
+  // After
+  selector.setFilter('gpt');
+  ```
+
 ## 0.51.0-alpha.1
 
 ### Minor Changes

@@ -1,4 +1,5 @@
 import { getIntlLocale } from '@/lib/i18n';
+import { formatClock } from '@/utils/date-format';
 
 /** Axis and tooltip labels for chart buckets, shared by the Metrics and Requests charts. */
 
@@ -20,7 +21,7 @@ export type BucketLabels = {
 };
 
 const fmtDay = (d: Date) => d.toLocaleDateString(getIntlLocale(), { month: 'short', day: 'numeric' });
-const fmtHour = (d: Date) => d.toLocaleTimeString(getIntlLocale(), { hour: 'numeric' });
+const fmtHour = (d: Date) => formatClock(d) ?? '';
 
 export function bucketLabels(ts: number, stepHours: number, multiDay: boolean): BucketLabels {
   const d = new Date(ts);
@@ -39,11 +40,10 @@ export function bucketLabels(ts: number, stepHours: number, multiDay: boolean): 
       }),
     };
   }
-  const time = d.toLocaleString(getIntlLocale(), { month: 'short', day: 'numeric', hour: 'numeric' });
-  const edgeLabel = time;
-  if (!multiDay) return { ts, label: fmtHour(d), edgeLabel, time };
+  const edgeLabel = `${fmtDay(d)}, ${fmtHour(d)}`;
+  if (!multiDay) return { ts, label: fmtHour(d), edgeLabel, time: edgeLabel };
   // Over several days the axis labels midnights with the day alone, other ticks with the hour.
-  return { ts, label: d.getHours() === 0 ? fmtDay(d) : edgeLabel, edgeLabel, time };
+  return { ts, label: d.getHours() === 0 ? fmtDay(d) : edgeLabel, edgeLabel, time: edgeLabel };
 }
 
 /** Reformat cached chart buckets when the interface language changes. */

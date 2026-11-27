@@ -4869,6 +4869,11 @@ export const en = {
   'Loading knowledge': 'Loading knowledge',
   'Loading more': 'Loading more',
   'Loading older logs': 'Loading older logs',
+  'Loading newer logs': 'Loading newer logs',
+  'Cancelled. The agent continues once its current response finishes.':
+    'Cancelled. The agent continues once its current response finishes.',
+  'Search or pick a provider to see all models.': 'Search or pick a provider to see all models.',
+  'Search to see the rest.': 'Search to see the rest.',
   'Loading sessions': 'Loading sessions',
   'Loading {value0} column': 'Loading {value0} column',
   'Log filters': 'Log filters',

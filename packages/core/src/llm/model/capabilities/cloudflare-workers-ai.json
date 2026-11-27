@@ -41,21 +41,20 @@
     "@cf/zai-org/glm-5.3"
   ],
   "reasoning": {
-    "@cf/google/gemma-4-26b-a4b-it": [
+    "@cf/zai-org/glm-5.3": [
+      {
+        "type": "effort",
+        "values": ["low", "high", "max"]
+      }
+    ],
+    "@cf/zai-org/glm-4.7-flash": [
       {
         "type": "toggle"
       }
     ],
-    "@cf/deepseek-ai/deepseek-v4.1-flash-1017": [
+    "@cf/google/gemma-4-26b-a4b-it": [
       {
-        "type": "effort",
-        "values": ["none", "low", "high", "max"]
-      }
-    ],
-    "@cf/openai/gpt-oss-20b": [
-      {
-        "type": "effort",
-        "values": ["low", "medium", "high"]
+        "type": "toggle"
       }
     ],
     "@cf/openai/gpt-oss-120b": [
@@ -64,15 +63,16 @@
         "values": ["low", "medium", "high"]
       }
     ],
-    "@cf/zai-org/glm-4.7-flash": [
-      {
-        "type": "toggle"
-      }
-    ],
-    "@cf/zai-org/glm-5.3": [
+    "@cf/openai/gpt-oss-20b": [
       {
         "type": "effort",
-        "values": ["low", "high", "max"]
+        "values": ["low", "medium", "high"]
+      }
+    ],
+    "@cf/deepseek-ai/deepseek-v4.1-flash-1017": [
+      {
+        "type": "effort",
+        "values": ["none", "low", "high", "max"]
       }
     ],
     "@cf/thinkingmachines/inkling-2-small": [

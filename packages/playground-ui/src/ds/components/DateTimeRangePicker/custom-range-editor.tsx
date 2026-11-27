@@ -10,6 +10,7 @@ import { IconArrowRight } from '@/ds/icons/central/IconArrowRight';
 import { IconCheckmark2Medium } from '@/ds/icons/central/IconCheckmark2Medium';
 import { IconChevronLeftMedium } from '@/ds/icons/central/IconChevronLeftMedium';
 import { t as studioT, useLocale } from '@/lib/i18n';
+import { formatDate } from '@/utils/date-format';
 
 function formatDays(ms: number): string {
   const days = Math.round(ms / (24 * 60 * 60 * 1000));
@@ -43,7 +44,7 @@ function rangeProblem({
   if (from && to && from > to) return 'Start date/time must be before end date/time';
   if (from && to && to.getTime() - from.getTime() > maxRangeMs)
     return `Range cannot be longer than ${formatDays(maxRangeMs)}`;
-  if (from && firstDay && from < firstDay) return `Range cannot start before ${format(firstDay, 'MMM d, yyyy')}`;
+  if (from && firstDay && from < firstDay) return `Range cannot start before ${formatDate(firstDay, 'date-year')}`;
   return undefined;
 }
 
@@ -194,7 +195,7 @@ function RangeEnd({
       </Txt>
       <div className="flex items-center gap-1">
         <Txt as="span" variant="label" tone={date ? undefined : 'muted'} className="min-w-0 flex-1 truncate px-1">
-          {date ? format(date, 'MMM d, yyyy') : studioT('Select a day')}
+          {date ? formatDate(date, 'date-year') : studioT('Select a day')}
         </Txt>
         <Input
           type="time"

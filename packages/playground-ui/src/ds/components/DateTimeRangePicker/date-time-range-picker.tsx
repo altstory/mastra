@@ -12,6 +12,7 @@ import { IconCrossMedium } from '@/ds/icons/central/IconCrossMedium';
 
 import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { formatClock } from '@/utils/date-format';
 
 export type DateRangePreset = 'all' | 'last-24h' | 'last-3d' | 'last-7d' | 'last-14d' | 'last-30d' | 'custom';
 
@@ -78,8 +79,7 @@ function outsideLimits(range: DateTimeRangePickerNamedRange, minDate?: Date, max
   return tooEarly || tooWide;
 }
 
-const fmtClock = (d: Date) =>
-  d.toLocaleTimeString('en-US', d.getMinutes() === 0 ? { hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' });
+const fmtClock = (d: Date) => formatClock(d) ?? '';
 
 /**
  * A custom range as day and time, kept short: `Oct 21, 2:05 PM – 4 PM` within one day,
@@ -89,7 +89,7 @@ function customRangeLabel(dateFrom: Date | undefined, dateTo: Date | undefined) 
   const thisYear = new Date().getFullYear();
   const withYear = [dateFrom, dateTo].some(d => d && d.getFullYear() !== thisYear);
   const fmtDay = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(withYear && { year: 'numeric' }) });
+    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(withYear && { year: 'numeric' }) });
   const fmtMoment = (d: Date) => `${fmtDay(d)}, ${fmtClock(d)}`;
 
   const start = dateFrom ? fmtMoment(dateFrom) : 'Start';

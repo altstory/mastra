@@ -1,5 +1,46 @@
 # @mastra/core
 
+## 1.87.0-alpha.3
+
+### Minor Changes
+
+- Added `AgentChannels.subscribeThread()` so bots can subscribe to chat threads they started themselves (for example, a scheduled digest post). The method creates the Mastra thread mapping and subscribes it, so replies without an @mention reach the agent. ([#27460](https://github.com/mastra-ai/mastra/pull/27460))
+
+  ```ts
+  const sent = await channel.post('Daily digest ready');
+  await agent.channels.subscribeThread({ thread: sent.thread, resourceId: 'digest-bot' });
+  ```
+
+  Subscribing to a thread with no Mastra mapping now logs a warning instead of silently doing nothing.
+
+- Added native PNG, JPEG, WebP, and PDF media output to skill_read for assets up to 10 MiB. As with read_file, the media type comes from the file's contents rather than its extension, so an asset saved under the wrong extension is sent as what it contains, or as text. Text reads and metadata-only binary fallbacks are preserved. Fixes https://github.com/mastra-ai/mastra/issues/25219. ([#28280](https://github.com/mastra-ai/mastra/pull/28280))
+
+  With a skill that includes `assets/logo.png`, the same request now gives the model the image instead of a binary-file placeholder:
+
+  ```typescript
+  await agent.generate('Use the design-system skill and read assets/logo.png.');
+  ```
+
+### Patch Changes
+
+- Fixed `lsp_inspect` for files that exist only in a remote sandbox. The tool now reads inspected files and definition previews through the workspace filesystem, including mounted filesystems. When the workspace filesystem can't read the inspected file, the tool returns a `Could not read file` error instead of reading a host file at the same path, which on a remote sandbox is unrelated content. The host filesystem is used only when the workspace has no filesystem, so a definition outside a contained `LocalFilesystem` (for example a globally installed library) now has `preview: null`. ([#26668](https://github.com/mastra-ai/mastra/pull/26668))
+
+- Fixed web search failing with a 422 error on Mastra gateway models. Every request to the gateway's chat endpoint now has a provider's native web search tool swapped for the gateway's own web search, whether the model is reached through the built-in gateway, a custom gateway, or directly from `MastraGateway`. ([#31641](https://github.com/mastra-ai/mastra/pull/31641))
+
+## 1.87.0-alpha.2
+
+### Minor Changes
+
+- `runKnowledgeImport` takes a new `maxFlushBytes` option: the largest flush request, in bytes of the request encoded as JSON. The runner sends its buffered items before one more item, or a saved cursor, would take the request over it. An item or a saved state too big for a request on its own ends the run with the new `flush_too_large` error code, before anything more is sent. No request is sent over the limit. With the option set, each item is copied when the importer hands it over, so changing it afterwards changes nothing that is sent. ([#31566](https://github.com/mastra-ai/mastra/pull/31566))
+
+  ```ts
+  await runKnowledgeImport({ importers, host, bindingId, maxFlushBytes: 8 * 1024 * 1024 });
+  ```
+
+  A host can also send its limit with a started run, as `maxFlushBytes` on the start result. The runner then keeps under the lower of the two, so an app doesn't have to hard-code its host's limit.
+
+  Without either limit nothing changes: a flush holds up to `bufferSize` items whatever their size. Set it when the host limits request size, so a batch of large items is sent in parts instead of failing the run at the same items each time.
+
 ## 1.87.0-alpha.1
 
 ### Minor Changes

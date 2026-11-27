@@ -1,5 +1,5 @@
 import type { AutoFormFieldProps } from '@autoform/react';
-import { format, isValid } from 'date-fns';
+import { isValid } from 'date-fns';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/ds/components/Button';
 import { DatePicker } from '@/ds/components/DateTimePicker';
@@ -11,6 +11,7 @@ import { fieldTriggerErrorBorder } from '@/ds/primitives/form-element';
 
 import { t as studioT, useLocale } from '@/lib/i18n';
 import { cn } from '@/utils/cn';
+import { formatDate } from '@/utils/date-format';
 
 export const DateField: React.FC<AutoFormFieldProps> = ({ inputProps, field }) => {
   useLocale();
@@ -57,7 +58,7 @@ export const DateField: React.FC<AutoFormFieldProps> = ({ inputProps, field }) =
           icon={<IconCalendar1 />}
         >
           {value ? (
-            <span className="text-foreground">{format(value, 'PPP')}</span>
+            <span className="text-foreground">{formatDate(value, 'date-long')}</span>
           ) : (
             <span className="text-muted-foreground">{studioT('Pick a date')}</span>
           )}
