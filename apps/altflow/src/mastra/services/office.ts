@@ -6,6 +6,7 @@ import { createConverter } from '@deepseek-ai/libreoffice-kit';
 import { FileStorageError } from '../user-storage';
 import type { UserStorage } from '../user-storage';
 import { decodePlainText, isPlainTextDocument } from './plain-text';
+import { extractDocumentText } from './office-text';
 
 export const isOfficeDocument = (path: string) => /\.(docx?|odt|xlsx?|ods|pptx?|odp|pdf)$/i.test(path);
 
@@ -54,6 +55,14 @@ export class OfficeReader {
         .replace(/\r\n?/g, '\n');
     }
     return this.withSnapshot(owner, path, signal, async ({ inputPath, extension, directory, bytes }) => {
+      if (extension === '.docx' || extension === '.odt') {
+        try {
+          const text = extractDocumentText(bytes, extension);
+          if (text.trim()) return text;
+        } catch {
+          // Fall through to the conversion engine for files this reader cannot parse.
+        }
+      }
       // Writer's text export preserves full flowing text without PDF pagination loss.
       const writer = /\.(docx?|odt)$/.test(extension);
       const outputPath = join(directory, writer ? 'body.txt' : 'body.pdf');
