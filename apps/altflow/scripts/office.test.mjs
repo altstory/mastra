@@ -101,6 +101,42 @@ test('DSH converts real Office files, renders a page to PNG and recalculates a w
   await assert.rejects(reader.produce('bob', '/body.docx', 'convert', { format: 'pdf' }), /不存在/);
 });
 
+test('a GBK upload can be read and searched by the Agent without converting the original', async t => {
+  const { store } = await setup(t);
+  const path = '/uploads/novel-gbk.txt';
+  const bytes = Buffer.from('b5dad2bbd5c20d0ad3ead2b9c0b4bfcd0d0ab1bebcafbde1caf8', 'hex');
+  await store.write('alice', path, bytes, { source: 'upload' });
+  const documents = createDocumentTools(new OfficeReader(store));
+  const filesystem = new UserFilesystem(store, 'alice');
+  const edge = await modelServer(t);
+  edge.responses.push(
+    { calls: [{ name: 'mastra_workspace_read_file', args: { path, offset: 2, limit: 1 } }] },
+    { calls: [{ name: 'mastra_workspace_grep', args: { path, pattern: '雨夜来客' } }] },
+    { calls: [{ name: 'read_document', args: { path, offset: 3, limit: 1 } }] },
+    { text: 'Read complete.' },
+  );
+  const agent = new Agent({
+    id: 'gbk-reader',
+    name: 'Reader',
+    model: edge.model,
+    instructions: 'Read and search the uploaded novel.',
+    tools: documents.tools,
+    workspace: new Workspace({ filesystem }),
+    inputProcessors: [documents.processor],
+  });
+  const result = await agent.generate('Read and search my novel.', {
+    requestContext: context('alice'),
+    maxSteps: 4,
+  });
+  const [read, search, document] = toolResults(result);
+  assert.match(JSON.stringify(read), /雨夜来客/);
+  assert.match(JSON.stringify(search), /雨夜来客/);
+  assert.doesNotMatch(JSON.stringify(search), /No matches found/);
+  assert.match(JSON.stringify(document), /本集结束/);
+  assert.deepEqual(await filesystem.readFile(path), bytes);
+  assert.equal(await filesystem.readFile(path, { encoding: 'base64' }), bytes.toString('base64'));
+});
+
 test('read_document reads uploaded plain text in pages without invoking Office or crossing accounts', async t => {
   const { store } = await setup(t);
   const path = '/uploads/novel.txt';

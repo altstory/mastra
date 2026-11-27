@@ -5,6 +5,7 @@ import { extname, join } from 'node:path';
 import { createConverter } from '@deepseek-ai/libreoffice-kit';
 import { FileStorageError } from '../user-storage';
 import type { UserStorage } from '../user-storage';
+import { decodePlainText, isPlainTextDocument } from './plain-text';
 
 export const isOfficeDocument = (path: string) => /\.(docx?|odt|xlsx?|ods|pptx?|odp|pdf)$/i.test(path);
 
@@ -44,11 +45,13 @@ export class OfficeReader {
 
   async read(owner: string, path: string, signal?: AbortSignal): Promise<string> {
     signal?.throwIfAborted();
-    if (/\.(txt|md|markdown|csv|tsv|json|yaml|yml|xml|html?|log)$/i.test(path)) {
+    if (isPlainTextDocument(path)) {
       const bytes = await this.storage.read(owner, path);
       signal?.throwIfAborted();
       if (bytes.length > 50 * 1024 * 1024) throw new FileStorageError('文档超过 50 MB 读取上限', 413);
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/\r\n?/g, '\n');
+      return decodePlainText(bytes)
+        .replace(/^\uFEFF/, '')
+        .replace(/\r\n?/g, '\n');
     }
     return this.withSnapshot(owner, path, signal, async ({ inputPath, extension, directory, bytes }) => {
       // Writer's text export preserves full flowing text without PDF pagination loss.

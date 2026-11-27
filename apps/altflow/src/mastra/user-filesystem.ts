@@ -12,6 +12,7 @@ import type {
   ProviderStatus,
 } from '@mastra/core/workspace';
 import type { WorkspaceFiles } from './services/conversation-files';
+import { decodePlainText, isPlainTextDocument } from './services/plain-text';
 import { FileStorageError, filePath } from './user-storage.ts';
 
 /** All agent file tools use the same private namespace and quota as uploads. */
@@ -31,7 +32,9 @@ export class UserFilesystem extends MastraFilesystem {
   async readFile(path: string, options?: ReadOptions) {
     try {
       const data = await this.store.read(this.owner, path);
-      return options?.encoding ? data.toString(options.encoding) : data;
+      const encoding = options?.encoding;
+      if ((encoding === 'utf-8' || encoding === 'utf8') && isPlainTextDocument(path)) return decodePlainText(data);
+      return encoding ? data.toString(encoding) : data;
     } catch (error) {
       if (error instanceof FileStorageError && error.status === 404) throw new FileNotFoundError(path);
       throw error;

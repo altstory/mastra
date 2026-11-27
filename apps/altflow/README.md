@@ -89,6 +89,8 @@ Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、�
 
 `read_document` 使用 DSH 同版本的 `@deepseek-ai/libreoffice-kit@0.2.3`，支持 Word（DOC/DOCX/ODT）、Excel（XLS/XLSX/ODS）、PowerPoint（PPT/PPTX/ODP）及有文字层的 PDF。Word 导出正文；表格和演示文稿先渲染为 PDF，再提取页面文字。现有 `read_file` 的文本读取也会转入此解析器，原始文件不变。
 
+TXT 等纯文本附件可用 `read_file`、`grep` 和 `read_document` 读取或搜索。系统优先按 UTF-8 解码，失败时尝试 GB18030（兼容 GBK），下载保留上传时的编码。
+
 解析前检查账号文件权限；临时文件随请求清理。沿用 DSH 的 50 MB 输入、60 秒转换、2 个并发和 8 个排队请求限制。正文按行分页返回，单次最多 80,000 字符。扫描件 OCR 不在此能力内；没有文字层时明确报错。运行此功能的主机需安装锁文件中对应平台的 LibreOffice Kit 原生依赖。
 
 `pnpm --filter @internal/altflow test:tools` 使用真实 Office 引擎、合成文档和隔离文件账本，验证正文、原文件不变、跨账号拒绝及 Agent 文件工具链路。
