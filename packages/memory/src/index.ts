@@ -1707,6 +1707,10 @@ ${workingMemory}`;
     return metadataByThread;
   }
 
+  protected onMessageSaveEmbeddingError(error: unknown): void {
+    throw error;
+  }
+
   /**
    * Embeds messages into vector rows in the shared format, without writing them. Every
    * message-vector write in this class builds its rows here.
@@ -1714,9 +1718,11 @@ ${workingMemory}`;
   private async buildMessageVectorRows({
     items,
     embeddedMessages,
+    onEmbedError,
   }: {
     items: MessageEmbeddingItem[];
     embeddedMessages?: Map<string, string>;
+    onEmbedError?: (error: unknown) => void;
   }): Promise<MessageEmbeddingRows> {
     if (items.length === 0) return { ids: [], metadata: [], embeddedEntries: [] };
     if (!this.embedder && !this.isSelfEmbedding) {
@@ -1725,6 +1731,7 @@ ${workingMemory}`;
 
     return buildMessageEmbeddingRows({
       items,
+      onEmbedError,
       embed: this.isSelfEmbedding ? undefined : chunks => this.embedMessageChunks(chunks),
       maxChunkChars: resolveMaxChunkChars({ maxChunkChars: this.configuredMaxChunkChars, embedder: this.embedder }),
       loadThreadMetadata: threadIds => this.loadThreadMetadata(threadIds),
@@ -1761,6 +1768,7 @@ ${workingMemory}`;
     items: MessageEmbeddingItem[];
     config?: MemoryConfigInternal;
     embeddedMessages?: Map<string, string>;
+    onEmbedError?: (error: unknown) => void;
   }): Promise<{ tokens: number } | undefined> {
     if (!this.vector) return undefined;
     const rows = await this.buildMessageVectorRows(args);
@@ -1810,6 +1818,7 @@ ${workingMemory}`;
               items: updatedMessages.map(message => ({ message })),
               config,
               embeddedMessages,
+              onEmbedError: error => this.onMessageSaveEmbeddingError(error),
             })
           : undefined;
 

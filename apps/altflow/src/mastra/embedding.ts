@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { OpenAICompatibleEmbeddingModel } from '@ai-sdk/openai-compatible';
 import type { MastraEmbeddingModel } from '@mastra/core/vector';
 import { z } from 'zod';
@@ -15,7 +16,38 @@ const rows = z.object({
   ),
 });
 
-export function createModelHubEmbedder({ apiKey, baseURL }: { apiKey: string; baseURL?: string }) {
+export function isTransientEmbeddingError(error: unknown): boolean {
+  const failure = error as { statusCode?: number; name?: string } | undefined;
+  const status = failure?.statusCode;
+  return (
+    status === 408 ||
+    status === 429 ||
+    (status !== undefined && status >= 500 && status <= 599) ||
+    failure?.name === 'TimeoutError'
+  );
+}
+
+function retryDelay(error: unknown, attempt: number): number {
+  const headers = (error as { responseHeaders?: Record<string, string> }).responseHeaders;
+  const header = headers?.['retry-after'];
+  const backoff = 1000 * 2 ** attempt;
+  if (!header) return backoff;
+  const seconds = Number(header);
+  const requested = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(header) - Date.now();
+  return Math.min(60_000, Math.max(backoff, Number.isFinite(requested) ? requested : 0));
+}
+
+export function createModelHubEmbedder({
+  apiKey,
+  baseURL,
+  retries = 0,
+  timeoutMs = 8000,
+}: {
+  apiKey: string;
+  baseURL?: string;
+  retries?: number;
+  timeoutMs?: number;
+}) {
   if (!apiKey) throw new Error('ModelHub credential is not configured');
   const root = modelHubBaseURL(baseURL);
   const model = new OpenAICompatibleEmbeddingModel(EMBEDDING_MODEL, {
@@ -25,6 +57,24 @@ export function createModelHubEmbedder({ apiKey, baseURL }: { apiKey: string; ba
     headers: () => ({ Authorization: `Bearer ${apiKey}` }),
     url: ({ path }) => root + path,
   });
+  async function request(options: Parameters<typeof model.doEmbed>[0]) {
+    for (let attempt = 0; ; attempt++) {
+      const deadline = AbortSignal.timeout(timeoutMs);
+      try {
+        return await model.doEmbed({
+          ...options,
+          abortSignal: options.abortSignal ? AbortSignal.any([options.abortSignal, deadline]) : deadline,
+          providerOptions: { openaiCompatible: { dimensions: EMBEDDING_DIMENSION } },
+        });
+      } catch (error) {
+        options.abortSignal?.throwIfAborted();
+        const failure = deadline.aborted ? deadline.reason : error;
+        if (attempt >= retries || !isTransientEmbeddingError(failure)) throw failure;
+        await delay(retryDelay(failure, attempt), undefined, { signal: options.abortSignal });
+      }
+    }
+  }
+
   return {
     specificationVersion: model.specificationVersion,
     provider: model.provider,
@@ -32,13 +82,7 @@ export function createModelHubEmbedder({ apiKey, baseURL }: { apiKey: string; ba
     maxEmbeddingsPerCall: model.maxEmbeddingsPerCall,
     supportsParallelCalls: model.supportsParallelCalls,
     async doEmbed(options: Parameters<typeof model.doEmbed>[0]) {
-      const result = await model.doEmbed({
-        ...options,
-        abortSignal: options.abortSignal
-          ? AbortSignal.any([options.abortSignal, AbortSignal.timeout(30_000)])
-          : AbortSignal.timeout(30_000),
-        providerOptions: { openaiCompatible: { dimensions: EMBEDDING_DIMENSION } },
-      });
+      const result = await request(options);
       const ordered = rows.parse(result.response?.body).data.sort((a, b) => a.index - b.index);
       if (ordered.length !== options.values.length || ordered.some((row, index) => row.index !== index)) {
         throw new Error('ModelHub returned mismatched embedding indices');

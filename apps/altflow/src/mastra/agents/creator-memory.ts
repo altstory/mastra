@@ -1,8 +1,14 @@
 import { parseMemoryRequestContext } from '@mastra/core/memory';
+import { isTransientEmbeddingError } from '../embedding';
 import { CREATIVE_MEMORY_POLICY } from './creative-memory-policy';
 import { HistoryMemory } from './history-memory';
 
 export class CreatorMemory extends HistoryMemory {
+  protected override onMessageSaveEmbeddingError(error: unknown): void {
+    if (!isTransientEmbeddingError(error)) throw error;
+    this.logger.warn('ModelHub unavailable. Saved message without a semantic recall vector.');
+  }
+
   override async getInputProcessors(...args: Parameters<HistoryMemory['getInputProcessors']>) {
     const processors = await super.getInputProcessors(...args);
     return processors.map(processor =>

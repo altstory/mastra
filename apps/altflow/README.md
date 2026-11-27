@@ -97,7 +97,7 @@ Web 自由创作会话通过 Go 网关使用 Mastra 的标题、会话记忆、�
 
 `src/mastra/public/preview.db` 保存会话、知识、工作流和编辑器配置；`data/vectors.db` 保存向量，`data/observability.duckdb` 保存追踪等数据。数据库、环境文件、缓存、工作区都不纳入 Git，部署时须单独持久化和备份。
 
-从本地 MiniLM 升级时，先停止 Agent，然后对原来的 `ALTFLOW_RUNTIME_ROOT` 执行 `pnpm --filter @internal/altflow rebuild:embeddings`。命令从知识库和会话原文重建向量，并用工作区索引保存的原文重建工作区向量。全部成功后才替换 `data/vectors.db`。
+从本地 MiniLM 升级时，先停服务，删除 `data/vectors.db` 及其 `-wal`、`-shm` 文件，在原来的 `ALTFLOW_RUNTIME_ROOT` 下运行 `pnpm --filter @internal/altflow rebuild:embeddings`，再启动 Agent。重建只读取 `preview.db` 的知识页、笔记和会话原文。工作区会在之后索引文件时使用网关生成向量。
 
 ## 验证
 

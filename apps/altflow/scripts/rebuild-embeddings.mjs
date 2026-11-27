@@ -1,4 +1,4 @@
-import { mkdtemp, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { backup, DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -12,8 +12,39 @@ const appRoot = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.ALTFLOW_RUNTIME_ROOT ?? process.env.MASTRA_PREVIEW_ROOT ?? appRoot);
 const previewPath = resolve(root, 'src/mastra/public/preview.db');
 const vectorPath = resolve(root, 'data/vectors.db');
-const embedder = createModelHubEmbedder({ apiKey: modelCredential(), baseURL: process.env.ALTFLOW_MODELHUB_BASE_URL });
-const workspaceIndex = 'creator_workspace_search';
+if (process.argv.includes('--prepare-deployment')) {
+  const current = await stat(vectorPath).catch(error => {
+    if (error.code !== 'ENOENT') throw error;
+  });
+  if (current) {
+    const db = new DatabaseSync(vectorPath, { readOnly: true });
+    let indexes;
+    try {
+      indexes = db.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND sql LIKE '%F32_BLOB%'").all();
+    } finally {
+      db.close();
+    }
+    if (
+      indexes.length &&
+      indexes.every(index => Number(/F32_BLOB\((\d+)\)/i.exec(index.sql)?.[1]) === EMBEDDING_DIMENSION)
+    ) {
+      process.exit(0);
+    }
+  }
+  const source = await stat(previewPath).catch(error => {
+    if (error.code !== 'ENOENT') throw error;
+  });
+  if (source) modelCredential();
+  for (const suffix of ['', '-wal', '-shm']) await rm(vectorPath + suffix, { force: true });
+  if (!source) process.exit(0);
+}
+
+const embedder = createModelHubEmbedder({
+  apiKey: modelCredential(),
+  baseURL: process.env.ALTFLOW_MODELHUB_BASE_URL,
+  retries: 4,
+  timeoutMs: 30_000,
+});
 const messageIndex = `memory_messages_${EMBEDDING_DIMENSION}`;
 
 async function fingerprint() {
@@ -27,52 +58,6 @@ async function fingerprint() {
         return info && !(path.endsWith('-wal') && info.size === 0n) ? `${info.ino}:${info.size}:${info.mtimeNs}` : null;
       }),
   ).then(files => JSON.stringify(files));
-}
-
-async function rebuildWorkspace(vector) {
-  if (
-    !(await stat(vectorPath).catch(error => {
-      if (error.code !== 'ENOENT') throw error;
-    }))
-  )
-    return 0;
-  const source = new DatabaseSync(vectorPath, { readOnly: true });
-  try {
-    const indexes = source
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND sql LIKE '%F32_BLOB%'")
-      .all()
-      .map(row => row.name);
-    if (
-      indexes.some(name => name !== workspaceIndex && !/^(knowledge_pages_dimension_|memory_messages_)\d+$/.test(name))
-    ) {
-      throw new Error('Unrecognized vector index. Rebuild stopped before replacing the index database.');
-    }
-    if (!indexes.includes(workspaceIndex)) return 0;
-    const read = source.prepare(
-      `SELECT rowid, vector_id, metadata FROM ${workspaceIndex} WHERE rowid > ? ORDER BY rowid LIMIT 20`,
-    );
-    let last = 0;
-    let count = 0;
-    for (let batch; (batch = read.all(last)).length; last = Number(batch.at(-1).rowid)) {
-      const metadata = batch.map(row => JSON.parse(String(row.metadata)));
-      const texts = metadata.map(row => {
-        if (typeof row.text !== 'string' || !row.text.trim())
-          throw new Error('A workspace index row has no source text.');
-        return row.text;
-      });
-      await vector.createIndex({ indexName: workspaceIndex, dimension: EMBEDDING_DIMENSION });
-      await vector.upsert({
-        indexName: workspaceIndex,
-        ids: batch.map(row => String(row.vector_id)),
-        metadata,
-        vectors: await embedTextBatch(embedder, texts),
-      });
-      count += batch.length;
-    }
-    return count;
-  } finally {
-    source.close();
-  }
 }
 
 async function rebuildMessages(storage, vector) {
@@ -124,6 +109,7 @@ function closeJournal(path) {
   }
 }
 
+await mkdir(resolve(root, 'data'), { recursive: true });
 const before = await fingerprint();
 await embedTextBatch(embedder, ['AltFlow embedding index check']);
 const directory = await mkdtemp(resolve(root, 'data/.embedding-rebuild-'));
@@ -139,7 +125,14 @@ try {
   const storage = new LibSQLStore({ id: 'embedding-rebuild-source', url: `file:${snapshotPath}` });
   const vector = new LibSQLVector({ id: 'embedding-rebuild', url: `file:${replacement}` });
   try {
-    const knowledge = new Knowledge({ id: 'creator-knowledge', storage, vector, embedder, scopes: {} });
+    const knowledge = new Knowledge({
+      id: 'creator-knowledge',
+      storage,
+      vector,
+      embedder,
+      embedderOptions: { maxRetries: 0 },
+      scopes: {},
+    });
     let cursor;
     let pages = 0;
     let notes = 0;
@@ -156,7 +149,6 @@ try {
       console.log(`Knowledge: ${pages} pages, ${notes} notes`);
     } while (cursor);
     console.log(`Conversation: ${await rebuildMessages(storage, vector)} vectors`);
-    console.log(`Workspace: ${await rebuildWorkspace(vector)} vectors`);
     for (const indexName of await vector.listIndexes()) {
       const stats = await vector.describeIndex({ indexName });
       if (stats.dimension !== EMBEDDING_DIMENSION) throw new Error(`Unexpected vector dimension in ${indexName}`);
@@ -170,11 +162,8 @@ try {
     throw new Error('The source databases changed during rebuild. Stop AltFlow and retry.');
   }
 
-  const old = await stat(vectorPath).catch(error => {
-    if (error.code !== 'ENOENT') throw error;
-  });
   closeJournal(replacement);
-  if (old) closeJournal(vectorPath);
+  for (const suffix of ['-wal', '-shm']) await rm(vectorPath + suffix, { force: true });
   await rename(replacement, vectorPath);
   console.log(`Replaced vector database with ${embedder.modelId}: ${vectorPath}`);
 } finally {

@@ -126,7 +126,9 @@ await accountPreferences.init();
 const vector = new LibSQLVector({ id: 'creator-vectors', url: `file:${previewPath('data/vectors.db')}` });
 for (const indexName of await vector.listIndexes()) {
   if ((await vector.describeIndex({ indexName })).dimension !== EMBEDDING_DIMENSION) {
-    throw new Error('AltFlow vector indexes must be rebuilt with pnpm --filter @internal/altflow rebuild:embeddings');
+    throw new Error(
+      '检测到旧向量库。请停服务、删除旧 vectors.db 及其 -wal / -shm 文件、运行 pnpm --filter @internal/altflow rebuild:embeddings，再启动。',
+    );
   }
 }
 await mkdir(previewPath('data'), { recursive: true });
@@ -243,6 +245,8 @@ const creatorMemory = new CreatorMemory({
   storage,
   vector,
   embedder,
+  embeddingDimension: EMBEDDING_DIMENSION,
+  embedderOptions: { maxRetries: 0 },
   options: {
     ...CREATOR_MEMORY_OPTIONS,
     generateTitle: titleGeneration,
